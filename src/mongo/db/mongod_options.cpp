@@ -172,7 +172,7 @@ Status addMongodOptions(moe::OptionSection* options) {
         "storage.engine",
         "storageEngine",
         moe::String,
-        "what storage engine to use - defaults to wiredTiger if no data files present");
+        "what storage engine to use - defaults to hse if no data files present");
 
 
 #ifdef _WIN32

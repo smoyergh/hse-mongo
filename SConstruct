@@ -203,6 +203,15 @@ add_option('wiredtiger',
     type='choice',
 )
 
+add_option('hse',
+    choices=['on', 'off'],
+    const='on',
+    default='on',
+    help='Enable HSE',
+    nargs='?',
+    type='choice',
+)
+
 js_engine_choices = ['mozjs', 'none']
 add_option('js-engine',
     choices=js_engine_choices,
