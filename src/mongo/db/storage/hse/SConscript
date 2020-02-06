@@ -1,0 +1,296 @@
+# -*- mode: python; -*-
+Import("env")
+Import("get_option")
+Import("has_option")
+
+import os
+
+HSE_LIBARRAY = None
+
+#
+# If you wish to build against a collection of HSE headers and libraries that
+# are not installed via RPM then you must give either just 'hse-tree-path' or
+# both of 'hse-source-path' and 'hse-build-path' as options to scons.
+#
+# If you work with your hse build output directory underneath '.../hse/' itself
+# then you can just use 'hse-tree-path' and the scons option 'dbg' will dictate
+# which of the debug or release targets are referenced.  Otherwise, specify
+# 'hse-source-path' for the location of the hse tree you wish to include header
+# files from and 'hse-build-path' for the full path of the root of the
+# particular build artifacts to link against. The value of the scons 'dbg'
+# option has no effect on how this path is used/interpreted.
+#
+# WARNING: --hse*path options need to be passed without quotes.
+# If quotes are included on the command line, the quotes become part of the
+# variable value in scons and break the build in strange ways.
+#
+
+build_type = 'debug' if get_option('dbg') == 'on' else 'release'
+
+#
+# Need to catch AttributeError in the case we're building with an
+# upstream mongo tree where --hse* options don't exist.
+#
+try:
+    has_hse_build_path = has_option('hse-build-path')
+except AttributeError:
+    has_hse_build_path = False
+
+try:
+    has_hse_source_path = has_option('hse-source-path')
+except AttributeError:
+    has_hse_source_path = False
+
+try:
+    has_hse_tree_path = has_option('hse-tree-path')
+except AttributeError:
+    has_hse_tree_path = False
+
+
+if has_hse_tree_path or (has_hse_source_path and has_hse_build_path):
+    if has_hse_tree_path:
+        hse_tree_root = get_option('hse-tree-path').rstrip(os.path.sep)
+        build_dir_root = os.path.join(hse_tree_root, 'builds', build_type)
+        source_dir_root = hse_tree_root
+    else:
+        build_dir_root = get_option('hse-build-path').rstrip(os.path.sep)
+        source_dir_root = get_option('hse-source-path').rstrip(os.path.sep)
+
+    #
+    # This is a little messy; however, there is a dependency ordering for
+    # library link lists.
+    #
+    LIBARRAY = [
+        'components/kvdb/source/libhse_kvdb.a',
+        'components/ui/libkvdb_ui.a',
+        'components/mpool/libmpool.a',
+    ]
+
+    if build_type == 'debug':
+        LIBARRAY.extend(
+            [
+                    'components/mpool/libmpool-test.a',
+                    'components/mpool/libhse_mpctl_ut_support.a'
+            ]
+        )
+
+    LIBARRAY.extend(
+        [
+            'components/ui/libmpool_ui.a',
+            'components/ui/libdevice_ui.a',
+        ]
+    )
+
+    if build_type == 'debug':
+        LIBARRAY.extend(
+            [
+                'components/ui/libcli_test.a',
+                'test/library/source/libhse_test_support.a'
+            ]
+        )
+
+    LIBARRAY.append('components/platform/source/libhse_platform.a')
+
+    if build_type == 'debug':
+        LIBARRAY.append(
+            'components/platform/source/libhse_platform_kernel_ut.a'
+        )
+
+    LIBARRAY.extend(
+        [
+            'components/ui/libplatform_ui.a',
+            'ext_install/lib/libyaml.so',
+            'ext_install/lib/libblkid_hse.so',
+        ]
+    )
+
+    # Set up all the absolute paths for HSE libraries to link against
+    HSE_LIBARRAY = [File(os.path.join(build_dir_root, x)) for x in LIBARRAY]
+    
+    # Set up all the paths for HSE include files
+    platform_inc = os.path.join(source_dir_root, 'components/platform/include')
+    kvdb_inc = os.path.join(source_dir_root, 'components/kvdb/include')
+
+    env.Prepend(CPPPATH=platform_inc)
+    env.Prepend(CPPPATH=os.path.join(build_dir_root, 'stage/gensrc'))
+    env.Prepend(CPPPATH=kvdb_inc)
+
+    env.Prepend(CCFLAGS='-DHSE_TREE_BUILD')
+
+else:
+    HSE_LIBARRAY = [
+        'hse_kvdb',
+        'kvdb_ui',
+        'mpool',
+    ]
+
+    if build_type == 'debug':
+        HSE_LIBARRAY.append('mpool-test')
+
+    HSE_LIBARRAY.extend(['mpool_ui', 'device_ui'])
+
+    if build_type == 'debug':
+        HSE_LIBARRAY.extend(
+            [
+            'cli_test',
+            'hse_test_support',
+            'hse_mpctl_ut_support'
+            ]
+        )
+
+    HSE_LIBARRAY.append('hse_platform')
+
+    if build_type == 'debug':
+        HSE_LIBARRAY.append('hse_platform_kernel_ut')
+
+    HSE_LIBARRAY.extend(
+        [
+            'platform_ui',
+            'blkid_nf',
+            'yaml',
+        ]
+    )
+
+
+HSE_THIRD_PARTY_LIBDEPS = [
+    'uuid',
+    'dyncall_s',
+    'crypto',
+    'umberlog',
+    'pthread',
+    'microhttpd',
+    'urcu-bp',
+    'bsd',
+    'lz4',
+]
+
+env.Prepend(LIBS=HSE_THIRD_PARTY_LIBDEPS)
+env.Prepend(LIBS=HSE_LIBARRAY)
+
+env.Library(
+    target='storage_hse_base',
+    source=[
+        'src/hse_impl.cpp',
+        'src/hse_clienttxn.cpp',
+        'src/hse_kvscursor.cpp',
+        'src/hse_global_options.cpp',
+        'src/hse_engine.cpp',
+        'src/hse_oplog_block.cpp',
+        'src/hse_record_store.cpp',
+        'src/hse_index.cpp',
+        'src/hse_recovery_unit.cpp',
+        'src/hse_counter_manager.cpp',
+        'src/hse_durability_manager.cpp',
+        'src/hse_stats.cpp',
+        'src/hse_util.cpp',        
+    ],
+    LIBDEPS=[
+        '$BUILD_DIR/mongo/base',
+        '$BUILD_DIR/mongo/db/namespace_string',
+        '$BUILD_DIR/mongo/db/catalog/collection_options',
+        '$BUILD_DIR/mongo/db/concurrency/write_conflict_exception',
+        '$BUILD_DIR/mongo/db/index/index_descriptor',
+        '$BUILD_DIR/mongo/db/storage/bson_collection_catalog_entry',
+        '$BUILD_DIR/mongo/db/storage/index_entry_comparison',
+        '$BUILD_DIR/mongo/db/storage/journal_listener',
+        '$BUILD_DIR/mongo/db/storage/key_string',
+        '$BUILD_DIR/mongo/db/storage/oplog_hack',
+        '$BUILD_DIR/mongo/util/background_job',
+        '$BUILD_DIR/mongo/util/processinfo',
+    ],
+    SYSLIBDEPS=HSE_LIBARRAY+HSE_THIRD_PARTY_LIBDEPS
+)
+
+env.Library(
+    target='storage_hse',
+    source=[
+        'src/hse_init.cpp',
+        'src/hse_options_init.cpp',
+        'src/hse_record_store_mongod.cpp',
+        'src/hse_server_status.cpp'
+    ],
+    LIBDEPS=[
+        'storage_hse_base',
+        '$BUILD_DIR/mongo/db/storage/kv/kv_engine'
+    ],
+    SYSLIBDEPS=HSE_LIBARRAY+HSE_THIRD_PARTY_LIBDEPS,
+    LIBDEPS_DEPENDENTS=['$BUILD_DIR/mongo/db/serveronly']
+)
+
+env.Library(
+    target='storage_hse_mock',
+    source=[
+        'src/hse_record_store_mock.cpp',
+    ],
+    LIBDEPS=[
+        'storage_hse_base',
+        #
+        # Temporary crutch since the ssl cleanup is hard coded in
+        # background.cpp
+        #
+        '$BUILD_DIR/mongo/util/net/network',
+    ],
+    SYSLIBDEPS=HSE_LIBARRAY+HSE_THIRD_PARTY_LIBDEPS
+)
+
+common = env.Object('src/hse_ut_common.cpp')
+
+env.CppUnitTest(
+    target='storage_mse_kvdb_test',
+    source=['src/hse_test.cpp'] + common,
+    LIBDEPS=[
+        'storage_hse_base',
+        'storage_hse_mock',
+        '$BUILD_DIR/mongo/db/storage/storage_options'
+    ]
+)
+
+env.CppUnitTest(
+    target='storage_mse_kvdb_engine_test',
+    source=['src/hse_engine_test.cpp'] + common,
+    LIBDEPS=[
+        'storage_hse_base',
+        'storage_hse_mock',
+        '$BUILD_DIR/mongo/db/storage/kv/kv_engine_test_harness',
+        '$BUILD_DIR/mongo/db/storage/storage_options'
+    ]
+)
+
+env.CppUnitTest(
+    target='storage_mse_kvdb_index_test',
+    source=['src/hse_index_test.cpp'] + common,
+    LIBDEPS=[
+        'storage_hse_base',
+        'storage_hse_mock',
+        '$BUILD_DIR/mongo/db/storage/sorted_data_interface_test_harness'
+    ]
+)
+
+env.CppUnitTest(
+    target='storage_mse_kvdb_record_store_test',
+    source=['src/hse_record_store_test.cpp'] + common,
+    LIBDEPS=[
+        'storage_hse_mock',
+        '$BUILD_DIR/mongo/db/storage/record_store_test_harness'
+    ]
+)
+
+env.Command(
+    'mse_kvdb_test_harness.py',
+    'src/hse_test_harness.py',
+    "cp $SOURCES $TARGET"
+)
+
+#
+# Provides shorthand target for the command line to build the HSE unit tests.
+#
+env.Alias(
+    'mse_unit_tests',
+    [
+        'storage_mse_kvdb_test',
+        'storage_mse_kvdb_engine_test',
+        'storage_mse_kvdb_index_test',
+        'storage_mse_kvdb_record_store_test',
+        'mse_kvdb_test_harness.py'
+    ]
+)

@@ -1,0 +1,351 @@
+/**
+ * TODO: HSE License
+ */
+#define MONGO_LOG_DEFAULT_COMPONENT ::mongo::logger::LogComponent::kStorage
+
+extern "C" {
+
+#include <hse_kvdb/hse.h>
+}
+
+#include "mongo/platform/basic.h"
+#include "mongo/util/log.h"
+
+#include "hse_impl.h"
+#include "hse_kvscursor.h"
+#include "hse_stats.h"
+#include "hse_util.h"
+
+#include <chrono>
+#include <cstdlib>
+#include <thread>
+
+using namespace std;
+using mongo::warning;
+using hse::Status;
+
+using hse_stat::_hseKvsCursorCreateLatency;
+using hse_stat::_hseKvsCursorCreateCounter;
+using hse_stat::_hseKvsCursorReadLatency;
+using hse_stat::_hseKvsCursorReadCounter;
+using hse_stat::_hseKvsCursorUpdateLatency;
+using hse_stat::_hseKvsCursorUpdateCounter;
+using hse_stat::_hseKvsCursorDestroyLatency;
+using hse_stat::_hseKvsCursorDestroyCounter;
+
+namespace {
+int RETRY_FIB_SEQ_EAGAIN[] = {1, 2, 3, 5, 8, 13};
+int FIB_LEN = 6;
+}
+
+// KVDB interface
+namespace hse {
+
+KvsCursor* create_cursor(KVSHandle kvs,
+                         KVDBData& prefix,
+                         bool forward,
+                         const struct CompParms& compparms,
+                         ClientTxn* lnkd_txn,
+                         bool enableRa) {
+    return new KvsCursor(kvs, prefix, forward, lnkd_txn, compparms, enableRa);
+}
+
+//
+// Forward-only cursor class
+//
+KvsCursor::KvsCursor(KVSHandle handle,
+                     KVDBData& prefix,
+                     bool forward,
+                     ClientTxn* lnkd_txn,
+                     const struct CompParms& compparms,
+                     bool enableRa)
+    : _kvs((struct hse_kvs*)handle),
+      _pfx(prefix),
+      _forward(forward),
+      _enableRa{enableRa},
+      _lnkd_txn(lnkd_txn),
+      _cursor(0),
+      _start(0),
+      _end(0),
+      _curr(0),
+      _kvs_stale(true),
+      _kvs_key(0),
+      _kvs_klen(0),
+      _kvs_val(0),
+      _kvs_vlen(0),
+      _kvs_eof(false),
+      _kvs_num_chunks(0),
+      _offset(0),
+      _total_len(0),
+      _kvs_total_len_comp(0),
+      _compparms(compparms),
+      _eof(false) {
+    struct hse_kvs* kvs = (struct hse_kvs*)handle;
+    struct hse_kvdb_opspec opspec = {0, 0};
+    int retries = 0;
+    unsigned long long sleepTime = 0;
+
+    if (_lnkd_txn) {
+        // the client is requesting a bound cursor
+        opspec.kop_flags |= HSE_KVDB_KOP_FLAG_BIND_TXN;
+        opspec.kop_flags |= HSE_KVDB_KOP_FLAG_STATIC_VIEW;
+        opspec.kop_txn = _lnkd_txn->get_kvdb_txn();
+    }
+
+    if (!_forward) {
+        opspec.kop_flags |= HSE_KVDB_KOP_FLAG_REVERSE;
+    }
+
+    if (_enableRa) {
+        opspec.kop_flags |= HSE_KVDB_KOP_FLAG_CURSOR_RA;
+    }
+
+    while (true) {
+        int ret;
+
+        if (retries < FIB_LEN) {
+            sleepTime = RETRY_FIB_SEQ_EAGAIN[retries % FIB_LEN];
+        } else {
+            sleepTime = RETRY_FIB_SEQ_EAGAIN[FIB_LEN - 1];
+            if (retries % 20 == 0)
+                warning() << "HSE: kvs_cursor_create returning EAGAIN after " << retries
+                          << " retries";
+        }
+
+        _hseKvsCursorCreateCounter.add();
+        auto lt = _hseKvsCursorCreateLatency.begin();
+        ret = ::hse_kvs_cursor_create(kvs, &opspec, (const void*)_pfx.data(), _pfx.len(), &_cursor);
+        _hseKvsCursorCreateLatency.end(lt);
+        if (!ret)
+            break;
+
+        if (ret != EAGAIN)
+            throw KVDBException("non EAGAIN failure from hse_kvs_cursor_create()");
+
+        this_thread::sleep_for(chrono::milliseconds(sleepTime));
+
+        retries++;
+    }
+}
+
+KvsCursor::~KvsCursor() {
+    _hseKvsCursorDestroyCounter.add();
+    auto lt = _hseKvsCursorDestroyLatency.begin();
+    ::hse_kvs_cursor_destroy(_cursor);
+    _hseKvsCursorDestroyLatency.end(lt);
+}
+
+Status KvsCursor::update(ClientTxn* lnkd_txn) {
+    int ret = 0;
+    struct hse_kvdb_opspec opspec = {0, 0};
+    int retries = 0;
+    unsigned long long sleepTime = 0;
+
+    _lnkd_txn = lnkd_txn;
+    if (lnkd_txn) {
+        opspec.kop_flags |= HSE_KVDB_KOP_FLAG_BIND_TXN;
+        opspec.kop_flags |= HSE_KVDB_KOP_FLAG_STATIC_VIEW;
+        opspec.kop_txn = lnkd_txn->get_kvdb_txn();
+    }
+
+    /* [MU_REVISIT] Limit retries. */
+    _hseKvsCursorUpdateCounter.add();
+    auto lt = _hseKvsCursorUpdateLatency.begin();
+    ret = ::hse_kvs_cursor_update(_cursor, &opspec);
+    _hseKvsCursorUpdateLatency.end(lt);
+    if (ret) {
+        _hseKvsCursorDestroyCounter.add();
+        auto lt = _hseKvsCursorDestroyLatency.begin();
+        ::hse_kvs_cursor_destroy(_cursor);
+        _hseKvsCursorDestroyLatency.end(lt);
+
+        _cursor = 0;
+
+        while (true) {
+            if (retries < FIB_LEN) {
+                sleepTime = RETRY_FIB_SEQ_EAGAIN[retries % FIB_LEN];
+            } else {
+                sleepTime = RETRY_FIB_SEQ_EAGAIN[FIB_LEN - 1];
+                if (retries % 20 == 0)
+                    warning() << "HSE: kvs_cursor_create (update) returning EAGAIN after "
+                              << retries << " retries";
+            }
+
+            if (!_forward) {
+                opspec.kop_flags |= HSE_KVDB_KOP_FLAG_REVERSE;
+            }
+
+            if (_enableRa) {
+                opspec.kop_flags |= HSE_KVDB_KOP_FLAG_CURSOR_RA;
+            }
+
+            _hseKvsCursorCreateCounter.add();
+            auto lt = _hseKvsCursorCreateLatency.begin();
+            ret = ::hse_kvs_cursor_create(_kvs, &opspec, _pfx.data(), _pfx.len(), &_cursor);
+            _hseKvsCursorCreateLatency.end(lt);
+            if (!ret)
+                break;
+
+            if (ret != EAGAIN)
+                throw KVDBException("non EAGAIN failure from hse_kvs_cursor_create()");
+
+            this_thread::sleep_for(chrono::milliseconds(sleepTime));
+            retries++;
+        }
+    }
+
+    return Status(ret);
+}
+
+Status KvsCursor::seek(const KVDBData& key, const KVDBData* kmax, KVDBData* pos) {
+    // struct hse_kvdb_opspec seek_os = {0};
+    int ret = 0;
+    int retries = 0;
+    unsigned long long sleepTime = 0;
+    const void* fkey;
+    size_t flen;
+
+    // [MU_REVISIT] Re-enable once KVDB changes are in, to seek up to a max key.
+    // Also set kmax appropriately. Right now, it's set to persistBoundary.
+    // if (kmax != nullptr) {
+    //     filter.kcf_maxkey = kmax->data();
+    //     filter.kcf_maxklen = kmax->len();
+    //     seek_os.kop_filter = &filter;
+    // }
+
+
+    while (true) {
+        if (retries < FIB_LEN) {
+            sleepTime = RETRY_FIB_SEQ_EAGAIN[retries % FIB_LEN];
+        } else {
+            sleepTime = RETRY_FIB_SEQ_EAGAIN[FIB_LEN - 1];
+            if (retries % 20 == 0)
+                warning() << "HSE: kvs_cursor_seek returning EAGAIN after " << retries
+                          << " retries";
+        }
+
+        //        ret = ::hse_kvs_cursor_seek(_cursor, (kmax == nullptr) ? 0 : &seek_os, key.data(),
+        //        key.len(), &fkey, &flen);
+        ret = ::hse_kvs_cursor_seek(_cursor, 0, key.data(), key.len(), &fkey, &flen);
+        if (ret != EAGAIN) {
+            break;
+        }
+
+        this_thread::sleep_for(chrono::milliseconds(sleepTime));
+
+        retries++;
+    }
+
+    if (!ret) {
+        _read_kvs();
+        if (pos)
+            *pos = KVDBData((const uint8_t*)fkey, (int)flen);
+    }
+
+    return Status(ret);
+}
+
+Status KvsCursor::read(KVDBData& key, KVDBData& val, bool& eof) {
+    if (_eof) {
+        eof = true;
+        return 0;
+    }
+
+    if (_kvs_stale) {
+        int ret = _read_kvs();
+        // We have guaranteed that the only possible error value returned is ECANCELED, which
+        // we will return eagerly even if the "next" value might be from the connector itself.
+        if (ret)
+            return ret;
+    }
+
+    if (_kvs_is_next()) {
+        eof = _is_eof();
+        if (!eof) {
+            key = KVDBData((const uint8_t*)_kvs_key, (int)_kvs_klen);
+            val = KVDBData((const uint8_t*)_kvs_val, (int)_kvs_vlen);
+            val.setFraming(_total_len, _kvs_total_len_comp, _kvs_num_chunks, _offset);
+            _kvs_stale = true;
+        }
+    } else {
+        eof = true;
+    }
+
+    return 0;
+}
+
+int KvsCursor::_read_kvs() {
+    int ret = 0;
+    int retries = 0;
+    unsigned long long sleepTime = 0;
+    _kvs_stale = false;
+
+    while (true) {
+        int ret;
+
+        if (retries < FIB_LEN) {
+            sleepTime = RETRY_FIB_SEQ_EAGAIN[retries % FIB_LEN];
+        } else {
+            sleepTime = RETRY_FIB_SEQ_EAGAIN[FIB_LEN - 1];
+            if (retries % 20 == 0)
+                warning() << "HSE: kvs_cursor_read returning EAGAIN after " << retries
+                          << " retries";
+        }
+
+        _hseKvsCursorReadCounter.add();
+        auto lt = _hseKvsCursorReadLatency.begin();
+        ret = ::hse_kvs_cursor_read(
+            _cursor, 0, &_kvs_key, &_kvs_klen, &_kvs_val, &_kvs_vlen, &_kvs_eof);
+        _hseKvsCursorReadLatency.end(lt);
+        if (ret != EAGAIN) {
+            break;
+        }
+
+        this_thread::sleep_for(chrono::milliseconds(sleepTime));
+
+        retries++;
+    }
+    if (!ret && !_kvs_eof) {
+        unsigned int off_comp;
+
+        computeFraming((const uint8_t*)_kvs_val,
+                       _kvs_vlen,
+                       this->_compparms,
+                       &_total_len,
+                       &_kvs_total_len_comp,
+                       &_kvs_num_chunks,
+                       &_offset,
+                       &off_comp);
+
+        // If the value is across several chunks, it is not possible to
+        // decompress the first chunk only. Because the compression of the
+        // whole value is done before the chunking.
+        if (this->_compparms.compdoit && !_kvs_num_chunks) {
+            void* kvs_val;
+            size_t kvs_len;
+            hse::Status hseSt;
+
+            hseSt = decompressdata1(
+                this->_compparms, _kvs_val, _kvs_vlen, off_comp, &kvs_val, &kvs_len);
+            if (hseSt.ok()) {
+                _kvs_val = kvs_val;
+                _kvs_vlen = kvs_len;
+                // Free the old _kvs_val buffer and attach the new one to _uncompressed_val.
+                _uncompressed_val.reset(static_cast<unsigned char*>(kvs_val));
+            } else {
+                ret = EILSEQ;
+            }
+        }
+    }
+
+    return ret;
+}
+
+Status KvsCursor::save() {
+    return 0;
+}
+
+Status KvsCursor::restore() {
+    return 0;
+}
+}

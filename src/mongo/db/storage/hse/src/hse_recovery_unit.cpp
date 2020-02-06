@@ -1,0 +1,406 @@
+/**
+ * TBD: HSE License
+ */
+#define MONGO_LOG_DEFAULT_COMPONENT ::mongo::logger::LogComponent::kStorage
+
+#include "hse_recovery_unit.h"
+#include "mongo/platform/basic.h"
+#include "mongo/util/log.h"
+
+#include "hse_util.h"
+
+using hse::KVDB;
+using hse::ClientTxn;
+using hse::KVDBData;
+using hse::CompParms;
+
+using namespace std;
+
+using hse::VALUE_META_SIZE;
+
+namespace mongo {
+
+namespace {
+// SnapshotIds need to be globally unique, as they are used in a WorkingSetMember to
+// determine if documents changed.
+AtomicUInt64 nextSnapshotId{1};
+thread_local unique_ptr<uint8_t[]> tlsReadBuf{new uint8_t[HSE_KVS_VLEN_MAX]};
+}
+
+/* Start  KVDBRecoveryUnit */
+KVDBRecoveryUnit::KVDBRecoveryUnit(KVDB& kvdb,
+                                   KVDBCounterManager& counterManager,
+                                   KVDBDurabilityManager& durabilityManager)
+    : _kvdb(kvdb),
+      _snapId(nextSnapshotId.fetchAndAdd(1)),
+      _txn(nullptr),
+      _counterManager(counterManager),
+      _durabilityManager(durabilityManager) {}
+
+KVDBRecoveryUnit::~KVDBRecoveryUnit() {
+    if (_txn) {
+        hse::Status st = _txn->abort();
+        invariantHse(st.ok());
+        delete _txn;
+        _txn = nullptr;
+    }
+}
+
+void KVDBRecoveryUnit::beginUnitOfWork(OperationContext* opCtx) {
+    // validate the recovery unit in the context
+    invariantHse(opCtx->recoveryUnit() == this);
+}
+
+void KVDBRecoveryUnit::commitUnitOfWork() {
+    Status mst = Status::OK();
+    hse::Status kst = 0;
+
+    if (_txn) {
+        kst = _txn->commit();
+        invariantHseSt(kst);
+        delete _txn;
+        _txn = nullptr;
+
+        _snapId = nextSnapshotId.fetchAndAdd(1);
+    }
+
+    // Sync the counters
+    for (auto pair : _deltaCounters) {
+        auto& counter = pair.second;
+        counter._value->fetch_add(counter._delta, std::memory_order::memory_order_relaxed);
+        _counterManager.incrementNumUpdates();
+    }
+
+    // commit all changes
+    try {
+        for (const auto& change : _changes) {
+            change->commit();
+        }
+        _changes.clear();
+    } catch (...) {
+        // [MU_REVISIT] the line below basically means "crash", which seems reckless ...
+        invariantHse(false);  // abort
+    }
+
+    // deactivate
+    _deltaCounters.clear();
+}
+
+void KVDBRecoveryUnit::abortUnitOfWork() {
+    if (_txn) {
+        hse::Status st = _txn->abort();
+        invariantHse(st.ok());
+        delete _txn;
+        _txn = nullptr;
+
+        _snapId = nextSnapshotId.fetchAndAdd(1);
+    }
+
+    // rollback all changes
+    try {
+        for (Changes::const_reverse_iterator it = _changes.rbegin(); it != _changes.rend(); it++) {
+            Change* change = *it;
+            change->rollback();
+        }
+        _changes.clear();
+    } catch (...) {
+        invariantHse(false);  // abort
+    }
+
+    // deactivate
+    _deltaCounters.clear();
+}
+
+bool KVDBRecoveryUnit::waitUntilDurable() {
+    _durabilityManager.waitUntilDurable();
+    return true;
+}
+
+void KVDBRecoveryUnit::abandonSnapshot() {
+    // abort the txn
+    if (_txn) {
+        hse::Status st = _txn->abort();
+        invariantHseSt(st);
+        delete _txn;
+        _txn = nullptr;
+
+        _snapId = nextSnapshotId.fetchAndAdd(1);
+    }
+
+    _deltaCounters.clear();
+}
+
+SnapshotId KVDBRecoveryUnit::getSnapshotId() const {
+    return SnapshotId(_snapId);
+}
+
+void KVDBRecoveryUnit::registerChange(Change* change) {
+    _changes.push_back(change);
+}
+
+void* KVDBRecoveryUnit::writingPtr(void* data, size_t len) {
+    invariantHse(!"don't call writingPtr");
+}
+
+void KVDBRecoveryUnit::setRollbackWritesDisabled() {
+    // TODO: HSE
+    // Consider implementing this
+}
+
+hse::Status KVDBRecoveryUnit::put(const KVSHandle& h, const KVDBData& key, const KVDBData& val) {
+    _ensureTxn();
+    hse::Status st = _kvdb.kvs_put(h, _txn, key, val);
+    int errn = st.getErrno();
+    if (ECANCELED == errn) {
+        throw WriteConflictException();
+    }
+    return st;
+}
+
+hse::Status KVDBRecoveryUnit::probeVlen(
+    const KVSHandle& h, const KVDBData& key, KVDBData& val, unsigned long len, bool& found) {
+    _ensureTxn();
+    invariantHse(tlsReadBuf);
+    invariantHse(len <= 1 + VALUE_META_SIZE + MAX_BYTES_LEB128);
+    val.setReadBuf(tlsReadBuf.get(), len);
+
+    // On a compressed record store, "val" contains len bytes not having
+    // been uncompressed yet. This read is used only to adjust length stats,
+    // during a DeleteRecord/UpdateRecord. It reads up to 10 (len) bytes but
+    // sets the full value length in _len.
+    // This function does NOT update the value framing (updateFraming()).
+    return _kvdb.kvs_probe_len(h, _txn, key, val, found);
+}
+
+hse::Status KVDBRecoveryUnit::_get(
+    const KVSHandle& h, const KVDBData& key, KVDBData& val, bool& found, bool use_txn) {
+    if (use_txn)
+        _ensureTxn();
+
+    // Allocate a new buffer if none exists, or if the owned buffer
+    // isn't an incomplete chunked buffer (with room to copy more).
+    if (val.getAllocLen() <= HSE_KVS_VLEN_MAX || val.getAllocLen() == val.len()) {
+        invariantHse(tlsReadBuf);
+        val.setReadBuf(tlsReadBuf.get(), HSE_KVS_VLEN_MAX);
+    }
+
+    return _kvdb.kvs_get(h, use_txn ? _txn : nullptr, key, val, found);
+}
+
+// On a compressed record store, "val" contains data not having
+// been de-compressed yet.
+// This function does NOT update the value framing (updateFraming()).
+hse::Status KVDBRecoveryUnit::getMCo(
+    const KVSHandle& h, const KVDBData& key, KVDBData& val, bool& found, bool use_txn) {
+    return _get(h, key, val, found, use_txn);
+}
+
+hse::Status KVDBRecoveryUnit::prefixGet(const KVSHandle& h,
+                                        const KVDBData& prefix,
+                                        KVDBData& key,
+                                        KVDBData& val,
+                                        hse_kvs_pfx_probe_cnt& found) {
+    _ensureTxn();
+
+    return _kvdb.kvs_prefix_probe(h, _txn, prefix, key, val, found);
+}
+
+
+hse::Status KVDBRecoveryUnit::probeKey(const KVSHandle& h, const KVDBData& key, bool& found) {
+    _ensureTxn();
+
+    return _kvdb.kvs_probe_key(h, _txn, key, found);
+}
+
+hse::Status KVDBRecoveryUnit::del(const KVSHandle& h, const KVDBData& key) {
+    _ensureTxn();
+    hse::Status st = _kvdb.kvs_delete(h, _txn, key);
+    int errn = st.getErrno();
+    if (ECANCELED == errn) {
+        throw WriteConflictException();
+    }
+    return st;
+}
+
+hse::Status KVDBRecoveryUnit::prefixDelete(const KVSHandle& h, const KVDBData& prefix) {
+    hse::Status st;
+
+    _ensureTxn();
+    st = _kvdb.kvs_prefix_delete(h, _txn, prefix);
+    if (st.getErrno() == ECANCELED)
+        throw WriteConflictException();
+
+    return st;
+}
+
+hse::Status KVDBRecoveryUnit::iterDelete(const KVSHandle& h, const KVDBData& prefix) {
+    _ensureTxn();
+    hse::Status st = _kvdb.kvs_iter_delete(h, _txn, prefix);
+    int errn = st.getErrno();
+    if (ECANCELED == errn) {
+        throw WriteConflictException();
+    }
+    return st;
+}
+
+hse::Status KVDBRecoveryUnit::nonTxnPut(const KVSHandle& h,
+                                        const KVDBData& key,
+                                        const KVDBData& val) {
+    // mongo bulk inserts use non transactional puts.
+    hse::Status st = _kvdb.kvs_put(h, 0, key, val);
+    return st;
+}
+
+hse::Status KVDBRecoveryUnit::nonTxnDel(const KVSHandle& h, const KVDBData& key) {
+    hse::Status st = _kvdb.kvs_delete(h, 0, key);
+    return st;
+}
+
+hse::Status KVDBRecoveryUnit::nonTxnPfxDel(const KVSHandle& h, const KVDBData& prefix) {
+    hse::Status st = _kvdb.kvs_prefix_delete(h, 0, prefix);
+    return st;
+}
+
+hse::Status KVDBRecoveryUnit::nonTxnIterDelete(const KVSHandle& h, const KVDBData& prefix) {
+    hse::Status st = _kvdb.kvs_iter_delete(h, 0, prefix);
+    return st;
+}
+
+hse::Status KVDBRecoveryUnit::beginScan(const KVSHandle& h,
+                                        KVDBData pfx,
+                                        bool forward,
+                                        KvsCursor** cursor,
+                                        const struct CompParms& compparm) {
+    KvsCursor* lcursor = 0;
+
+    // [MU_REVISIT] - I'm not sure this code handles reverse cursors correctly
+    _ensureTxn();
+
+    try {
+        lcursor = create_cursor(h, pfx, forward, compparm, _txn);
+    } catch (...) {
+        return hse::Status(ENOMEM);
+    }
+    invariantHse(lcursor != 0);
+    *cursor = lcursor;
+
+    return 0;
+}
+
+hse::Status KVDBRecoveryUnit::cursorUpdate(KvsCursor* cursor) {
+    _ensureTxn();
+    auto st = cursor->update(_txn);
+    invariantHse(st.ok());
+
+    return st;
+}
+
+hse::Status KVDBRecoveryUnit::cursorSeek(KvsCursor* cursor, const KVDBData& key, KVDBData* pos) {
+    return cursor->seek(key, nullptr, pos);
+}
+
+hse::Status KVDBRecoveryUnit::cursorRead(KvsCursor* cursor,
+                                         KVDBData& key,
+                                         KVDBData& val,
+                                         bool& eof) {
+    return cursor->read(key, val, eof);
+}
+
+hse::Status KVDBRecoveryUnit::endScan(KvsCursor* cursor) {
+    delete cursor;
+
+    return 0;
+}
+
+hse::Status KVDBRecoveryUnit::beginOplogScan(const KVSHandle& h,
+                                             KVDBData pfx,
+                                             bool forward,
+                                             KvsCursor** cursor,
+                                             const struct CompParms& compparm,
+                                             bool readAhead) {
+    KvsCursor* lcursor = 0;
+
+    // [MU_REVISIT] - I'm not sure this code handles reverse cursors correctly
+
+    try {
+        lcursor = create_cursor(h, pfx, forward, compparm, _txn, readAhead);
+    } catch (...) {
+        return hse::Status(ENOMEM);
+    }
+    invariantHse(lcursor != 0);
+    *cursor = lcursor;
+
+    return 0;
+}
+
+hse::Status KVDBRecoveryUnit::oplogCursorUpdate(KvsCursor* cursor) {
+    auto st = cursor->update(nullptr);
+    invariantHse(st.ok());
+
+    return st;
+}
+
+hse::Status KVDBRecoveryUnit::oplogCursorSeek(KvsCursor* cursor,
+                                              const KVDBData& key,
+                                              const KVDBData* kmax,
+                                              KVDBData* pos) {
+    return cursor->seek(key, kmax, pos);
+}
+
+void KVDBRecoveryUnit::incrementCounter(const string counterKey,
+                                        std::atomic<long long>* counter,
+                                        long long delta) {
+    if (delta == 0) {
+        return;
+    }
+
+    auto pair = _deltaCounters.find(counterKey);
+    if (pair == _deltaCounters.end()) {
+        _deltaCounters[counterKey] = KVDBCounter(counter, delta);
+    } else {
+        pair->second._delta += delta;
+    }
+    ++_updates;
+}
+
+void KVDBRecoveryUnit::resetCounter(const string counterKey, std::atomic<long long>* counter) {
+    counter->store(0);
+}
+
+long long KVDBRecoveryUnit::getDeltaCounter(const string counterKey) {
+    auto counter = _deltaCounters.find(counterKey);
+    if (counter == _deltaCounters.end()) {
+        return 0;
+    } else {
+        return counter->second._delta;
+    }
+}
+
+// struct kvdb_txn* KVDBRecoveryUnit::getKvdbTxn() {
+//     return _txn;
+// }
+
+KVDBRecoveryUnit* KVDBRecoveryUnit::newKVDBRecoveryUnit() {
+    return new KVDBRecoveryUnit(_kvdb, _counterManager, _durabilityManager);
+}
+
+// private
+void KVDBRecoveryUnit::_ensureTxn() {
+    if (!_txn) {
+        hse::Status st = 0;
+
+        try {
+            _txn = new ClientTxn(_kvdb.kvdb_handle());
+        } catch (...) {
+            st = 1;
+        }
+        invariantHseSt(st);
+
+        // start a transaction.
+        st = _txn->begin();
+        invariantHseSt(st);
+    }
+}
+
+/* End  KVDBRecoveryUnit */
+}
