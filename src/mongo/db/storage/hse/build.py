@@ -15,9 +15,9 @@ def has_option(env, name):
     #
     return True if optval == () else bool(optval)
 
-def getMseGitSha(conf, env):
+def getHseGitSha(conf, env):
     #
-    # Get the version string from the mse-devel RPM.
+    # Get the version string from the hse-devel RPM.
     #
     # rpm -qa is always successful(ret code 0)
     version = subprocess.check_output(['rpm', '-qa', 'hse-devel'])
@@ -29,7 +29,7 @@ def getMseGitSha(conf, env):
 
     return retval
 
-def getMseConnectorGitSha(conf, env):
+def getHseConnectorGitSha(conf, env):
     s_pwd = os.getcwd()
     print s_pwd
     os.chdir(K_CON_SRC)
@@ -37,17 +37,17 @@ def getMseConnectorGitSha(conf, env):
     os.chdir(s_pwd)
     return sha.strip().decode('utf-8')
 
-def getMseVersion(conf, env):
-    mse_ver = 'DEVBRANCH'
+def getHseVersion(conf, env):
+    hse_ver = 'DEVBRANCH'
     try:
         rpm_info = subprocess.check_output(['rpm', '-qi', 'hse-devel'])
-        mse_ver = [y.split(':')[-1] for y in rpm_info.split('\n') if y.startswith('Version')][0].strip(' ')
+        hse_ver = [y.split(':')[-1] for y in rpm_info.split('\n') if y.startswith('Version')][0].strip(' ')
     except:
         pass
 
-    return mse_ver
+    return hse_ver
 
-def getMseConnectorVersion(conf, env):
+def getHseConnectorVersion(conf, env):
     line = 'UNKNOWN'
     with open(K_CON_VERSION_FILE, 'r') as f:
         line = f.readline()
@@ -59,15 +59,15 @@ def gensrc(conf, env):
 '''#pragma once
 
 namespace hse {{
-static const char* K_HSE_VERSION="{mse_version}";
+static const char* K_HSE_VERSION="{hse_version}";
 static const char* K_HSE_CONNECTOR_VERSION="{connector_version}";
-static const char* K_HSE_GIT_SHA="{mse_git_sha}";
-static const char* K_HSE_CONNECTOR_GIT_SHA="{mse_connector_git_sha}";
+static const char* K_HSE_GIT_SHA="{hse_git_sha}";
+static const char* K_HSE_CONNECTOR_GIT_SHA="{hse_connector_git_sha}";
 }}'''.format(
-            mse_version=getMseVersion(conf, env),
-            connector_version=getMseConnectorVersion(conf, env),
-            mse_git_sha=getMseGitSha(conf, env),
-            mse_connector_git_sha=getMseConnectorGitSha(conf, env)
+            hse_version=getHseVersion(conf, env),
+            connector_version=getHseConnectorVersion(conf, env),
+            hse_git_sha=getHseGitSha(conf, env),
+            hse_connector_git_sha=getHseConnectorGitSha(conf, env)
         );
         f.write(contents)
 

@@ -236,7 +236,7 @@ env.Library(
 common = env.Object('src/hse_ut_common.cpp')
 
 env.CppUnitTest(
-    target='storage_mse_kvdb_test',
+    target='storage_hse_test',
     source=['src/hse_test.cpp'] + common,
     LIBDEPS=[
         'storage_hse_base',
@@ -246,7 +246,7 @@ env.CppUnitTest(
 )
 
 env.CppUnitTest(
-    target='storage_mse_kvdb_engine_test',
+    target='storage_hse_engine_test',
     source=['src/hse_engine_test.cpp'] + common,
     LIBDEPS=[
         'storage_hse_base',
@@ -257,7 +257,7 @@ env.CppUnitTest(
 )
 
 env.CppUnitTest(
-    target='storage_mse_kvdb_index_test',
+    target='storage_hse_index_test',
     source=['src/hse_index_test.cpp'] + common,
     LIBDEPS=[
         'storage_hse_base',
@@ -267,7 +267,7 @@ env.CppUnitTest(
 )
 
 env.CppUnitTest(
-    target='storage_mse_kvdb_record_store_test',
+    target='storage_hse_record_store_test',
     source=['src/hse_record_store_test.cpp'] + common,
     LIBDEPS=[
         'storage_hse_mock',
@@ -276,7 +276,7 @@ env.CppUnitTest(
 )
 
 env.Command(
-    'mse_kvdb_test_harness.py',
+    'hse_test_harness.py',
     'src/hse_test_harness.py',
     "cp $SOURCES $TARGET"
 )
@@ -285,12 +285,12 @@ env.Command(
 # Provides shorthand target for the command line to build the HSE unit tests.
 #
 env.Alias(
-    'mse_unit_tests',
+    'hse_unit_tests',
     [
-        'storage_mse_kvdb_test',
-        'storage_mse_kvdb_engine_test',
-        'storage_mse_kvdb_index_test',
-        'storage_mse_kvdb_record_store_test',
-        'mse_kvdb_test_harness.py'
+        'storage_hse_test',
+        'storage_hse_engine_test',
+        'storage_hse_index_test',
+        'storage_hse_record_store_test',
+        'hse_test_harness.py'
     ]
 )

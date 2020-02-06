@@ -122,10 +122,10 @@ if __name__ == '__main__':
     pwd = os.getcwd()
 
     tests = [
-        'storage_mse_kvdb_engine_test',
-        'storage_mse_kvdb_index_test',
-        'storage_mse_kvdb_record_store_test',
-        'storage_mse_kvdb_test'
+        'storage_hse_engine_test',
+        'storage_hse_index_test',
+        'storage_hse_record_store_test',
+        'storage_hse_test'
     ]
 
     check_for_tests(pwd, tests)
