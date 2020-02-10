@@ -284,7 +284,8 @@ Status KVDBImpl::kvs_iter_delete(KVSHandle handle, ClientTxn* txn, const KVDBDat
 
     _hseKvsCursorCreateCounter.add();
     auto lt = _hseKvsCursorCreateLatency.begin();
-    int ret = ::hse_kvs_cursor_create(kvs, &opspec, prefix.data(), prefix.len(), &lCursor);
+    unsigned long ret =
+        ::hse_kvs_cursor_create(kvs, &opspec, prefix.data(), prefix.len(), &lCursor);
     _hseKvsCursorCreateLatency.end(lt);
     if (ret) {
         return Status{ret};
@@ -321,7 +322,7 @@ Status KVDBImpl::kvs_iter_delete(KVSHandle handle, ClientTxn* txn, const KVDBDat
 }
 
 Status KVDBImpl::kvdb_sync() {
-    int ret = 0;
+    unsigned long ret = 0;
 
     if (_handle) {
         _hseKvdbSyncCounter.add();
@@ -337,28 +338,28 @@ Status KVDBImpl::kvdb_cparams_parse(int argc,
                                     char** argv,
                                     struct hse_params* params,
                                     int* next_arg) {
-    return Status{::hse_params_parse(argc, argv, next_arg, 0, params, HSE_KVDB_CP)};
+    return Status{(unsigned long)::hse_params_parse(argc, argv, next_arg, 0, params, HSE_KVDB_CP)};
 }
 
 Status KVDBImpl::kvdb_rparams_parse(int argc,
                                     char** argv,
                                     struct hse_params* params,
                                     int* next_arg) {
-    return Status{::hse_params_parse(argc, argv, next_arg, 0, params, HSE_KVDB_RP)};
+    return Status{(unsigned long)::hse_params_parse(argc, argv, next_arg, 0, params, HSE_KVDB_RP)};
 }
 
 Status KVDBImpl::kvs_cparams_parse(int argc,
                                    char** argv,
                                    struct hse_params* params,
                                    int* next_arg) {
-    return Status{::hse_params_parse(argc, argv, next_arg, 0, params, HSE_KVS_CP)};
+    return Status{(unsigned long)::hse_params_parse(argc, argv, next_arg, 0, params, HSE_KVS_CP)};
 }
 
 Status KVDBImpl::kvs_rparams_parse(int argc,
                                    char** argv,
                                    struct hse_params* params,
                                    int* next_arg) {
-    return Status{::hse_params_parse(argc, argv, next_arg, 0, params, HSE_KVS_RP)};
+    return Status{(unsigned long)::hse_params_parse(argc, argv, next_arg, 0, params, HSE_KVS_RP)};
 }
 
 Status KVDBImpl::kvdb_get_c1_info(struct ikvdb_c1_info* info) {
