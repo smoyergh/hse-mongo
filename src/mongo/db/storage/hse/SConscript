@@ -67,7 +67,7 @@ static const char* K_HSE_CONNECTOR_GIT_SHA="{hse_connector_git_sha}";
         f.write(contents)
 
 def configure(conf, env):
-    print("Configuring NFE MongoDB storage engine module")
+    print("Configuring Heterogeneous-memory Storage Engine")
     gensrc(conf, env)
 
 configure(None, env)
@@ -156,7 +156,6 @@ if has_hse_tree_path or (has_hse_source_path and has_hse_build_path):
             ]
         )
 
-    LIBARRAY.append('components/platform/source/libhse_platform.a')
 
     if build_type == 'debug':
         LIBARRAY.append(
@@ -205,7 +204,6 @@ else:
             ]
         )
 
-    HSE_LIBARRAY.append('hse_platform')
 
     if build_type == 'debug':
         HSE_LIBARRAY.append('hse_platform_kernel_ut')
