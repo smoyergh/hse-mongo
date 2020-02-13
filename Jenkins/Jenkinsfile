@@ -208,10 +208,10 @@ do
             mkdir -p ${SCONS_CACHE}
 
             scons -j$(nproc) \
-                CC=/opt/rh/devtoolset-6/root/bin/gcc /
-                CXX=/opt/rh/devtoolset-6/root/bin/g++ /
-                OBJCOPY=/opt/rh/devtoolset-6/root/bin/objcopy /
-                dbg=off --opt=on /
+                CC=/opt/rh/devtoolset-6/root/bin/gcc \
+                CXX=/opt/rh/devtoolset-6/root/bin/g++ \
+                OBJCOPY=/opt/rh/devtoolset-6/root/bin/objcopy \
+                --dbg=off --opt=on \
                 --disable-warnings-as-errors all hse_unit_tests
             ;;
         test)
@@ -622,8 +622,9 @@ pipeline {
                 script {
                     try {
                         sh """
-                            cp ${PRIOR_TEST_RESULTS_DIR}/* .
-                            ls -ltr *.db
+                            echo "Come back to this after few runs"
+                            # cp ${PRIOR_TEST_RESULTS_DIR}/* .
+                            # ls -ltr *.db
                         """
                     }
                     catch (error) {
