@@ -208,9 +208,6 @@ do
             mkdir -p ${SCONS_CACHE}
 
             scons -j$(nproc) \
-                CC=/opt/rh/devtoolset-6/root/bin/gcc \
-                CXX=/opt/rh/devtoolset-6/root/bin/g++ \
-                OBJCOPY=/opt/rh/devtoolset-6/root/bin/objcopy \
                 --dbg=off --opt=on \
                 --disable-warnings-as-errors all hse_unit_tests
             ;;
@@ -622,9 +619,7 @@ pipeline {
                 script {
                     try {
                         sh """
-                            echo "Come back to this after few runs"
-                            # cp ${PRIOR_TEST_RESULTS_DIR}/* .
-                            # ls -ltr *.db
+                            echo "not needed now"
                         """
                     }
                     catch (error) {
@@ -646,7 +641,7 @@ pipeline {
                     }
                 }
             }
-        }
+        }/*
         stage("sbusw-mongo-mse-kvdb - uninstall nightfury devel package") {
             steps {
                 script {
@@ -654,7 +649,7 @@ pipeline {
                     sh "cat $SBUDEVOPS_STATUS_FILE"
                 }
             }
-        }
+        }*/
         stage("sbusw-mongo-mse-kvdb - Restore VM cleanup and save build data") {
             steps {
                 script {
@@ -693,9 +688,9 @@ pipeline {
                 echo "Replacing prior successful test results with current test results"
                 try {
                 sh """
-                    rm -rf ${PRIOR_TEST_RESULTS_DIR}/*
+                    #rm -rf ${PRIOR_TEST_RESULTS_DIR}/*
                     mkdir -p ${PRIOR_TEST_RESULTS_DIR}
-                    cp -p ${BUILD_NUMBER}.db ${PRIOR_TEST_RESULTS_DIR}
+                    #cp -p ${BUILD_NUMBER}.db ${PRIOR_TEST_RESULTS_DIR}
                 """
                 }
                 catch (error) {
@@ -719,7 +714,7 @@ pipeline {
                         + " ${env.BUILD_URL}consoleFull",
                         from: 'noreply-bojenkins@micron.com',
                         to: "${SBUDEVOPS_AUTHOR_EMAIL}"
-                )
+                )/*
                 build(
                     job: 'mongo-mse-multi-distro',
                     parameters: [
@@ -734,7 +729,7 @@ pipeline {
                     ],
                     propagate: false,
                     wait: false
-                )
+                )*/
             }
         }
         failure {
@@ -756,3 +751,4 @@ pipeline {
         }
     } //post
 } //pipeline
+
