@@ -136,7 +136,7 @@ const std::string enableMetricsOptStr = modName + "EnableMetrics";
 }
 
 Status KVDBGlobalOptions::add(moe::OptionSection* options) {
-    moe::OptionSection kvdbOptions("Native Flash Engine options");
+    moe::OptionSection kvdbOptions("Heterogeneous-memory Storage Engine options");
 
     kvdbOptions
         .addOptionChaining(
