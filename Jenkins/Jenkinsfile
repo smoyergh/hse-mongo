@@ -409,7 +409,7 @@ pipeline {
         )
         choice(
             name: 'MONGOVERSION',
-            choices: '3.4.7\n3.4.17.1\n3.4.2',
+            choices: '3.4.17.1\n3.4.7\n3.4.2',
             description: '',
         )
         string(
