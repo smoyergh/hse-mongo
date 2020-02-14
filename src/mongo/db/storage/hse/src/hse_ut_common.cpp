@@ -52,16 +52,21 @@ KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
         hse_params_set(_kvdbCfg, "kvdb.cparams.dur_capacity", std::to_string(16).c_str());
     }
 
+    int err{0};
     while (true) {
         st = _db.kvdb_make(_mpoolName.c_str(), _kvdbName.c_str(), _kvdbCfg);
 
-        int err = st.getErrno();
-        if (EEXIST != err && EAGAIN != err) {
+        err = st.getErrno();
+        if (EAGAIN != err) {
             break;
         }
     }
 
-    ASSERT_EQUALS(0, st.getErrno());
+    if (EEXIST == err) {
+        err = 0;
+    }
+
+    ASSERT_EQUALS(0, err);
 
     hse_params_create(&_kvdbRnCfg);
     st = _db.kvdb_open(_mpoolName.c_str(), _kvdbName.c_str(), _kvdbRnCfg, _snapId);

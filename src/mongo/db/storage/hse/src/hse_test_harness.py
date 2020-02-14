@@ -51,7 +51,7 @@ import sys
 
 from subprocess import Popen, PIPE
 
-_NFBIN = '/usr/bin/nf'
+_MPOOLBIN = '/usr/bin/mpool'
 _MPOOL_NAME = 'mp1'
 _DEVICE_LIST = []
 
@@ -77,9 +77,9 @@ def run_test(pwd, test):
     devlist_str = ' '.join(_DEVICE_LIST)
 
     # Reset mpool
-    cmdargs = [ '%s mpool umount %s' % (_NFBIN, _MPOOL_NAME), '>>', '%s/%s.out' % (pwd, test), '2>&1']
+    cmdargs = [ '%s umount %s' % (_MPOOLBIN, _MPOOL_NAME), '>>', '%s/%s.out' % (pwd, test), '2>&1']
     _run_cmd(cmdargs, logfile)
-    cmdargs = [ '%s mpool destroy %s' % (_NFBIN, _MPOOL_NAME), '>>', '%s/%s.out' % (pwd, test), '2>&1']
+    cmdargs = [ '%s destroy %s' % (_MPOOLBIN, _MPOOL_NAME), '>>', '%s/%s.out' % (pwd, test), '2>&1']
     _run_cmd(cmdargs, logfile)
 
     harness_vg = 'harness_vg'
@@ -97,16 +97,12 @@ def run_test(pwd, test):
     _run_cmd(cmdargs, logfile)
 
     exit_code = 0
-    cmdargs = [ '%s device prepare -f /dev/%s/%s' % (_NFBIN, harness_vg, harness_lv), '>>', '%s/%s.out' % (pwd, test), '2>&1']
-    exit_code = _run_cmd(cmdargs, logfile)
-    if exit_code != 0:
-        return exit_code
 
-    cmdargs = [ '%s mpool create %s /dev/%s/%s' % (_NFBIN, _MPOOL_NAME, harness_vg, harness_lv), '>>', '%s/%s.out' % (pwd, test), '2>&1']
+    cmdargs = [ '%s  create %s /dev/%s/%s' % (_MPOOLBIN, _MPOOL_NAME, harness_vg, harness_lv), '>>', '%s/%s.out' % (pwd, test), '2>&1']
     exit_code = _run_cmd(cmdargs, logfile)
     if exit_code != 0:
         return exit_code
-    cmdargs = [ '%s mpool mount %s' % (_NFBIN, _MPOOL_NAME), '>>', '%s/%s.out' % (pwd, test), '2>&1']
+    cmdargs = [ '%s mount %s' % (_MPOOLBIN, _MPOOL_NAME), '>>', '%s/%s.out' % (pwd, test), '2>&1']
     exit_code = _run_cmd(cmdargs, logfile)
     if exit_code != 0:
         return exit_code
@@ -115,8 +111,6 @@ def run_test(pwd, test):
     if exit_code != 0:
         return exit_code
 
-    # Run test
-    cmdargs = ['%s/%s' % (pwd, test), '>', '%s/%s.out' % (pwd, test), '2>&1']
     logfile.close()
     return exit_code
     
@@ -142,7 +136,7 @@ def parse_output(pwd, test):
 
 
 if __name__ == '__main__':
-    usage = "Usage: hse_test_harness build_number mpool_name device1 device2 ..."
+    usage = "Usage: hse_test_harness build_number mpool_bin_path mpool_name device1 device2 ..."
 
     if len(sys.argv) < 4:
         print("Error:  incorrect number of arguments!", file=sys.stderr)
@@ -150,7 +144,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     build_number = sys.argv[1]
-    _NFBIN = sys.argv[2]
+    _MPOOLBIN = sys.argv[2]
     _MPOOL_NAME = sys.argv[3]
     _DEVICE_LIST = sys.argv[4:]
 

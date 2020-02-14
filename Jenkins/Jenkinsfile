@@ -237,7 +237,7 @@ do
             
             banner "Running unit tests on ${TEST_VM}"
             ssh ${SSH_OPTS} ${RUN_USER}@${TEST_VM} \
-                "cd ${REMOTE_DEST}/${BUILD_TAG}; ./hse_test_harness.py ${BUILD_NUMBER} /usr/bin/hse mp1 /dev/vdb"
+                "cd ${REMOTE_DEST}/${BUILD_TAG}; ./hse_test_harness.py ${BUILD_NUMBER} /usr/bin/mpool mp1 /dev/vdb"
             
             banner "Fetching unit test results from ${TEST_VM}"
             scp ${SSH_OPTS} ${RUN_USER}@${TEST_VM}:${REMOTE_DEST}/${BUILD_TAG}/${BUILD_NUMBER}.db .
