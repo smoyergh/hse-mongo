@@ -174,6 +174,8 @@ case ${BUILD_TYPE} in
         ;;
 esac
 
+# install mpool-kmod, mpool and hse packages
+/usr/local/bin/install_hse --target-branch ${NIGHT_FURY_BRANCH} --rpm-group all --make-type ${NF_BUILD_TYPE} --os_type ${OS_TYPE} --install-on-target `hostname`
 #
 # Unlike nightfury, we only currently do one build type; however, to allow for
 # doing multiple types, we'll still use a loop.
@@ -223,16 +225,8 @@ do
             TEST_VM=$(/usr/local/bin/kvm --kvmhost ${KVM_HOST} --createvm 1 --memory 32G)
             echo ${TEST_VM} > TEST_VM
             
-            banner "Installing nf RPM on ${TEST_VM}..."
-            /usr/local/bin/nfrpm                       \
-                -f ${JENKINS_CONF}                     \
-                --target-branch ${NIGHT_FURY_BRANCH}   \
-                --build-project nightfury              \
-                --make-type ${NF_BUILD_TYPE}           \
-                --rpm ${RUNTIME_RPM_NAME}              \
-                --build-sha $(cat tested.RECORDED_SHA) \
-                --os_type ${OS_TYPE}                   \
-                --install-on-target ${TEST_VM}
+            banner "Installing hse RPM on ${TEST_VM}..."
+            /usr/local/bin/install_hse --target-branch ${NIGHT_FURY_BRANCH} --rpm-group all --make-type ${NF_BUILD_TYPE} --os_type ${OS_TYPE} --install-on-target ${TEST_VM}
             
             banner "Copying unit test files to ${TEST_VM}..."
             REMOTE_DEST=/tmp/
