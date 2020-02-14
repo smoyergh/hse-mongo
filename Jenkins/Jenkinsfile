@@ -329,10 +329,11 @@ pipeline {
         GIT_BRANCH = "${sourceBranch}"
         GIT_COMMIT = "${PULL_REQUEST_FROM_HASH}"
         JENKINS_CONF = '/usr/local/etc/jenkins_env_bo.conf'
-        NIGHT_FURY_BRANCH = "${targetBranch}".substring(
+        /* NIGHT_FURY_BRANCH = "${targetBranch}".substring(
             0,
             "${targetBranch}".indexOf("-r${MONGOVERSION}")
-        )
+        )*/
+        NIGHT_FURY_BRANCH = "master"
         repoName = "${sourceRepositoryName}"
         SBU_SSH_OPTS = "-o StrictHostKeyChecking=no"
         SBUDEVOPS_JENKINS_BRANCH = "${NIGHT_FURY_BRANCH}"
