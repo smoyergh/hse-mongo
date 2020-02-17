@@ -45,7 +45,6 @@
 namespace mongo {
 
 const std::string KVDBGlobalOptions::kDefaultMpoolName = "mp1";
-const std::string KVDBGlobalOptions::kDefaultKvdbName = "mp1";
 const int KVDBGlobalOptions::kDefaultForceLag = 0;
 
 const std::string KVDBGlobalOptions::kDefaultKvdbCParamsStr = "";
@@ -68,7 +67,6 @@ KVDBGlobalOptions kvdbGlobalOptions;
 namespace {
 const std::string modName{"hse"};
 const std::string mpoolNameOptStr = modName + "MpoolName";
-const std::string kvdbNameOptStr = modName + "KvdbName";
 const std::string forceLagOptStr = modName + "ForceLag";
 
 const std::string kvdbCParamsOptStr = modName + "KvdbCParams";
@@ -99,7 +97,6 @@ const std::string KvsRParamsOpt_OplogLargeKvs = modName + "OplogLargeKvsRParams"
 const std::string cfgStrPrefix = ("storage." + modName) + ".";
 
 const std::string mpoolNameCfgStr = cfgStrPrefix + "mpoolName";
-const std::string kvdbNameCfgStr = cfgStrPrefix + "kvdbName";
 const std::string forceLagCfgStr = cfgStrPrefix + "forceLag";
 
 const std::string kvdbCParamsCfgStr = cfgStrPrefix + "kvdbCParams";
@@ -145,8 +142,6 @@ Status KVDBGlobalOptions::add(moe::OptionSection* options) {
     kvdbOptions
         .addOptionChaining(forceLagCfgStr, forceLagOptStr, moe::Int, "force x seconds of lag")
         .setDefault(moe::Value(kDefaultForceLag));
-    kvdbOptions.addOptionChaining(kvdbNameCfgStr, kvdbNameOptStr, moe::String, "name of the KVDB")
-        .setDefault(moe::Value(kDefaultKvdbName));
     kvdbOptions
         .addOptionChaining(
             kvdbCParamsCfgStr, kvdbCParamsOptStr, moe::String, "KVDB creation parameters")
@@ -277,11 +272,6 @@ Status KVDBGlobalOptions::store(const moe::Environment& params,
         log() << "Mpool Name: " << kvdbGlobalOptions._mpoolName;
     }
 
-    if (params.count(kvdbNameCfgStr)) {
-        kvdbGlobalOptions._kvdbName = params[kvdbNameCfgStr].as<std::string>();
-        log() << "KVDB Name: " << kvdbGlobalOptions._kvdbName;
-    }
-
     if (params.count(forceLagCfgStr)) {
         kvdbGlobalOptions._forceLag = params[forceLagCfgStr].as<int>();
         log() << "Force Lag: " << kvdbGlobalOptions._forceLag;
@@ -392,10 +382,6 @@ std::string KVDBGlobalOptions::getMpoolName() const {
     return _mpoolName;
 }
 
-std::string KVDBGlobalOptions::getKvdbName() const {
-    return _kvdbName;
-}
-
 bool KVDBGlobalOptions::getCrashSafeCounters() const {
     return _crashSafeCounters;
 }
@@ -483,10 +469,6 @@ int KVDBGlobalOptions::getForceLag() const {
 
 void KVDBGlobalOptions::setKvdbC1Enabled(bool enabled) {
     _kvdbC1Enabled = enabled;
-}
-
-void KVDBGlobalOptions::setKvdbName(std::string name) {
-    _kvdbName = name;
 }
 
 }  // namespace mongo

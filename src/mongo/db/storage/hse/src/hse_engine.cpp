@@ -615,11 +615,11 @@ void KVDBEngine::_setupDb() {
     invariantHseSt(st);
 
     const string mpoolName = kvdbGlobalOptions.getMpoolName();
-    const string kvdbName = kvdbGlobalOptions.getKvdbName();
 
     unsigned int snapId = 0;
 
-    _open_kvdb(mpoolName, kvdbName, snapId);
+    // kvdb name and mpool name are the same for now as per the HSE API.
+    _open_kvdb(mpoolName, mpoolName, snapId);
 
     struct hse_params* params;
 

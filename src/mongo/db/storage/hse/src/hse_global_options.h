@@ -44,7 +44,6 @@ class KVDBGlobalOptions {
 public:
     KVDBGlobalOptions()
         : _mpoolName{kDefaultMpoolName},
-          _kvdbName{kDefaultKvdbName},
           _forceLag{kDefaultForceLag},
           _kvdbCParamsStr{kDefaultKvdbCParamsStr},
           _kvdbRParamsStr{kDefaultKvdbRParamsStr},
@@ -111,9 +110,6 @@ public:
     bool getKvdbC1Enabled() const;
     void setKvdbC1Enabled(bool enabled);
 
-    // For testing
-    void setKvdbName(std::string name);
-
 private:
     static const std::string kDefaultMpoolName;
     static const std::string kDefaultKvdbName;
@@ -131,7 +127,6 @@ private:
     static const bool kDefaultEnableMetrics;
 
     std::string _mpoolName;
-    std::string _kvdbName;
     int _forceLag;
 
     std::string _kvdbCParamsStr;
