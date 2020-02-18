@@ -10,6 +10,8 @@ selector:
     exclude_files:
     # Skip any tests that run with auth explicitly.
     - jstests/gle/*[aA]uth*.js
+    # Not supporting master-slave replication for hse
+    - jstests/gle/block2.js
 
 executor:
   js_test:

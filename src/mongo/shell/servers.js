@@ -65,10 +65,26 @@ var MongoRunner, _startMongod, startMongoProgram, runMongoProgram, startMongoPro
         return fullArgs;
     };
 
+    var hashCode = function(s) {
+        var h = 0, l = s.length, i = 0;
+        if (l > 0)
+            while (i < l)
+                h = (h << 5) - h + s.charCodeAt(i++) | 0;
+
+        var r = h.toString();
+        if ('-' == r.charAt(0)) {
+            r = r.slice(1);
+        }
+        return r;
+    };
+
     MongoRunner = function() {};
 
     MongoRunner.dataDir = "/data/db";
     MongoRunner.dataPath = "/data/db/";
+
+    MongoRunner.mpoolNamePrefix = "jstests";
+    MongoRunner.volumeGroup = "mp";
 
     MongoRunner.VersionSub = function(pattern, version) {
         this.pattern = pattern;
@@ -223,6 +239,24 @@ var MongoRunner, _startMongod, startMongoProgram, runMongoProgram, startMongoPro
     };
 
     MongoRunner.toRealFile = MongoRunner.toRealDir;
+
+    MongoRunner.toRealKvdbName = function(name, pathOpts) {
+        for (var key in pathOpts) {
+            name = name.replace(RegExp("\\$" + RegExp.escape(key), "g"), pathOpts[key]);
+        }
+
+        var nameStr = name;
+
+        // generate a hash code, we need this because dbpath is too
+        // long for a kvdb name.
+        if (isNaN(name)) {
+            name = hashCode(name);
+        }
+
+        print("toRealKvdbName: hash generated for str " + nameStr + " is " + name);
+
+        return name;
+    };
 
     /**
      * Returns an iterator object which yields successive versions on calls to advance(), starting
@@ -530,6 +564,15 @@ var MongoRunner, _startMongod, startMongoProgram, runMongoProgram, startMongoPro
 
         opts.dbpath = MongoRunner.toRealDir(opts.dbpath || "$dataDir/mongod-$port", opts.pathOpts);
 
+        var storageEngine = opts.storageEngine || jsTestOptions().storageEngine;
+        if (storageEngine === "hse") {
+            opts.hseKvdbName =
+                MongoRunner.toRealKvdbName(opts.hseKvdbName || opts.dbpath, opts.pathOpts);
+            opts.hseMpoolName = opts.hseKvdbName;
+            opts.hseKvdbCParams = MongoRunner.hseCParams;
+            opts.hseCollectionParams = MongoRunner.hseCollectionParams;
+        }
+
         opts.pathOpts = Object.merge(opts.pathOpts, {dbpath: opts.dbpath});
 
         _removeSetParameterIfBeforeVersion(opts, "writePeriodicNoops", "3.3.12");
@@ -720,6 +763,16 @@ var MongoRunner, _startMongod, startMongoProgram, runMongoProgram, startMongoPro
             if ((opts.cleanData || opts.startClean) || (!opts.restart && !opts.noCleanData)) {
                 print("Resetting db path '" + opts.dbpath + "'");
                 resetDbpath(opts.dbpath);
+
+                var storageEngine = opts.storageEngine || jsTestOptions().storageEngine;
+                if (storageEngine === "hse") {
+                    print("Resetting kvdb '" + opts.hseMpoolName + "/" + opts.hseKvdbName + "'");
+                    resetKvdb(jsTestOptions().hse,
+                              jsTestOptions().vg,
+                              opts.hseMpoolName,
+                              opts.hseKvdbName,
+                              jsTestOptions().hseKvdbCParams);
+                }
             }
 
             opts = MongoRunner.arrOptions("mongod", opts);

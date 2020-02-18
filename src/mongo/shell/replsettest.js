@@ -81,6 +81,7 @@ var ReplSetTest = function(opts) {
     var Health = {UP: 1, DOWN: 0};
 
     var _alldbpaths;
+    var _allKvdbNames = new Set();
     var _configSettings;
 
     // mongobridge related variables. Only available if the bridge option is selected.
@@ -416,6 +417,11 @@ var ReplSetTest = function(opts) {
         else
             _alldbpaths.push(p);
 
+        return p;
+    };
+
+    this._addKvdbName = function(p) {
+        _allKvdbNames.add(p);
         return p;
     };
 
@@ -1642,6 +1648,11 @@ var ReplSetTest = function(opts) {
 
         // Make sure to call _addPath, otherwise folders won't be cleaned.
         this._addPath(conn.dbpath);
+        // also add kvdbname if found
+        if (conn.fullOptions.hasOwnProperty("hseKvdbName")) {
+            print("ReplSetTest: adding kvdbname = " + conn.fullOptions.hseKvdbName);
+            this._addKvdbName(conn.fullOptions.hseKvdbName);
+        }
 
         if (_useBridge) {
             this.nodes[n].connectToBridge();
@@ -1769,7 +1780,7 @@ var ReplSetTest = function(opts) {
      * @param {boolean} forRestart will not cleanup data directory
      * @param {Object} opts @see MongoRunner.stopMongod
      */
-    this.stopSet = function(signal, forRestart, opts) {
+    this.stopSet = function(signal, forRestart, opts, resetKvdbs) {
         for (var i = 0; i < this.ports.length; i++) {
             this.stop(i, signal, opts);
         }
@@ -1782,6 +1793,27 @@ var ReplSetTest = function(opts) {
             print("ReplSetTest stopSet deleting all dbpaths");
             for (var i = 0; i < _alldbpaths.length; i++) {
                 resetDbpath(_alldbpaths[i]);
+            }
+        }
+
+        if (_allKvdbNames.size) {
+            for (var kName of _allKvdbNames) {
+                if (resetKvdbs) {
+                    // This should be set when the test needs to restart the replset with empty KVDBs.
+                    print("ReplSetTest stopSet resetting kvdb " + kName + "/" + kName);
+                    resetKvdb(jsTestOptions().hse,
+                              jsTestOptions().vg,
+                              kName,
+                              kName,
+                              jsTestOptions().hseKvdbCParams);
+                } else {
+                    print("ReplSetTest stopSet deleting kvdb " + kName + "/" + kName);
+                    deleteKvdb(jsTestOptions().hse,
+                               jsTestOptions().vg,
+                               kName,
+                               kName,
+                               jsTestOptions().hseKvdbCParams);
+                }
             }
         }
 

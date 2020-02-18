@@ -109,7 +109,19 @@ class Job(object):
                     "%s marked as a failure because the fixture crashed during the test.",
                     test.shortDescription())
                 self.report.setFailure(test, return_code=2)
-                # Always fail fast if the fixture fails.
+
+            if config.CONTINUE_ON_CRASH:
+                self.logger.info("Trying to start the fixture back up again...")
+
+                # If the fixture owned multiple mongods (i.e. replicaset or
+                # shardedcluster), make sure any orphaned processes are
+                # cleaned up before attempting to start the fixture again.
+                self.fixture.teardown()
+
+                self.fixture.setup()
+                self.fixture.await_ready()
+
+            if not self.fixture.is_running():
                 raise errors.StopExecution("%s not running after %s" %
                                            (self.fixture, test.shortDescription()))
 
@@ -172,29 +184,30 @@ class Job(object):
         Swallows any TestFailure exceptions if set to continue on
         failure, and reraises any other exceptions.
         """
-        try:
-            for hook in self.hooks:
-                self._run_hook(hook, hook.after_test, test)
+        for hook in self.hooks:
+            try:
+                hook.after_test(test, self.report)
 
-        except errors.StopExecution:
-            raise
+            except errors.StopExecution:
+                raise
 
-        except errors.ServerFailure:
-            self.logger.exception("%s marked as a failure by a hook's after_test.",
-                                  test.shortDescription())
-            self.report.setFailure(test, return_code=2)
-            raise errors.StopExecution("A hook's after_test failed")
+            except errors.ServerFailure:
+                self.logger.exception("%s marked as a failure by a hook's after_test.",
+                                      test.shortDescription())
+                self.report.setFailure(test, return_code=2)
+                if not config.CONTINUE_ON_CRASH:
+                    raise errors.StopExecution("A hook's after_test failed")
 
-        except errors.TestFailure:
-            self.logger.exception("%s marked as a failure by a hook's after_test.",
-                                  test.shortDescription())
-            self.report.setFailure(test, return_code=1)
-            if config.FAIL_FAST:
-                raise errors.StopExecution("A hook's after_test failed")
+            except errors.TestFailure:
+                self.logger.exception("%s marked as a failure by a hook's after_test.",
+                                      test.shortDescription())
+                self.report.setFailure(test, return_code=1)
+                if config.FAIL_FAST:
+                    raise errors.StopExecution("A hook's after_test failed")
 
-        except:
-            self.report.setError(test)
-            raise
+            except:
+                self.report.setError(test)
+                raise
 
     def _fail_test(self, test, exc_info, return_code=1):
         """

@@ -341,6 +341,16 @@ class JSTestCase(TestCase):
         global_vars["MongoRunner.dataDir"] = data_dir
         global_vars["MongoRunner.dataPath"] = data_path
 
+        if config.STORAGE_ENGINE == 'hse':
+            pfx = config.HSE_MPOOL_NAME_PREFIX
+            pfx = utils.default_if_none(pfx, config.DEFAULT_HSE_MPOOL_NAME_PREFIX)
+            pfx = "%s-job%d" % (pfx, self.fixture.job_num)
+
+            global_vars["MongoRunner.mpoolNamePrefix"] = pfx
+            global_vars["MongoRunner.volumeGroup"] = config.VOLUME_GROUP
+            global_vars["MongoRunner.hseKvdbCParams"] = config.HSE_KVDB_CPARAMS
+            global_vars["MongoRunner.hseCollectionParams"] = config.HSE_COLLECTION_PARAMS
+
         test_data = global_vars.get("TestData", {}).copy()
         test_data["minPort"] = core.network.PortAllocator.min_test_port(fixture.job_num)
         test_data["maxPort"] = core.network.PortAllocator.max_test_port(fixture.job_num)

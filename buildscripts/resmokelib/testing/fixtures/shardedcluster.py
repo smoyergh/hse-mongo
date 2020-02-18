@@ -64,6 +64,13 @@ class ShardedClusterFixture(interface.Fixture):
 
         self._dbpath_prefix = os.path.join(self._dbpath_prefix, config.FIXTURE_SUBDIR)
 
+        if config.STORAGE_ENGINE == 'hse':
+            hse_mpool_name_prefix = config.HSE_MPOOL_NAME_PREFIX
+            hse_mpool_name_prefix = utils.default_if_none(
+                hse_mpool_name_prefix, config.DEFAULT_HSE_MPOOL_NAME_PREFIX)
+            fmt = "%s-job%d"
+            self._hse_mpool_name_prefix = fmt % (hse_mpool_name_prefix, self.job_num)
+
         self.configsvr = None
         self.mongos = None
         self.shards = []
@@ -224,6 +231,10 @@ class ShardedClusterFixture(interface.Fixture):
         mongod_options = copy.deepcopy(self.mongod_options)
         mongod_options["shardsvr"] = ""
         mongod_options["dbpath"] = os.path.join(self._dbpath_prefix, "shard%d" % (index))
+
+        if config.STORAGE_ENGINE == 'hse':
+            mpool_name = "%s-shard%d" % (self._hse_mpool_name_prefix, index)
+            mongod_options["hseMpoolName"] = mpool_name
 
         return standalone.MongoDFixture(mongod_logger,
                                         self.job_num,
