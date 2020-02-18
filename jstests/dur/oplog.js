@@ -53,6 +53,11 @@ function log(str) {
 function verify() {
     log("verify");
     var d = conn.getDB("local");
+
+    if (jsTest.options().storageEngine == "hse") {
+        d.oplog.validate({full: true});
+    }
+
     var mycount = d.oplog.$main.find({"o.z": 3}).count();
     print(mycount);
     assert(mycount == 3, "oplog doesnt match");
@@ -151,26 +156,28 @@ MongoRunner.stopMongod(conn);
 // stopMongod seems to be asynchronous (hmmm) so we sleep here.
 sleep(5000);
 
-// at this point, after clean shutdown, there should be no journal files
-log("check no journal files");
-checkNoJournalFiles(path2 + "/journal");
+if (jsTest.options().storageEngine != "hse") {
+    // at this point, after clean shutdown, there should be no journal files
+    log("check no journal files");
+    checkNoJournalFiles(path2 + "/journal");
 
-log("check data matches ns");
-var diff = runDiff(path1 + "/test.ns", path2 + "/test.ns");
-if (diff != "") {
-    print("\n\n\nDIFFERS\n");
-    print(diff);
+    log("check data matches ns");
+    var diff = runDiff(path1 + "/test.ns", path2 + "/test.ns");
+    if (diff != "") {
+        print("\n\n\nDIFFERS\n");
+        print(diff);
+    }
+    assert(diff == "", "error test.ns files differ");
+
+    log("check data matches .0");
+    diff = runDiff(path1 + "/test.0", path2 + "/test.0");
+    if (diff != "") {
+        print("\n\n\nDIFFERS\n");
+        print(diff);
+    }
+    assert(diff == "", "error test.0 files differ");
+
+    log("check data matches done");
 }
-assert(diff == "", "error test.ns files differ");
-
-log("check data matches .0");
-diff = runDiff(path1 + "/test.0", path2 + "/test.0");
-if (diff != "") {
-    print("\n\n\nDIFFERS\n");
-    print(diff);
-}
-assert(diff == "", "error test.0 files differ");
-
-log("check data matches done");
 
 print(testname + " SUCCESS");

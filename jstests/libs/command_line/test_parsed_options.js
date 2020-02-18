@@ -76,6 +76,19 @@ function testGetCmdLineOptsMongod(mongoRunnerConfig, expectedResult) {
         typeof expectedResult.parsed.storage.dbPath === "undefined") {
         delete getCmdLineOptsExpected.parsed.storage.dbPath;
     }
+    // handle hse options for same reasons as above
+    if (typeof expectedResult.parsed === "undefined" ||
+        typeof expectedResult.parsed.storage === "undefined" ||
+        typeof expectedResult.parsed.storage.hse === "undefined" ||
+        typeof expectedResult.parsed.storage.hse.kvdbName === "undefined") {
+        delete getCmdLineOptsExpected.parsed.storage.hse.kvdbName;
+    }
+    if (typeof expectedResult.parsed === "undefined" ||
+        typeof expectedResult.parsed.storage === "undefined" ||
+        typeof expectedResult.parsed.storage.hse === "undefined" ||
+        typeof expectedResult.parsed.storage.hse.mpoolName === "undefined") {
+        delete getCmdLineOptsExpected.parsed.storage.hse.mpoolName;
+    }
 
     // Merge with the result that we expect
     expectedResult = mergeOptions(getCmdLineOptsExpected, expectedResult);
@@ -107,6 +120,19 @@ function testGetCmdLineOptsMongod(mongoRunnerConfig, expectedResult) {
         typeof expectedResult.parsed.storage === "undefined" ||
         typeof expectedResult.parsed.storage.dbPath === "undefined") {
         delete getCmdLineOptsResult.parsed.storage.dbPath;
+    }
+    // handle hse options for same reasons as above
+    if (typeof expectedResult.parsed === "undefined" ||
+        typeof expectedResult.parsed.storage === "undefined" ||
+        typeof expectedResult.parsed.storage.hse === "undefined" ||
+        typeof expectedResult.parsed.storage.hse.kvdbName === "undefined") {
+        delete getCmdLineOptsResult.parsed.storage.hse.kvdbName;
+    }
+    if (typeof expectedResult.parsed === "undefined" ||
+        typeof expectedResult.parsed.storage === "undefined" ||
+        typeof expectedResult.parsed.storage.hse === "undefined" ||
+        typeof expectedResult.parsed.storage.hse.mpoolName === "undefined") {
+        delete getCmdLineOptsResult.parsed.storage.hse.mpoolName;
     }
 
     // Make sure the options are equal to what we expect

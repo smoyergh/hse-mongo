@@ -23,6 +23,11 @@ function log(str) {
 function verify() {
     log("verify");
     var d = conn.getDB("test");
+
+    if (jsTest.options().storageEngine == "hse") {
+        d.foo.validate({full: true});
+    }
+
     var mycount = d.foo.count();
     print("count:" + mycount);
     assert(mycount > 2, "count wrong");
@@ -96,23 +101,25 @@ sleep(14);  // wait for lsn write
 log("kill mongod -9");
 MongoRunner.stopMongod(conn, /*signal*/ 9);
 
-// journal file should be present, and non-empty as we killed hard
+if (jsTest.options().storageEngine != "hse") {
+    // journal file should be present, and non-empty as we killed hard
 
-// check that there is an lsn file
-{
-    var files = listFiles(path2 + "/journal/");
-    assert(files.some(function(f) {
-        return f.name.indexOf("lsn") >= 0;
-    }),
-           "lsn.js FAIL no lsn file found after kill, yet one is expected");
-}
-/*assert.soon(
-    function () {
+    // check that there is an lsn file
+    {
         var files = listFiles(path2 + "/journal/");
-        return files.some(function (f) { return f.name.indexOf("lsn") >= 0; });
-    },
-    "lsn.js FAIL no lsn file found after kill, yet one is expected"
-);*/
+        assert(files.some(function(f) {
+            return f.name.indexOf("lsn") >= 0;
+        }),
+               "lsn.js FAIL no lsn file found after kill, yet one is expected");
+    }
+    /*assert.soon(
+        function () {
+            var files = listFiles(path2 + "/journal/");
+            return files.some(function (f) { return f.name.indexOf("lsn") >= 0; });
+        },
+        "lsn.js FAIL no lsn file found after kill, yet one is expected"
+    );*/
+}
 
 // restart and recover
 log("restart mongod, recover, verify");

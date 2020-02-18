@@ -72,6 +72,11 @@ function verify() {
     log("verify");
     var d = conn.getDB("test");
     var count = d.foo.count();
+
+    if (jsTest.options().storageEngine == "hse") {
+        d.foo.validate({full: true});
+    }
+
     if (count != 1) {
         print("going to fail, test.foo.count() != 1 in verify()");
         sleep(10000);  // easier to read the output this way
@@ -85,6 +90,11 @@ function verify() {
     printjson(conn.getDB("teste").foo.findOne());
 
     var teste = conn.getDB("teste");
+
+    if (jsTest.options().storageEngine == "hse") {
+        d.foo.validate({full: true});
+    }
+
     var testecount = teste.foo.count();
     if (testecount != 1) {
         print("going to fail, teste.foo.count() != 1 in verify()");
@@ -127,50 +137,52 @@ verify();
 log("kill 9");
 MongoRunner.stopMongod(conn.port, /*signal*/ 9);
 
-// journal file should be present, and non-empty as we killed hard
+if (jsTest.options().storageEngine != "hse") {
+    // journal file should be present, and non-empty as we killed hard
 
-// we will force removal of a datafile to be sure we can recreate everything.
-removeFile(path2 + "/test.0");
-// the trick above is only valid if journals haven't rotated out, and also if lsn isn't skipping
-removeFile(path2 + "/lsn");
+    // we will force removal of a datafile to be sure we can recreate everything.
+    removeFile(path2 + "/test.0");
+    // the trick above is only valid if journals haven't rotated out, and also if lsn isn't skipping
+    removeFile(path2 + "/lsn");
 
-log("restart and recover");
-conn = MongoRunner.runMongod({
-    restart: true,
-    cleanData: false,
-    dbpath: path2,
-    journal: "",
-    smallfiles: "",
-    journalOptions: 9
-});
+    log("restart and recover");
+    conn = MongoRunner.runMongod({
+        restart: true,
+        cleanData: false,
+        dbpath: path2,
+        journal: "",
+        smallfiles: "",
+        journalOptions: 9
+    });
 
-log("verify after recovery");
-verify();
+    log("verify after recovery");
+    verify();
 
-log("stop mongod");
-MongoRunner.stopMongod(conn);
-sleep(5000);
+    log("stop mongod");
+    MongoRunner.stopMongod(conn);
+    sleep(5000);
 
-// at this point, after clean shutdown, there should be no journal files
-log("check no journal files");
-checkNoJournalFiles(path2 + "/journal");
+    // at this point, after clean shutdown, there should be no journal files
+    log("check no journal files");
+    checkNoJournalFiles(path2 + "/journal");
 
-log("check data matches ns");
-var diff = runDiff(path1 + "/test.ns", path2 + "/test.ns");
-if (diff != "") {
-    print("\n\n\nDIFFERS\n");
-    print(diff);
+    log("check data matches ns");
+    var diff = runDiff(path1 + "/test.ns", path2 + "/test.ns");
+    if (diff != "") {
+        print("\n\n\nDIFFERS\n");
+        print(diff);
+    }
+    assert(diff == "", "error test.ns files differ");
+
+    log("check data matches .0");
+    diff = runDiff(path1 + "/test.0", path2 + "/test.0");
+    if (diff != "") {
+        print("\n\n\nDIFFERS\n");
+        print(diff);
+    }
+    assert(diff == "", "error test.0 files differ");
+
+    log("check data matches done");
 }
-assert(diff == "", "error test.ns files differ");
-
-log("check data matches .0");
-diff = runDiff(path1 + "/test.0", path2 + "/test.0");
-if (diff != "") {
-    print("\n\n\nDIFFERS\n");
-    print(diff);
-}
-assert(diff == "", "error test.0 files differ");
-
-log("check data matches done");
 
 print(testname + " SUCCESS");

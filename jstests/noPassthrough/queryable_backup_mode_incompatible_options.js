@@ -15,6 +15,15 @@
     var dbdir = MongoRunner.dataPath + name + "/";
 
     resetDbpath(dbdir);
+    if (jsTest.options().storageEngine == 'hse') {
+        // drop the trailing slash
+        var dbpath = MongoRunner.dataPath + name;
+
+        resetKvdb(TestData.hse,
+                  TestData.hseMpoolName,
+                  MongoRunner.toRealKvdbName(dbpath, {}),
+                  TestData.hseKvdbCParams);
+    }
 
     // Insert dummy document to ensure startup failure isn't due to lack of storage metadata file.
     var conn = MongoRunner.runMongod({dbpath: dbdir, noCleanData: true});

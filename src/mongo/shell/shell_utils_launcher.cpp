@@ -35,6 +35,7 @@
 
 #include <algorithm>
 #include <array>
+#include <boost/algorithm/string.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/stream_buffer.hpp>
@@ -792,6 +793,116 @@ BSONObj RunMongoProgram(const BSONObj& a, void* data) {
     return BSON(string("") << exit_code);
 }
 
+string makeLvPath(const string& vgName, const string& lvName) {
+    string adjustedVg = vgName;
+    string adjustedLv = lvName;
+
+    boost::replace_all(adjustedVg, "-", "--");
+    boost::replace_all(adjustedLv, "-", "--");
+
+    return "/dev/mapper/" + adjustedVg + "-" + adjustedLv;
+}
+
+BSONObj ResetKvdb(const BSONObj& a, void* data) {
+    using std::to_string;
+
+    verify(a.nFields() == 5);
+    BSONObjIterator i(a);
+    string hseExecutable = i.next().str();
+    string vgName = i.next().str();
+    string mpoolName = i.next().str();
+    string kvdbName = i.next().str();
+    string kvdbCParams = i.next().str();
+    verify(!hseExecutable.empty());
+    verify(!mpoolName.empty());
+    verify(!kvdbName.empty());
+
+    int rc;
+    string cmd;
+    string lvPath = makeLvPath(vgName, mpoolName);
+
+    /*
+     * Create LV and mpool
+     */
+    boost::filesystem::path lvPathObj(lvPath);
+
+    if (!boost::filesystem::exists(lvPathObj)) {
+        cmd = "sudo lvcreate -y --size 50G --name " + mpoolName + " " + vgName;
+        rc = system(cmd.c_str());
+        if (rc)
+            return BSON(string("") << rc);
+
+        cmd = "sudo " + hseExecutable + " device prepare -f " + lvPath;
+        rc = system(cmd.c_str());
+        if (rc)
+            return BSON(string("") << rc);
+    } else {
+        cmd = "sudo " + hseExecutable + " mpool umount " + mpoolName;
+        rc = system(cmd.c_str()); /* ignore return code */
+
+        cmd = "sudo " + hseExecutable + " mpool destroy " + mpoolName;
+        rc = system(cmd.c_str()); /* ignore return code */
+    }
+
+    cmd = "sudo " + hseExecutable + " mpool create " + mpoolName + " " + lvPath + " " + " uid=" +
+        to_string(geteuid()) + " gid=" + to_string(getegid());
+    rc = system(cmd.c_str());
+    if (rc)
+        return BSON(string("") << rc);
+
+    cmd = "sudo " + hseExecutable + " mpool mount " + mpoolName;
+    rc = system(cmd.c_str());
+    if (rc)
+        return BSON(string("") << rc);
+
+    /*
+     * Create KVDB
+     */
+    cmd = "sudo " + hseExecutable + " kvdb create " + mpoolName;
+
+    if (!kvdbCParams.empty()) {
+        /*
+         * Change semicolon-delimited params to space-delimited.
+         */
+        size_t pos = 0;
+
+        while ((pos = kvdbCParams.find(';', pos))) {
+            if (pos == string::npos) {
+                break;
+            }
+            kvdbCParams[pos] = ' ';
+        }
+
+        cmd += " ";
+        cmd += kvdbCParams;
+    }
+
+    cout << cmd << endl;
+    rc = system(cmd.c_str());
+
+    return BSON(string("") << rc);
+}
+
+BSONObj DeleteKvdb(const BSONObj& a, void* data) {
+    using std::to_string;
+
+    verify(a.nFields() == 5);
+    BSONObjIterator i(a);
+    string hseExecutable = i.next().str();
+    string mpoolName = i.next().str();
+    string vgName = i.next().str();
+    string kvdbName = i.next().str();
+    string kvdbCParams = i.next().str();
+    verify(!hseExecutable.empty());
+    verify(!mpoolName.empty());
+    verify(!kvdbName.empty());
+
+    string cmd = "sudo " + hseExecutable + " mpool destroy " + mpoolName;
+    int rc = system(cmd.c_str());
+
+    return BSON(string("") << rc);
+}
+
 BSONObj ResetDbpath(const BSONObj& a, void* data) {
     verify(a.nFields() == 1);
     string path = a.firstElement().valuestrsafe();
@@ -1041,6 +1152,8 @@ void installShellUtilsLauncher(Scope& scope) {
     scope.injectNative("resetDbpath", ResetDbpath);
     scope.injectNative("pathExists", PathExists);
     scope.injectNative("copyDbpath", CopyDbpath);
+    scope.injectNative("resetKvdb", ResetKvdb);
+    scope.injectNative("deleteKvdb", DeleteKvdb);
 }
 }
 }

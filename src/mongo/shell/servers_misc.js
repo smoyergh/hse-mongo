@@ -7,8 +7,33 @@ ToolTest = function(name, extraOptions) {
     this.dbpath = this.root + "/";
     this.ext = this.root + "_external/";
     this.extFile = this.root + "_external/a";
+    this.kvdbNamePrefix = MongoRunner.kvdbNamePrefix;
+    this.mpoolName = MongoRunner.mpoolName;
     resetDbpath(this.dbpath);
     resetDbpath(this.ext);
+
+    if (this.options === undefined) {
+        this.options = {};
+    }
+
+    var storageEngine = this.options.storageEngine || jsTestOptions().storageEngine;
+    if (storageEngine === "hse") {
+        this.options.storageEngine = 'hse';
+
+        var pathOpts = {port: this.port};
+
+        this.options.hseKvdbName = MongoRunner.toRealKvdbName("$kvdbPrefix-mongod-$port", pathOpts);
+        this.options.hseMpoolName = this.options.hseKvdbName;
+
+        print("Resetting kvdb '" + this.options.hseMpoolName + "/" + this.options.hseKvdbName +
+              "'");
+
+        resetKvdb(jsTestOptions().hse,
+                  jsTestOptions().vg,
+                  this.options.hseMpoolName,
+                  this.options.hseKvdbName,
+                  jsTestOptions().hseKvdbCParams);
+    }
 };
 
 ToolTest.prototype.startDB = function(coll) {

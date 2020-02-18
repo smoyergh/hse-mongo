@@ -83,6 +83,12 @@ function addRows() {
 function verify() {
     log("verify");
     var d = conn.getDB("test");
+
+    if (jsTest.options().storageEngine == "hse") {
+        d.foo.validate({full: true});
+        d.a.validate({full: true});
+    }
+
     assert.eq(d.foo.count(), 2, "collection count is wrong");
     assert.eq(d.a.count(), 2, "collection count is wrong");
 }
@@ -90,6 +96,11 @@ function verify() {
 function verifyRows(nrows) {
     log("verify rows " + nrows);
     var d = conn.getDB("test");
+
+    if (jsTest.options().storageEngine == "hse") {
+        d.rows.validate({full: true});
+    }
+
     assert.eq(d.rows.count(), nrows, "collection count is wrong");
 }
 
@@ -169,19 +180,21 @@ log("stop");
 MongoRunner.stopMongod(conn);
 sleep(5000);
 
-// at this point, after clean shutdown, there should be no journal files
-log("check no journal files");
-checkNoJournalFiles(path2 + "/journal");
+if (jsTest.options().storageEngine != "hse") {
+    // at this point, after clean shutdown, there should be no journal files
+    log("check no journal files");
+    checkNoJournalFiles(path2 + "/journal");
 
-log("check data matches ns");
-var diff = runDiff(path1 + "/test.ns", path2 + "/test.ns");
-assert(diff == "", "error test.ns files differ");
+    log("check data matches ns");
+    var diff = runDiff(path1 + "/test.ns", path2 + "/test.ns");
+    assert(diff == "", "error test.ns files differ");
 
-log("check data matches .0");
-var diff = runDiff(path1 + "/test.0", path2 + "/test.0");
-assert(diff == "", "error test.0 files differ");
+    log("check data matches .0");
+    var diff = runDiff(path1 + "/test.0", path2 + "/test.0");
+    assert(diff == "", "error test.0 files differ");
 
-log("check data matches done");
+    log("check data matches done");
+}
 
 Random.setRandomSeed();
 var nrows = 0;

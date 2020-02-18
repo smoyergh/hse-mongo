@@ -45,18 +45,25 @@ load("jstests/replsets/rslib.js");
     // Pre-populate the data directory for the first replica set node, to be started later, with
     // a user's credentials.
     print("add a user to server0: foo");
-    m = MongoRunner.runMongod({dbpath: MongoRunner.dataPath + name + "-0"});
+    m = MongoRunner.runMongod();
     m.getDB("admin").createUser({user: "foo", pwd: "bar", roles: jsTest.adminUserRoles});
     m.getDB("test").createUser({user: "bar", pwd: "baz", roles: jsTest.basicUserRoles});
     print("make sure user is written before shutting down");
     MongoRunner.stopMongod(m);
+
+    var standaloneOptions = m.fullOptions;
 
     print("start up rs");
     var rs = new ReplSetTest({"name": name, "nodes": 3});
 
     // The first node is started with the pre-populated data directory.
     print("start 0 with keyFile");
-    m = rs.start(0, {"keyFile": key1_600, noCleanData: true});
+    m = rs.start(0, {
+        "keyFile": key1_600,
+        noCleanData: true,
+        dbpath: standaloneOptions.dbpath,
+        hseMpoolName: standaloneOptions.hseMpoolName
+    });
     print("start 1 with keyFile");
     rs.start(1, {"keyFile": key1_600});
     print("start 2 with keyFile");

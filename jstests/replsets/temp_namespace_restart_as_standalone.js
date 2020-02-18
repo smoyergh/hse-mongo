@@ -55,7 +55,11 @@
     var secondaryNodeId = rst.getNodeId(secondaryDB.getMongo());
     rst.stop(secondaryNodeId);
 
-    secondaryConn = MongoRunner.runMongod({dbpath: secondaryConn.dbpath, noCleanData: true});
+    secondaryConn = MongoRunner.runMongod({
+        dbpath: secondaryConn.dbpath,
+        hseMpoolName: secondaryConn.fullOptions.hseMpoolName,
+        noCleanData: true
+    });
     assert.neq(null, secondaryConn, "secondary failed to start up as a stand-alone mongod");
     secondaryDB = secondaryConn.getDB("test");
 

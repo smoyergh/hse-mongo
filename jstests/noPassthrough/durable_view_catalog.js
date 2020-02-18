@@ -11,6 +11,12 @@
     // durable.
     let dbpath = MongoRunner.dataPath + '_durable_view_catalog';
     resetDbpath(dbpath);
+    if (jsTest.options().storageEngine == 'hse') {
+        resetKvdb(TestData.hse,
+                  MongoRunner.toRealKvdbName(dbpath, {}),
+                  MongoRunner.toRealKvdbName(dbpath, {}),
+                  TestData.hseKvdbCParams);
+    }
 
     let mongodArgs = {dbpath: dbpath, noCleanData: true, journal: ''};
 

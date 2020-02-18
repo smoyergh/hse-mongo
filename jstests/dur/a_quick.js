@@ -85,25 +85,27 @@ sleep(8000);
 tst.log("kill -9 mongod");
 MongoRunner.stopMongod(conn.port, /*signal*/ 9);
 
-// journal file should be present, and non-empty as we killed hard
+if (jsTest.options().storageEngine != "hse") {
+    // journal file should be present, and non-empty as we killed hard
 
-// we will force removal of a datafile to be sure we can recreate everything
-// without it being present.
-removeFile(path2 + "/test.0");
+    // we will force removal of a datafile to be sure we can recreate everything
+    // without it being present.
+    removeFile(path2 + "/test.0");
 
-// for that to work, we can't skip anything though:
-removeFile(path2 + "/journal/lsn");
+    // for that to work, we can't skip anything though:
+    removeFile(path2 + "/journal/lsn");
 
-// with the file deleted, we MUST start from the beginning of the journal.
-// thus this check to be careful
-var files = listFiles(path2 + "/journal/");
-if (files.some(function(f) {
-        return f.name.indexOf("lsn") >= 0;
-    })) {
-    print("\n\n\n");
-    print(path2);
-    printjson(files);
-    assert(false, "a journal/lsn file is present which will make this test potentially fail.");
+    // with the file deleted, we MUST start from the beginning of the journal.
+    // thus this check to be careful
+    var files = listFiles(path2 + "/journal/");
+    if (files.some(function(f) {
+            return f.name.indexOf("lsn") >= 0;
+        })) {
+        print("\n\n\n");
+        print(path2);
+        printjson(files);
+        assert(false, "a journal/lsn file is present which will make this test potentially fail.");
+    }
 }
 
 // restart and recover
@@ -112,6 +114,10 @@ conn = MongoRunner.runMongod(
     {restart: true, cleanData: false, dbpath: path2, journal: "", journalOptions: 9});
 tst.log("check data results");
 d = conn.getDB("test");
+
+if (jsTest.options().storageEngine == "hse") {
+    d.foo.validate({full: true});
+}
 
 var countOk = (d.foo.count() == 1);
 if (!countOk) {
@@ -122,33 +128,35 @@ if (!countOk) {
 tst.log("stop");
 MongoRunner.stopMongod(conn);
 
-// at this point, after clean shutdown, there should be no journal files
-tst.log("check no journal files");
-checkNoJournalFiles(path2 + "/journal");
+if (jsTest.options().storageEngine != "hse") {
+    // at this point, after clean shutdown, there should be no journal files
+    tst.log("check no journal files");
+    checkNoJournalFiles(path2 + "/journal");
 
-tst.log("check data matches");
-var diff = tst.diff(path1 + "/test.ns", path2 + "/test.ns");
-print("diff of .ns files returns:" + diff);
+    tst.log("check data matches");
+    var diff = tst.diff(path1 + "/test.ns", path2 + "/test.ns");
+    print("diff of .ns files returns:" + diff);
 
-function showfiles() {
-    print("\n\nERROR: files for dur and nodur do not match");
-    print(path1 + " files:");
-    printjson(listFiles(path1));
-    print(path2 + " files:");
-    printjson(listFiles(path2));
-    print();
-}
+    function showfiles() {
+        print("\n\nERROR: files for dur and nodur do not match");
+        print(path1 + " files:");
+        printjson(listFiles(path1));
+        print(path2 + " files:");
+        printjson(listFiles(path2));
+        print();
+    }
 
-if (diff != "") {
-    showfiles();
-    assert(diff == "", "error test.ns files differ");
-}
+    if (diff != "") {
+        showfiles();
+        assert(diff == "", "error test.ns files differ");
+    }
 
-diff = tst.diff(path1 + "/test.0", path2 + "/test.0");
-print("diff of .0 files returns:" + diff);
-if (diff != "") {
-    showfiles();
-    assert(diff == "", "error test.0 files differ");
+    diff = tst.diff(path1 + "/test.0", path2 + "/test.0");
+    print("diff of .0 files returns:" + diff);
+    if (diff != "") {
+        showfiles();
+        assert(diff == "", "error test.0 files differ");
+    }
 }
 
 assert(countOk, "a_quick.js document count after recovery was not the expected value");

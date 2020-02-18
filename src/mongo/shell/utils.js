@@ -274,6 +274,10 @@ jsTestOptions = function() {
             forceValidationWithFeatureCompatibilityVersion:
                 TestData.forceValidationWithFeatureCompatibilityVersion,
             skipValidationNamespaces: TestData.skipValidationNamespaces || [],
+            hse: TestData.hse,
+            vg: TestData.vg,
+            hseKvdbCParams: TestData.hseKvdbCParams,
+            hseCollectionParams: TestData.hseCollectionParams,
         });
     }
     return _jsTestOptions;

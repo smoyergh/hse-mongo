@@ -7,6 +7,12 @@
 
     var dbpath = MongoRunner.dataPath + 'noncapped_oplog_creation';
     resetDbpath(dbpath);
+    if (jsTest.options().storageEngine == 'hse') {
+        resetKvdb(TestData.hse,
+                  MongoRunner.toRealKvdbName(dbpath, {}),
+                  MongoRunner.toRealKvdbName(dbpath, {}),
+                  TestData.hseKvdbCParams);
+    }
 
     var conn = MongoRunner.runMongod({
         dbpath: dbpath,
