@@ -24,6 +24,11 @@ function verify() {
     var d = conn.getDB("test");
     var mycount = d.foo.count();
     // print("count:" + mycount);
+
+    if (jsTest.options().storageEngine == "hse") {
+        d.foo.validate({full: true});
+    }
+
     assert(mycount > 2, "count wrong");
 }
 
@@ -84,9 +89,11 @@ work();
 log("kill -9");
 MongoRunner.stopMongod(conn, /*signal*/ 9);
 
+if (jsTest.options().storageEngine != "hse") {
 // journal file should be present, and non-empty as we killed hard
 assert(listFiles(path + "/journal/").length > 0,
        "journal directory is unexpectantly empty after kill");
+}
 
 // restart and recover
 log("restart mongod and recover");
