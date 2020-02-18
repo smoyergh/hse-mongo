@@ -90,9 +90,9 @@ log("kill -9");
 MongoRunner.stopMongod(conn, /*signal*/ 9);
 
 if (jsTest.options().storageEngine != "hse") {
-// journal file should be present, and non-empty as we killed hard
-assert(listFiles(path + "/journal/").length > 0,
-       "journal directory is unexpectantly empty after kill");
+    // journal file should be present, and non-empty as we killed hard
+    assert(listFiles(path + "/journal/").length > 0,
+           "journal directory is unexpectantly empty after kill");
 }
 
 // restart and recover

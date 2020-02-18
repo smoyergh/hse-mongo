@@ -89,7 +89,8 @@ if (jsTest.options().storageEngine != "hse") {
     assert.eq(exitCode, 100 /*EXIT_UNCAUGHT*/);
 
     // TODO Possibly we could check the mongod log to verify that the correct type of exception was
-    // thrown.  But that would introduce a dependency on the mongod log format, which we may not want.
+    // thrown.  But that would introduce a dependency on the mongod log format, which we may not
+    // want.
 }
 
 jsTest.log("SUCCESS checksum.js");
