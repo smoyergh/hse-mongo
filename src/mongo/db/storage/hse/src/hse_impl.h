@@ -110,27 +110,11 @@ public:
 
     virtual Status kvdb_sync();
 
-    virtual Status kvdb_cparams_parse(int argc,
-                                      char** argv,
-                                      struct hse_params* params,
-                                      int* next_arg);
-
-    virtual Status kvdb_rparams_parse(int argc,
-                                      char** argv,
-                                      struct hse_params* params,
-                                      int* next_arg);
-
-    virtual Status kvs_cparams_parse(int argc,
-                                     char** argv,
-                                     struct hse_params* params,
-                                     int* next_arg);
-
-    virtual Status kvs_rparams_parse(int argc,
-                                     char** argv,
-                                     struct hse_params* params,
-                                     int* next_arg);
-
     virtual Status kvdb_get_c1_info(struct ikvdb_c1_info* info);
+
+    virtual Status kvdb_params_from_file(struct hse_params* params, const string& filePath);
+
+    virtual Status kvdb_params_set(struct hse_params* params, const string& key, const string& val);
 
 private:
     struct hse_kvdb* _handle = nullptr;

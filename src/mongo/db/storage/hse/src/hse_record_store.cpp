@@ -128,6 +128,29 @@ mongo::Status collectionCfgString2compParms(const StringData& sd, struct CompPar
     return mongo::Status::OK();
 }
 
+// Parses options from mongod cmdline or config file
+mongo::Status collectionOptions2compParms(const string algo,
+                                          const string compMinSize,
+                                          struct CompParms& compparms) {
+
+    if (algo == "lz4") {
+        compparms.compalgo = CompAlgo::ALGO_LZ4;
+    } else if (algo == "none") {
+        compparms.compalgo = CompAlgo::ALGO_NONE;
+    } else {
+        return mongo::Status(mongo::ErrorCodes::FailedToParse, string("invalid algo: ") + algo);
+    }
+
+    std::stringstream ss{compMinSize};
+    ss >> std::dec >> compparms.compminsize;
+    if (ss.fail()) {
+        return mongo::Status(mongo::ErrorCodes::FailedToParse,
+                             string("invalid compminsize: ") + compMinSize);
+    }
+
+    return mongo::Status::OK();
+}
+
 // options is coming from the create collection command line.
 // option is a BSON obj with one field/element whose name is "configString"
 // The value of this field is list options:

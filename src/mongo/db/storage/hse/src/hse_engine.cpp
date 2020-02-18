@@ -33,6 +33,7 @@
  */
 #define MONGO_LOG_DEFAULT_COMPONENT ::mongo::logger::LogComponent::kStorage
 
+#include <boost/algorithm/string.hpp>
 #include <boost/tokenizer.hpp>
 #include <chrono>
 #include <iostream>
@@ -72,98 +73,33 @@ namespace mongo {
 
 namespace {
 
-template <typename T>
-using freed_unique_ptr = std::unique_ptr<T, std::function<void(T*)>>;
-
 std::string encodePrefix(uint32_t prefix) {
     uint32_t bigEndianPrefix = endian::nativeToBig(prefix);
     return std::string(reinterpret_cast<const char*>(&bigEndianPrefix), sizeof(uint32_t));
 }
 
-// this uses a "free" version of unique_ptr for managing strdup-ed mem.
-std::vector<freed_unique_ptr<char>> tokenizeParams(string paramStr) {
-
-    std::vector<freed_unique_ptr<char>> strV{};
-    boost::char_separator<char> sep("; ");
-    boost::tokenizer<boost::char_separator<char>> tokens(paramStr, sep);
-
-    for (const auto& t : tokens) {
-        strV.push_back(freed_unique_ptr<char>{strdup(t.c_str()), [](char* p) { free(p); }});
-    }
-
-    return strV;
-}
-
-void parseKvdbCParams(KVDB& db, string paramStr, struct hse_params* kvdbCParams) {
+void parseParams(KVDB& db, string paramStr, struct hse_params* params) {
     if (paramStr.size() == 0) {
         return;
     }
 
-    std::vector<freed_unique_ptr<char>> strV = tokenizeParams(paramStr);
+    stringstream ss1{paramStr};
+    string kvStrTok{};
 
-    int argc = strV.size();
-    char* argv[argc];
+    while (std::getline(ss1, kvStrTok, ';')) {
+        boost::trim(kvStrTok);
+        stringstream ss2{kvStrTok};
+        string key{};
+        string val{};
 
-    for (int i = 0; i < argc; i++) {
-        argv[i] = strV[i].get();
+        invariantHse(std::getline(ss1, key, '='));
+        invariantHse(std::getline(ss1, val, '='));
+
+        // HSE_REVISIT: remove
+        LOG(1) << "CMD Params : " << key << "=" << val;
+
+        invariantHseSt(db.kvdb_params_set(params, key, val));
     }
-
-    auto st = db.kvdb_cparams_parse(argc, argv, kvdbCParams, nullptr);
-    invariantHseSt(st);
-}
-
-void parseKvdbRParams(KVDB& db, string paramStr, struct hse_params* kvdbRParams) {
-    if (paramStr.size() == 0) {
-        return;
-    }
-
-    std::vector<freed_unique_ptr<char>> strV = tokenizeParams(paramStr);
-
-    int argc = strV.size();
-    char* argv[argc];
-
-    for (int i = 0; i < argc; i++) {
-        argv[i] = strV[i].get();
-    }
-
-    auto st = db.kvdb_rparams_parse(argc, argv, kvdbRParams, nullptr);
-    invariantHseSt(st);
-}
-
-void parseKvsCParams(KVDB& db, string paramStr, struct hse_params* kvsCParams) {
-    if (paramStr.size() == 0) {
-        return;
-    }
-
-    std::vector<freed_unique_ptr<char>> strV = tokenizeParams(paramStr);
-
-    int argc = strV.size();
-    char* argv[argc];
-
-    for (int i = 0; i < argc; i++) {
-        argv[i] = strV[i].get();
-    }
-
-    auto st = db.kvs_cparams_parse(argc, argv, kvsCParams, nullptr);
-    invariantHseSt(st);
-}
-
-void parseKvsRParams(KVDB& db, string paramStr, struct hse_params* kvsRParams) {
-    if (paramStr.size() == 0) {
-        return;
-    }
-
-    std::vector<freed_unique_ptr<char>> strV = tokenizeParams(paramStr);
-
-    int argc = strV.size();
-    char* argv[argc];
-
-    for (int i = 0; i < argc; i++) {
-        argv[i] = strV[i].get();
-    }
-
-    auto st = db.kvs_rparams_parse(argc, argv, kvsRParams, nullptr);
-    invariantHseSt(st);
 }
 }
 
@@ -218,7 +154,9 @@ Status KVDBEngine::createRecordStore(OperationContext* opCtx,
     if (engine.isEmpty()) {
         // If no compression option where provided at the time of the
         // collection creation, use the global options.
-        collconf::collectionCfgString2compParms(kvdbGlobalOptions.getCollParamsStr(), compparms);
+        collconf::collectionOptions2compParms(kvdbGlobalOptions.getCollComprAlgoStr(),
+                                              kvdbGlobalOptions.getCollComprMinSzStr(),
+                                              compparms);
     } else {
         // The collection creation is passing some storage engine options.
         Status st = collconf::validateCollectionOptions(engine, compparms);
@@ -517,24 +455,10 @@ void KVDBEngine::setJournalListener(JournalListener* jl) {
     _durabilityManager->setJournalListener(jl);
 }
 
-void KVDBEngine::_open_kvdb(const string& mp, const string& db, unsigned int snap) {
-    struct hse_params* params;
-    unsigned int ms = DUR_LAG;
-
-    hse_params_create(&params);
-
-    // Set a long KVDB txn timeout (99 days)
-    hse_params_set(params, "kvdb.rparams.txn_ttl", "0x1FFFFFFFFL");
-
-    parseKvdbRParams(_db, kvdbGlobalOptions.getKvdbRParamsStr(), params);
-
-    if (isDurable()) {
-        if (storageGlobalParams.journalCommitIntervalMs > 0)
-            ms = storageGlobalParams.journalCommitIntervalMs;
-    }
-
-    // Set KVDB c1 dur_lag to the journal commit interval.
-    hse_params_set(params, "kvdb.rparams.dur_lag", std::to_string(ms).c_str());
+void KVDBEngine::_open_kvdb(const string& mp,
+                            const string& db,
+                            struct hse_params* params,
+                            unsigned int snap) {
 
     auto st = _db.kvdb_open(mp.c_str(), db.c_str(), params, snap);
     if (st.getErrno()) {
@@ -548,15 +472,12 @@ void KVDBEngine::_open_kvdb(const string& mp, const string& db, unsigned int sna
         if (st.getErrno() != ENOENT)
             invariantHseSt(st);
 
-        parseKvdbCParams(_db, kvdbGlobalOptions.getKvdbCParamsStr(), params);
-
         st = _db.kvdb_make(mp.c_str(), db.c_str(), params);
         invariantHseSt(st);
 
         st = _db.kvdb_open(mp.c_str(), db.c_str(), params, snap);
     }
 
-    hse_params_destroy(params);
     invariantHseSt(st);
 
     if (isDurable()) {
@@ -572,25 +493,9 @@ void KVDBEngine::_open_kvdb(const string& mp, const string& db, unsigned int sna
 
 void KVDBEngine::_open_kvs(const string& kvs, KVSHandle& h, struct hse_params* params) {
 
-    if (kvs == kMainKvsName) {
-        parseKvsCParams(_db, kvdbGlobalOptions.getCParamsStrMainKvs(), params);
-        parseKvsRParams(_db, kvdbGlobalOptions.getRParamsStrMainKvs(), params);
-    } else if (kvs == kUniqIdxKvsName) {
-        parseKvsCParams(_db, kvdbGlobalOptions.getCParamsStrUniqIdxKvs(), params);
-        parseKvsRParams(_db, kvdbGlobalOptions.getRParamsStrUniqIdxKvs(), params);
-    } else if (kvs == kStdIdxKvsName) {
-        parseKvsCParams(_db, kvdbGlobalOptions.getCParamsStrStdIdxKvs(), params);
-        parseKvsRParams(_db, kvdbGlobalOptions.getRParamsStrStdIdxKvs(), params);
-    } else if (kvs == kLargeKvsName) {
-        parseKvsCParams(_db, kvdbGlobalOptions.getCParamsStrLargeKvs(), params);
-        parseKvsRParams(_db, kvdbGlobalOptions.getRParamsStrLargeKvs(), params);
-    } else if (kvs == kOplogKvsName) {
-        parseKvsCParams(_db, kvdbGlobalOptions.getCParamsStrOplogKvs(), params);
-        parseKvsRParams(_db, kvdbGlobalOptions.getRParamsStrOplogKvs(), params);
-    } else if (kvs == kOplogLargeKvsName) {
-        parseKvsCParams(_db, kvdbGlobalOptions.getCParamsStrOplogLargeKvs(), params);
-        parseKvsRParams(_db, kvdbGlobalOptions.getRParamsStrOplogLargeKvs(), params);
-    }
+
+    parseParams(_db, kvdbGlobalOptions.getParamsStr(), params);
+    parseParams(_db, kvdbGlobalOptions.getParamsStr(), params);
 
     auto st = _db.kvdb_kvs_open(kvs.c_str(), params, h);
     if (st.getErrno()) {
@@ -610,49 +515,86 @@ void KVDBEngine::_open_kvs(const string& kvs, KVSHandle& h, struct hse_params* p
     invariantHseSt(st);
 }
 
+void KVDBEngine::_set_hse_params(struct hse_params* params) {
+    // get profile string
+    const string profilePath = kvdbGlobalOptions.getProfilePathStr();
+
+    // load params from profile
+    if (profilePath != "") {
+        invariantHseSt(_db.kvdb_params_from_file(params, profilePath));
+    }
+
+    // get params from cmdline
+    parseParams(_db, kvdbGlobalOptions.getParamsStr(), params);
+
+    // set internal params that cannot be overridden
+    // Set a long KVDB txn timeout (99 days)
+    invariantHseSt(_db.kvdb_params_set(params, string("kvdb.txn_ttl"), string("0x1FFFFFFFF")));
+
+    unsigned int ms = DUR_LAG;
+    if (isDurable()) {
+        if (storageGlobalParams.journalCommitIntervalMs > 0)
+            ms = storageGlobalParams.journalCommitIntervalMs;
+    }
+    // Set KVDB c1 dur_lag to the journal commit interval.
+    invariantHseSt(_db.kvdb_params_set(params, string("kvdb.dur_lag"), std::to_string(ms)));
+
+    // applies to all kvses
+    string paramName = string("kvs.pfxlen");
+    invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(DEFAULT_PFX_LEN)));
+
+    // applies to oplog
+    paramName = string("kvs.") + kOplogKvsName + string(".fanout");
+    invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(OPLOG_FANOUT)));
+
+    paramName = string("kvs.") + kOplogKvsName + string(".pfxlen");
+    invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(OPLOG_PFX_LEN)));
+
+    paramName = string("kvs.") + kOplogKvsName + string(".kvs_ext01");
+    invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(1)));
+
+    // applies to oploglarge
+    paramName = string("kvs.") + kOplogLargeKvsName + string(".fanout");
+    invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(OPLOG_FANOUT)));
+
+    paramName = string("kvs.") + kOplogLargeKvsName + string(".pfxlen");
+    invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(OPLOG_PFX_LEN)));
+
+    // applies to uniq idx
+    paramName = string("kvs.") + kUniqIdxKvsName + string(".sfxlen");
+    invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(DEFAULT_SFX_LEN)));
+
+    // applies to std idx
+    paramName = string("kvs.") + kStdIdxKvsName + string(".sfxlen");
+    invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(STDIDX_SFX_LEN)));
+}
+
 void KVDBEngine::_setupDb() {
     auto st = _db.kvdb_init();
     invariantHseSt(st);
 
     const string mpoolName = kvdbGlobalOptions.getMpoolName();
 
+    struct hse_params* params{nullptr};
+
+    hse_params_create(&params);
+    invariantHse(params != nullptr);
+
+    _set_hse_params(params);
+
     unsigned int snapId = 0;
 
     // kvdb name and mpool name are the same for now as per the HSE API.
-    _open_kvdb(mpoolName, mpoolName, snapId);
-
-    struct hse_params* params;
-
-    hse_params_create(&params);
-    hse_params_set(params, "kvs.cparams.pfxlen", std::to_string(DEFAULT_PFX_LEN).c_str());
-
-    parseKvsCParams(_db, kvdbGlobalOptions.getPriKvsCParamsStr(), params);
-    parseKvsRParams(_db, kvdbGlobalOptions.getPriKvsRParamsStr(), params);
+    _open_kvdb(mpoolName, mpoolName, params, snapId);
 
     _open_kvs(kMainKvsName, _mainKvs, params);
     _open_kvs(kLargeKvsName, _largeKvs, params);
 
-    hse_params_destroy(params);
-    hse_params_create(&params);
-    hse_params_set(params, "kvs.cparams.fanout", std::to_string(OPLOG_FANOUT).c_str());
-    hse_params_set(params, "kvs.cparams.pfxlen", std::to_string(OPLOG_PFX_LEN).c_str());
-
     _open_kvs(kOplogLargeKvsName, _oplogLargeKvs, params);
-    hse_params_set(params, "kvs.cparams.kvs_ext01", std::to_string(1).c_str());
     _open_kvs(kOplogKvsName, _oplogKvs, params);
 
-    hse_params_destroy(params);
-    hse_params_create(&params);
-
-    hse_params_set(params, "kvs.cparams.pfxlen", std::to_string(DEFAULT_PFX_LEN).c_str());
-
-    parseKvsCParams(_db, kvdbGlobalOptions.getSecKvsCParamsStr(), params);
-    parseKvsRParams(_db, kvdbGlobalOptions.getSecKvsRParamsStr(), params);
-
-    hse_params_set(params, "kvs.cparams.sfxlen", std::to_string(DEFAULT_SFX_LEN).c_str());
     _open_kvs(kUniqIdxKvsName, _uniqIdxKvs, params);
 
-    hse_params_set(params, "kvs.cparams.sfxlen", std::to_string(STDIDX_SFX_LEN).c_str());
     _open_kvs(kStdIdxKvsName, _stdIdxKvs, params);
 
     hse_params_destroy(params);

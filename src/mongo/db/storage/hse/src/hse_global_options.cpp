@@ -46,18 +46,12 @@ namespace mongo {
 
 const std::string KVDBGlobalOptions::kDefaultMpoolName = "mp1";
 const int KVDBGlobalOptions::kDefaultForceLag = 0;
-
-const std::string KVDBGlobalOptions::kDefaultKvdbCParamsStr = "";
-const std::string KVDBGlobalOptions::kDefaultKvdbRParamsStr = "";
-
-// Old
-const std::string KVDBGlobalOptions::kDefaultPriKvsCParamsStr = "";
-const std::string KVDBGlobalOptions::kDefaultPriKvsRParamsStr = "";
-const std::string KVDBGlobalOptions::kDefaultSecKvsCParamsStr = "";
-const std::string KVDBGlobalOptions::kDefaultSecKvsRParamsStr = "";
+const std::string KVDBGlobalOptions::kDefaultProfilePathStr = "";
+const std::string KVDBGlobalOptions::kDefaultParamsStr = "";
 
 // Collection options
-const std::string KVDBGlobalOptions::kDefaultCollParamsStr = "compalgo=lz4,compminsize=0";
+const std::string KVDBGlobalOptions::kDefaultCollComprAlgoStr = "lz4";
+const std::string KVDBGlobalOptions::kDefaultCollComprMinSzStr = "0";
 
 const bool KVDBGlobalOptions::kDefaultEnableMetrics = false;
 
@@ -66,66 +60,31 @@ KVDBGlobalOptions kvdbGlobalOptions;
 
 namespace {
 const std::string modName{"hse"};
+
 const std::string mpoolNameOptStr = modName + "MpoolName";
+
 const std::string forceLagOptStr = modName + "ForceLag";
 
-const std::string kvdbCParamsOptStr = modName + "KvdbCParams";
-const std::string kvdbRParamsOptStr = modName + "KvdbRParams";
+const std::string profilePathOptStr = modName + "ProfilePath";
 
-// Old
-const std::string priKvsCParamsOptStr = modName + "PriKvsCParams";
-const std::string priKvsRParamsOptStr = modName + "PriKvsRParams";
-const std::string secKvsCParamsOptStr = modName + "SecKvsCParams";
-const std::string secKvsRParamsOptStr = modName + "SecKvsRParams";
-
-// New
-const std::string KvsCParamsOpt_MainKvs = modName + "MainKvsCParams";
-const std::string KvsCParamsOpt_UniqIdxKvs = modName + "UniqIdxKvsCParams";
-const std::string KvsCParamsOpt_StdIdxKvs = modName + "StdIdxKvsCParams";
-const std::string KvsCParamsOpt_LargeKvs = modName + "LargeKvsCParams";
-const std::string KvsCParamsOpt_OplogKvs = modName + "OplogKvsCParams";
-const std::string KvsCParamsOpt_OplogLargeKvs = modName + "OplogLargeKvsCParams";
-
-const std::string KvsRParamsOpt_MainKvs = modName + "MainKvsRParams";
-const std::string KvsRParamsOpt_UniqIdxKvs = modName + "UniqIdxKvsRParams";
-const std::string KvsRParamsOpt_StdIdxKvs = modName + "StdIdxKvsRParams";
-const std::string KvsRParamsOpt_LargeKvs = modName + "LargeKvsRParams";
-const std::string KvsRParamsOpt_OplogKvs = modName + "OplogKvsRParams";
-const std::string KvsRParamsOpt_OplogLargeKvs = modName + "OplogLargeKvsRParams";
-
+const std::string paramsOptStr = modName + "Params";
 
 const std::string cfgStrPrefix = ("storage." + modName) + ".";
 
 const std::string mpoolNameCfgStr = cfgStrPrefix + "mpoolName";
+
 const std::string forceLagCfgStr = cfgStrPrefix + "forceLag";
 
-const std::string kvdbCParamsCfgStr = cfgStrPrefix + "kvdbCParams";
-const std::string kvdbRParamsCfgStr = cfgStrPrefix + "kvdbRParams";
-// old
-const std::string priKvsCParamsCfgStr = cfgStrPrefix + "priKvsCParams";
-const std::string priKvsRParamsCfgStr = cfgStrPrefix + "priKvsRParams";
-const std::string secKvsCParamsCfgStr = cfgStrPrefix + "secKvsCParams";
-const std::string secKvsRParamsCfgStr = cfgStrPrefix + "secKvsRParams";
-// new
-const std::string KvsCParamsCfg_MainKvs = cfgStrPrefix + "MainKvsCParams";
-const std::string KvsCParamsCfg_UniqIdxKvs = cfgStrPrefix + "UniqIdxKvsCParams";
-const std::string KvsCParamsCfg_StdIdxKvs = cfgStrPrefix + "StdIdxKvsCParams";
-const std::string KvsCParamsCfg_LargeKvs = cfgStrPrefix + "LargeKvsCParams";
-const std::string KvsCParamsCfg_OplogKvs = cfgStrPrefix + "OplogKvsCParams";
-const std::string KvsCParamsCfg_OplogLargeKvs = cfgStrPrefix + "OplogLargeKvsCParams";
+const std::string profilePathCfgStr = cfgStrPrefix + "profilePath";
 
-const std::string KvsRParamsCfg_MainKvs = cfgStrPrefix + "MainKvsRParams";
-const std::string KvsRParamsCfg_UniqIdxKvs = cfgStrPrefix + "UniqIdxKvsRParams";
-const std::string KvsRParamsCfg_StdIdxKvs = cfgStrPrefix + "StdIdxKvsRParams";
-const std::string KvsRParamsCfg_LargeKvs = cfgStrPrefix + "LargeKvsRParams";
-const std::string KvsRParamsCfg_OplogKvs = cfgStrPrefix + "OplogKvsRParams";
-const std::string KvsRParamsCfg_OplogLargeKvs = cfgStrPrefix + "OplogLargeKvsRParams";
+const std::string paramsCfgStr = cfgStrPrefix + "params";
 
 
 // Collection options.
-
-const std::string collectionParamsCfgStr = cfgStrPrefix + "collectionParams";
-const std::string collectionParamsOptStr = modName + "CollectionParams";
+const std::string collComprAlgoCfgStr = cfgStrPrefix + "collComprAlgo";
+const std::string collComprMinSzCfgStr = cfgStrPrefix + "collComprMinSz";
+const std::string collComprAlgoOptStr = modName + "CollComprAlgo";
+const std::string collComprMinSzOptStr = modName + "CollComprMinSz";
 
 // Enable metrics
 const std::string enableMetricsCfgStr = cfgStrPrefix + "enableMetrics";
@@ -137,127 +96,32 @@ Status KVDBGlobalOptions::add(moe::OptionSection* options) {
 
     kvdbOptions
         .addOptionChaining(
-            mpoolNameCfgStr, mpoolNameOptStr, moe::String, "name of the MPool containing the KVDB")
+            mpoolNameCfgStr, mpoolNameOptStr, moe::String, "name of the mpool containing the kvdb")
         .setDefault(moe::Value(kDefaultMpoolName));
     kvdbOptions
         .addOptionChaining(forceLagCfgStr, forceLagOptStr, moe::Int, "force x seconds of lag")
         .hidden()
         .setDefault(moe::Value(kDefaultForceLag));
     kvdbOptions
-        .addOptionChaining(
-            kvdbCParamsCfgStr, kvdbCParamsOptStr, moe::String, "KVDB creation parameters")
-        .setDefault(moe::Value(kDefaultKvdbCParamsStr));
-    kvdbOptions
-        .addOptionChaining(
-            kvdbRParamsCfgStr, kvdbRParamsOptStr, moe::String, "KVDB runtime parameters")
-        .setDefault(moe::Value(kDefaultKvdbRParamsStr));
-    // Old
-    kvdbOptions
-        .addOptionChaining(priKvsCParamsCfgStr,
-                           priKvsCParamsOptStr,
-                           moe::String,
-                           "primary KVS creation parameters")
-        .setDefault(moe::Value(kDefaultPriKvsCParamsStr));
-    kvdbOptions
-        .addOptionChaining(
-            priKvsRParamsCfgStr, priKvsRParamsOptStr, moe::String, "primary KVS runtime parameters")
-        .setDefault(moe::Value(kDefaultPriKvsRParamsStr));
-    kvdbOptions
-        .addOptionChaining(secKvsCParamsCfgStr,
-                           secKvsCParamsOptStr,
-                           moe::String,
-                           "secondary KVS creation parameters")
-        .setDefault(moe::Value(kDefaultSecKvsCParamsStr));
-    kvdbOptions
-        .addOptionChaining(secKvsRParamsCfgStr,
-                           secKvsRParamsOptStr,
-                           moe::String,
-                           "secondary KVS runtime parameters")
-        .setDefault(moe::Value(kDefaultSecKvsRParamsStr));
-
-    // New
-    kvdbOptions
-        .addOptionChaining(KvsCParamsCfg_MainKvs,
-                           KvsCParamsOpt_MainKvs,
-                           moe::String,
-                           "MainKvs creation parameters")
-        .setDefault(moe::Value(""));
-    kvdbOptions
-        .addOptionChaining(KvsCParamsCfg_UniqIdxKvs,
-                           KvsCParamsOpt_UniqIdxKvs,
-                           moe::String,
-                           "UniqIdxKvs creation parameters")
-        .setDefault(moe::Value(""));
-    kvdbOptions
-        .addOptionChaining(KvsCParamsCfg_StdIdxKvs,
-                           KvsCParamsOpt_StdIdxKvs,
-                           moe::String,
-                           "StdIdxKvs creation parameters")
-        .setDefault(moe::Value(""));
-    kvdbOptions
-        .addOptionChaining(KvsCParamsCfg_LargeKvs,
-                           KvsCParamsOpt_LargeKvs,
-                           moe::String,
-                           "LargeKvs creation parameters")
-        .setDefault(moe::Value(""));
-    kvdbOptions
-        .addOptionChaining(KvsCParamsCfg_OplogKvs,
-                           KvsCParamsOpt_OplogKvs,
-                           moe::String,
-                           "OplogKvs creation parameters")
-        .setDefault(moe::Value(""));
-    kvdbOptions
-        .addOptionChaining(KvsCParamsCfg_OplogLargeKvs,
-                           KvsCParamsOpt_OplogLargeKvs,
-                           moe::String,
-                           "OplogLargeKvs creation parameters")
-        .setDefault(moe::Value(""));
-
-    kvdbOptions
-        .addOptionChaining(
-            KvsRParamsCfg_MainKvs, KvsRParamsOpt_MainKvs, moe::String, "MainKvs runtime parameters")
-        .setDefault(moe::Value(""));
-    kvdbOptions
-        .addOptionChaining(KvsRParamsCfg_UniqIdxKvs,
-                           KvsRParamsOpt_UniqIdxKvs,
-                           moe::String,
-                           "UniqIdxKvs runtime parameters")
-        .setDefault(moe::Value(""));
-    kvdbOptions
-        .addOptionChaining(KvsRParamsCfg_StdIdxKvs,
-                           KvsRParamsOpt_StdIdxKvs,
-                           moe::String,
-                           "StdIdxKvs runtime parameters")
-        .setDefault(moe::Value(""));
-    kvdbOptions
-        .addOptionChaining(KvsRParamsCfg_LargeKvs,
-                           KvsRParamsOpt_LargeKvs,
-                           moe::String,
-                           "LargeKvs runtime parameters")
-        .setDefault(moe::Value(""));
-    kvdbOptions
-        .addOptionChaining(KvsRParamsCfg_OplogKvs,
-                           KvsRParamsOpt_OplogKvs,
-                           moe::String,
-                           "OplogKvs runtime parameters")
-        .setDefault(moe::Value(""));
-    kvdbOptions
-        .addOptionChaining(KvsRParamsCfg_OplogLargeKvs,
-                           KvsRParamsOpt_OplogLargeKvs,
-                           moe::String,
-                           "OplogLargeKvs runtime parameters")
-        .setDefault(moe::Value(""));
-
+        .addOptionChaining(profilePathCfgStr, profilePathOptStr, moe::String, "HSE profile path")
+        .setDefault(moe::Value(kDefaultParamsStr));
+    kvdbOptions.addOptionChaining(paramsCfgStr, paramsOptStr, moe::String, "HSE parameters")
+        .setDefault(moe::Value(kDefaultParamsStr));
 
     // Collection options
-
     kvdbOptions
-        .addOptionChaining(collectionParamsCfgStr,
-                           collectionParamsOptStr,
+        .addOptionChaining(collComprAlgoCfgStr,
+                           collComprAlgoOptStr,
                            moe::String,
-                           "compalgo={lz4}[,compminsize=<values whose size is <= to this size are "
-                           "not compressed>]")
-        .setDefault(moe::Value(kDefaultCollParamsStr));
+                           "collection compression algorithm")
+        .setDefault(moe::Value(kDefaultCollComprAlgoStr));
+    kvdbOptions
+        .addOptionChaining(collComprMinSzCfgStr,
+                           collComprMinSzOptStr,
+                           moe::String,
+                           "compression minimum size <values whose size is <= to this size are "
+                           "not compressed>")
+        .setDefault(moe::Value(kDefaultCollComprMinSzStr));
 
     kvdbOptions
         .addOptionChaining(
@@ -280,97 +144,25 @@ Status KVDBGlobalOptions::store(const moe::Environment& params,
         log() << "Force Lag: " << kvdbGlobalOptions._forceLag;
     }
 
-    if (params.count(kvdbCParamsCfgStr)) {
-        kvdbGlobalOptions._kvdbCParamsStr = params[kvdbCParamsCfgStr].as<std::string>();
-        log() << "KVDB creation params str: " << kvdbGlobalOptions._kvdbCParamsStr;
+    if (params.count(profilePathCfgStr)) {
+        kvdbGlobalOptions._profilePathStr = params[profilePathCfgStr].as<std::string>();
+        log() << "HSE profile path str: " << kvdbGlobalOptions._profilePathStr;
     }
 
-    if (params.count(kvdbRParamsCfgStr)) {
-        kvdbGlobalOptions._kvdbRParamsStr = params[kvdbRParamsCfgStr].as<std::string>();
-        log() << "KVDB runtime params str: " << kvdbGlobalOptions._kvdbRParamsStr;
+    if (params.count(paramsCfgStr)) {
+        kvdbGlobalOptions._paramsStr = params[paramsCfgStr].as<std::string>();
+        log() << "HSE params str: " << kvdbGlobalOptions._paramsStr;
     }
 
-    // old
-    if (params.count(priKvsCParamsCfgStr)) {
-        kvdbGlobalOptions._priKvsCParamsStr = params[priKvsCParamsCfgStr].as<std::string>();
-        log() << "Primary KVS creation params str: " << kvdbGlobalOptions._priKvsCParamsStr;
+    if (params.count(collComprAlgoCfgStr)) {
+        kvdbGlobalOptions._collComprAlgoStr = params[collComprAlgoCfgStr].as<std::string>();
+        log() << "Collection compression Algo str: " << kvdbGlobalOptions._collComprAlgoStr;
     }
 
-    if (params.count(priKvsRParamsCfgStr)) {
-        kvdbGlobalOptions._priKvsRParamsStr = params[priKvsRParamsCfgStr].as<std::string>();
-        log() << "Primary KVS runtime params str: " << kvdbGlobalOptions._priKvsRParamsStr;
-    }
-
-    if (params.count(secKvsCParamsCfgStr)) {
-        kvdbGlobalOptions._secKvsCParamsStr = params[secKvsCParamsCfgStr].as<std::string>();
-        log() << "Secondary KVS creation params str: " << kvdbGlobalOptions._secKvsCParamsStr;
-    }
-
-    if (params.count(secKvsRParamsCfgStr)) {
-        kvdbGlobalOptions._secKvsRParamsStr = params[secKvsRParamsCfgStr].as<std::string>();
-        log() << "Secondary KVS runtime params str: " << kvdbGlobalOptions._secKvsRParamsStr;
-    }
-
-    // new
-    if (params.count(KvsCParamsCfg_MainKvs)) {
-        kvdbGlobalOptions._CParamsStrMainKvs = params[KvsCParamsCfg_MainKvs].as<std::string>();
-        log() << "MainKvs creation params str: " << kvdbGlobalOptions._CParamsStrMainKvs;
-    }
-    if (params.count(KvsCParamsCfg_UniqIdxKvs)) {
-        kvdbGlobalOptions._CParamsStrUniqIdxKvs =
-            params[KvsCParamsCfg_UniqIdxKvs].as<std::string>();
-        log() << "UniqIdxKvs creation params str: " << kvdbGlobalOptions._CParamsStrUniqIdxKvs;
-    }
-    if (params.count(KvsCParamsCfg_StdIdxKvs)) {
-        kvdbGlobalOptions._CParamsStrStdIdxKvs = params[KvsCParamsCfg_StdIdxKvs].as<std::string>();
-        log() << "StdIdxKvs creation params str: " << kvdbGlobalOptions._CParamsStrStdIdxKvs;
-    }
-    if (params.count(KvsCParamsCfg_LargeKvs)) {
-        kvdbGlobalOptions._CParamsStrLargeKvs = params[KvsCParamsCfg_LargeKvs].as<std::string>();
-        log() << "LargeKvs creation params str: " << kvdbGlobalOptions._CParamsStrLargeKvs;
-    }
-    if (params.count(KvsCParamsCfg_OplogKvs)) {
-        kvdbGlobalOptions._CParamsStrOplogKvs = params[KvsCParamsCfg_OplogKvs].as<std::string>();
-        log() << "OplogKvs creation params str: " << kvdbGlobalOptions._CParamsStrOplogKvs;
-    }
-    if (params.count(KvsCParamsCfg_OplogLargeKvs)) {
-        kvdbGlobalOptions._CParamsStrOplogLargeKvs =
-            params[KvsCParamsCfg_OplogLargeKvs].as<std::string>();
-        log() << "OplogLargeKvs creation params str: "
-              << kvdbGlobalOptions._CParamsStrOplogLargeKvs;
-    }
-
-    if (params.count(KvsRParamsCfg_MainKvs)) {
-        kvdbGlobalOptions._RParamsStrMainKvs = params[KvsRParamsCfg_MainKvs].as<std::string>();
-        log() << "MainKvs runtime params str: " << kvdbGlobalOptions._RParamsStrMainKvs;
-    }
-    if (params.count(KvsRParamsCfg_UniqIdxKvs)) {
-        kvdbGlobalOptions._RParamsStrUniqIdxKvs =
-            params[KvsRParamsCfg_UniqIdxKvs].as<std::string>();
-        log() << "UniqIdxKvs runtime params str: " << kvdbGlobalOptions._RParamsStrUniqIdxKvs;
-    }
-    if (params.count(KvsRParamsCfg_StdIdxKvs)) {
-        kvdbGlobalOptions._RParamsStrStdIdxKvs = params[KvsRParamsCfg_StdIdxKvs].as<std::string>();
-        log() << "StdIdxKvs runtime params str: " << kvdbGlobalOptions._RParamsStrStdIdxKvs;
-    }
-    if (params.count(KvsRParamsCfg_LargeKvs)) {
-        kvdbGlobalOptions._RParamsStrLargeKvs = params[KvsRParamsCfg_LargeKvs].as<std::string>();
-        log() << "LargeKvs runtime params str: " << kvdbGlobalOptions._RParamsStrLargeKvs;
-    }
-    if (params.count(KvsRParamsCfg_OplogKvs)) {
-        kvdbGlobalOptions._RParamsStrOplogKvs = params[KvsRParamsCfg_OplogKvs].as<std::string>();
-        log() << "OplogKvs runtime params str: " << kvdbGlobalOptions._RParamsStrOplogKvs;
-    }
-    if (params.count(KvsRParamsCfg_OplogLargeKvs)) {
-        kvdbGlobalOptions._RParamsStrOplogLargeKvs =
-            params[KvsRParamsCfg_OplogLargeKvs].as<std::string>();
-        log() << "OplogLargeKvs runtime params str: " << kvdbGlobalOptions._RParamsStrOplogLargeKvs;
-    }
-
-    if (params.count(collectionParamsCfgStr)) {
-        kvdbGlobalOptions._collectionParamsStr = params[collectionParamsCfgStr].as<std::string>();
-        log() << "Collection creation parameters params str: "
-              << kvdbGlobalOptions._collectionParamsStr;
+    if (params.count(collComprMinSzCfgStr)) {
+        kvdbGlobalOptions._collComprMinSzStr = params[collComprMinSzCfgStr].as<std::string>();
+        log() << "Collection compression minimum size  str: "
+              << kvdbGlobalOptions._collComprMinSzStr;
     }
 
     if (params.count(enableMetricsCfgStr)) {
@@ -389,73 +181,20 @@ bool KVDBGlobalOptions::getCrashSafeCounters() const {
     return _crashSafeCounters;
 }
 
-std::string KVDBGlobalOptions::getKvdbCParamsStr() const {
-    return _kvdbCParamsStr;
+std::string KVDBGlobalOptions::getProfilePathStr() const {
+    return _profilePathStr;
 }
 
-std::string KVDBGlobalOptions::getKvdbRParamsStr() const {
-    return _kvdbRParamsStr;
+std::string KVDBGlobalOptions::getParamsStr() const {
+    return _paramsStr;
 }
 
-// old
-std::string KVDBGlobalOptions::getPriKvsCParamsStr() const {
-    return _priKvsCParamsStr;
+std::string KVDBGlobalOptions::getCollComprAlgoStr() const {
+    return _collComprAlgoStr;
 }
 
-std::string KVDBGlobalOptions::getPriKvsRParamsStr() const {
-    return _priKvsRParamsStr;
-}
-
-std::string KVDBGlobalOptions::getSecKvsCParamsStr() const {
-    return _secKvsCParamsStr;
-}
-
-std::string KVDBGlobalOptions::getSecKvsRParamsStr() const {
-    return _secKvsRParamsStr;
-}
-
-// New
-// old
-std::string KVDBGlobalOptions::getCParamsStrMainKvs() const {
-    return _CParamsStrMainKvs;
-}
-std::string KVDBGlobalOptions::getCParamsStrUniqIdxKvs() const {
-    return _CParamsStrUniqIdxKvs;
-}
-std::string KVDBGlobalOptions::getCParamsStrStdIdxKvs() const {
-    return _CParamsStrStdIdxKvs;
-}
-std::string KVDBGlobalOptions::getCParamsStrLargeKvs() const {
-    return _CParamsStrLargeKvs;
-}
-std::string KVDBGlobalOptions::getCParamsStrOplogKvs() const {
-    return _CParamsStrOplogKvs;
-}
-std::string KVDBGlobalOptions::getCParamsStrOplogLargeKvs() const {
-    return _CParamsStrOplogLargeKvs;
-}
-
-std::string KVDBGlobalOptions::getRParamsStrMainKvs() const {
-    return _RParamsStrMainKvs;
-}
-std::string KVDBGlobalOptions::getRParamsStrUniqIdxKvs() const {
-    return _RParamsStrUniqIdxKvs;
-}
-std::string KVDBGlobalOptions::getRParamsStrStdIdxKvs() const {
-    return _RParamsStrStdIdxKvs;
-}
-std::string KVDBGlobalOptions::getRParamsStrLargeKvs() const {
-    return _RParamsStrLargeKvs;
-}
-std::string KVDBGlobalOptions::getRParamsStrOplogKvs() const {
-    return _RParamsStrOplogKvs;
-}
-std::string KVDBGlobalOptions::getRParamsStrOplogLargeKvs() const {
-    return _RParamsStrOplogLargeKvs;
-}
-
-std::string KVDBGlobalOptions::getCollParamsStr() const {
-    return _collectionParamsStr;
+std::string KVDBGlobalOptions::getCollComprMinSzStr() const {
+    return _collComprMinSzStr;
 }
 
 bool KVDBGlobalOptions::getMetricsEnabled() const {

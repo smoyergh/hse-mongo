@@ -73,6 +73,9 @@ namespace collconf {
 
 mongo::Status parseOneOption(string& left, string& right, CompParms& compparms);
 mongo::Status collectionCfgString2compParms(const StringData& sd, struct CompParms& compparms);
+mongo::Status collectionOptions2compParms(const string algo,
+                                          const string compMinSize,
+                                          struct CompParms& compparms);
 mongo::Status validateCollectionOptions(const BSONObj& options, CompParms& compparms);
 void compParms2Ident(BSONObjBuilder* configBuilder, CompParms& compparms);
 mongo::Status ident2compParms(const BSONObj& config, CompParms& compparms);

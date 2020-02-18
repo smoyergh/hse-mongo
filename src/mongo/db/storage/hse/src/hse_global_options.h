@@ -45,29 +45,10 @@ public:
     KVDBGlobalOptions()
         : _mpoolName{kDefaultMpoolName},
           _forceLag{kDefaultForceLag},
-          _kvdbCParamsStr{kDefaultKvdbCParamsStr},
-          _kvdbRParamsStr{kDefaultKvdbRParamsStr},
-          // old
-          _priKvsCParamsStr{kDefaultPriKvsCParamsStr},
-          _priKvsRParamsStr{kDefaultPriKvsRParamsStr},
-          _secKvsCParamsStr{kDefaultSecKvsCParamsStr},
-          _secKvsRParamsStr{kDefaultSecKvsRParamsStr},
-          // new
-          _CParamsStrMainKvs{""},
-          _CParamsStrUniqIdxKvs{""},
-          _CParamsStrStdIdxKvs{""},
-          _CParamsStrLargeKvs{""},
-          _CParamsStrOplogKvs{""},
-          _CParamsStrOplogLargeKvs{""},
-
-          _RParamsStrMainKvs{""},
-          _RParamsStrUniqIdxKvs{""},
-          _RParamsStrStdIdxKvs{""},
-          _RParamsStrLargeKvs{""},
-          _RParamsStrOplogKvs{""},
-          _RParamsStrOplogLargeKvs{""},
-
-          _collectionParamsStr{kDefaultCollParamsStr},
+          _profilePathStr{kDefaultProfilePathStr},
+          _paramsStr{kDefaultParamsStr},
+          _collComprAlgoStr{kDefaultCollComprAlgoStr},
+          _collComprMinSzStr{kDefaultCollComprMinSzStr},
           _enableMetrics{kDefaultEnableMetrics},
           _crashSafeCounters{false},
           _kvdbC1Enabled{false} {}
@@ -79,29 +60,12 @@ public:
 
     std::string getKvdbName() const;
 
-    std::string getKvdbCParamsStr() const;
-    std::string getKvdbRParamsStr() const;
-    // old
-    std::string getPriKvsCParamsStr() const;
-    std::string getPriKvsRParamsStr() const;
-    std::string getSecKvsCParamsStr() const;
-    std::string getSecKvsRParamsStr() const;
-    // new
-    std::string getCParamsStrMainKvs() const;
-    std::string getCParamsStrUniqIdxKvs() const;
-    std::string getCParamsStrStdIdxKvs() const;
-    std::string getCParamsStrLargeKvs() const;
-    std::string getCParamsStrOplogKvs() const;
-    std::string getCParamsStrOplogLargeKvs() const;
+    std::string getProfilePathStr() const;
 
-    std::string getRParamsStrMainKvs() const;
-    std::string getRParamsStrUniqIdxKvs() const;
-    std::string getRParamsStrStdIdxKvs() const;
-    std::string getRParamsStrLargeKvs() const;
-    std::string getRParamsStrOplogKvs() const;
-    std::string getRParamsStrOplogLargeKvs() const;
+    std::string getParamsStr() const;
 
-    std::string getCollParamsStr() const;
+    std::string getCollComprAlgoStr() const;
+    std::string getCollComprMinSzStr() const;
 
 
     bool getMetricsEnabled() const;
@@ -114,45 +78,20 @@ private:
     static const std::string kDefaultMpoolName;
     static const std::string kDefaultKvdbName;
     static const int kDefaultForceLag;
+    static const std::string kDefaultProfilePathStr;
+    static const std::string kDefaultParamsStr;
 
-    static const std::string kDefaultKvdbCParamsStr;
-    static const std::string kDefaultKvdbRParamsStr;
-    // old
-    static const std::string kDefaultPriKvsCParamsStr;
-    static const std::string kDefaultPriKvsRParamsStr;
-    static const std::string kDefaultSecKvsCParamsStr;
-    static const std::string kDefaultSecKvsRParamsStr;
-
-    static const std::string kDefaultCollParamsStr;
+    static const std::string kDefaultCollComprAlgoStr;
+    static const std::string kDefaultCollComprMinSzStr;
     static const bool kDefaultEnableMetrics;
 
     std::string _mpoolName;
     int _forceLag;
+    std::string _profilePathStr;
+    std::string _paramsStr;
 
-    std::string _kvdbCParamsStr;
-    std::string _kvdbRParamsStr;
-    // old
-    std::string _priKvsCParamsStr;
-    std::string _priKvsRParamsStr;
-    std::string _secKvsCParamsStr;
-    std::string _secKvsRParamsStr;
-    // new
-    std::string _CParamsStrMainKvs;
-    std::string _CParamsStrUniqIdxKvs;
-    std::string _CParamsStrStdIdxKvs;
-    std::string _CParamsStrLargeKvs;
-    std::string _CParamsStrOplogKvs;
-    std::string _CParamsStrOplogLargeKvs;
-
-    std::string _RParamsStrMainKvs;
-    std::string _RParamsStrUniqIdxKvs;
-    std::string _RParamsStrStdIdxKvs;
-    std::string _RParamsStrLargeKvs;
-    std::string _RParamsStrOplogKvs;
-    std::string _RParamsStrOplogLargeKvs;
-
-
-    std::string _collectionParamsStr;
+    std::string _collComprAlgoStr;
+    std::string _collComprMinSzStr;
     bool _enableMetrics;
 
     bool _crashSafeCounters;

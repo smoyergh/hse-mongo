@@ -61,8 +61,7 @@ private:
     string _kvdbName{"mp1"};
     string _mpoolName{"mp1"};
 
-    struct hse_params* _kvdbCfg;
-    struct hse_params* _kvdbRnCfg;
+    struct hse_params* _params{nullptr};
     unsigned long _snapId = 0;
 
     bool _kvdbPerUt = true;
