@@ -10,6 +10,12 @@
     //  The following test verifies that writeConcern: {j: true} ensures that data is durable.
     var dbpath = MongoRunner.dataPath + 'sync_write';
     resetDbpath(dbpath);
+    if (jsTest.options().storageEngine == 'hse') {
+        resetKvdb(TestData.hse,
+                  MongoRunner.toRealKvdbName(dbpath, {}),
+                  MongoRunner.toRealKvdbName(dbpath, {}),
+                  TestData.hseKvdbCParams);
+    }
 
     var mongodArgs = {dbpath: dbpath, noCleanData: true, journal: ''};
 

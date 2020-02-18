@@ -10,7 +10,7 @@
 (function() {
     "use strict";
 
-    const storageEnginesUsingKeyString = new Set(["wiredTiger", "inMemory", "rocksdb"]);
+    const storageEnginesUsingKeyString = new Set(["wiredTiger", "inMemory", "rocksdb", "hse"]);
 
     function getFeatureCompatibilityVersion(conn) {
         const res = assert.commandWorked(
