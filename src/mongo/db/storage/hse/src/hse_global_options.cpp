@@ -141,6 +141,7 @@ Status KVDBGlobalOptions::add(moe::OptionSection* options) {
         .setDefault(moe::Value(kDefaultMpoolName));
     kvdbOptions
         .addOptionChaining(forceLagCfgStr, forceLagOptStr, moe::Int, "force x seconds of lag")
+        .hidden()
         .setDefault(moe::Value(kDefaultForceLag));
     kvdbOptions
         .addOptionChaining(
@@ -258,8 +259,10 @@ Status KVDBGlobalOptions::add(moe::OptionSection* options) {
                            "not compressed>]")
         .setDefault(moe::Value(kDefaultCollParamsStr));
 
-    kvdbOptions.addOptionChaining(
-        enableMetricsCfgStr, enableMetricsOptStr, moe::Switch, "enable metrics collection");
+    kvdbOptions
+        .addOptionChaining(
+            enableMetricsCfgStr, enableMetricsOptStr, moe::Switch, "enable metrics collection")
+        .hidden();
 
 
     return options->addSection(kvdbOptions);
