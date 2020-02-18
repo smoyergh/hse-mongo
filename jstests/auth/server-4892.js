@@ -11,6 +11,12 @@
 var baseName = 'jstests_auth_server4892';
 var dbpath = MongoRunner.dataPath + baseName;
 resetDbpath(dbpath);
+if (jsTest.options().storageEngine == 'hse') {
+    resetKvdb(TestData.hse,
+              MongoRunner.toRealKvdbName(dbpath, {}),
+              MongoRunner.toRealKvdbName(dbpath, {}),
+              TestData.hseKvdbCParams);
+}
 var mongodCommonArgs = {
     dbpath: dbpath,
     noCleanData: true,
