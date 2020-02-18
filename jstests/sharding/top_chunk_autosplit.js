@@ -348,8 +348,11 @@ configDB = st.s.getDB('config');
 assert.commandWorked(db.adminCommand({addshard: st.getConnNames()[0], maxSize: 5}));
 assert.commandWorked(db.adminCommand({addshard: st.getConnNames()[1], maxSize: 1}));
 
+jsTest.log("D0 SE NAME = " + st.d0.adminCommand({serverStatus: 1}).storageEngine.name);
+jsTest.log("D1 SE NAME = " + st.d1.adminCommand({serverStatus: 1}).storageEngine.name);
+
 // SERVER-17070 Auto split moves to shard node running WiredTiger, if exceeding maxSize
-var unsupported = ["wiredTiger", "rocksdb", "inMemory", "ephemeralForTest"];
+var unsupported = ["wiredTiger", "rocksdb", "inMemory", "ephemeralForTest", "hse"];
 if (unsupported.indexOf(st.d0.adminCommand({serverStatus: 1}).storageEngine.name) == -1 &&
     unsupported.indexOf(st.d1.adminCommand({serverStatus: 1}).storageEngine.name) == -1) {
     assert.commandWorked(db.adminCommand({enableSharding: dbName}));

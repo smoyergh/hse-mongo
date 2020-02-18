@@ -97,7 +97,8 @@
 
     print("start rs w/correct key");
 
-    d1.stopSet();
+    // set last argument to stopSet() to true to reset hse KVDBs instead of deleting them
+    d1.stopSet(undefined, undefined, undefined, true);
     d1.startSet({keyFile: "jstests/libs/key1", restart: true});
     d1.initiate();
 
@@ -339,4 +340,7 @@
 
     s.stop();
 
+    // explicit stopSet() calls to make sure hse KVDBs are cleaned up
+    d1.stopSet();
+    d2.stopSet();
 })();

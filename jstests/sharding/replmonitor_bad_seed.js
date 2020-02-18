@@ -25,7 +25,8 @@
     // The cluster now has the shard information. Then kill the replica set so when mongos restarts
     // and tries to create a ReplSetMonitor for that shard, it will not be able to connect to any of
     // the seed servers.
-    replTest.stopSet();
+    // set last argument to stopSet() to true to reset hse KVDBs instead of deleting them
+    replTest.stopSet(undefined, undefined, undefined, true);
 
     st.restartMongos(0);
 
