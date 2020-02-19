@@ -110,20 +110,20 @@ class Job(object):
                     test.shortDescription())
                 self.report.setFailure(test, return_code=2)
 
-            if config.CONTINUE_ON_CRASH:
-                self.logger.info("Trying to start the fixture back up again...")
+                if config.CONTINUE_ON_CRASH:
+                    self.logger.info("Trying to start the fixture back up again...")
 
-                # If the fixture owned multiple mongods (i.e. replicaset or
-                # shardedcluster), make sure any orphaned processes are
-                # cleaned up before attempting to start the fixture again.
-                self.fixture.teardown()
+                    # If the fixture owned multiple mongods (i.e. replicaset or
+                    # shardedcluster), make sure any orphaned processes are
+                    # cleaned up before attempting to start the fixture again.
+                    self.fixture.teardown()
 
-                self.fixture.setup()
-                self.fixture.await_ready()
+                    self.fixture.setup()
+                    self.fixture.await_ready()
 
-            if not self.fixture.is_running():
-                raise errors.StopExecution("%s not running after %s" %
-                                           (self.fixture, test.shortDescription()))
+                if not self.fixture.is_running():
+                    raise errors.StopExecution("%s not running after %s" %
+                                               (self.fixture, test.shortDescription()))
 
         finally:
             success = self.report.find_test_info(test).status == "pass"
