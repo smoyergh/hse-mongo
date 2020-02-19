@@ -213,5 +213,7 @@ private:
     std::unique_ptr<KVDBCounterManager> _counterManager;
 
     std::unique_ptr<KVDBJournalFlusher> _journalFlusher;  // Depends on _durabilityManager
+
+    std::shared_ptr<KVDBOplogBlockManager> _oplogBlkMgr{};
 };
 }

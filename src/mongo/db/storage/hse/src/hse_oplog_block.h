@@ -84,30 +84,6 @@ namespace mongo {
 //     oplog KVS and correspond to those in the KVDBOplogBlockManager's _blockList
 //     member variable.
 //
-//
-// Outstanding Problems:
-// --------------------------------
-//
-// The scope of the issues with this code is too large to clean up in the current round
-// of rework. Instead, it will be deferred to a subsequent effort. Items that come
-// immediately to mind:
-//
-//   (A) The names "kvs" and "largeKvs" should have no meaning in the context of the
-//       KVDBOplogManager. The KVDBOplogStore uses the KVDBOplogManager primarily to
-//       access/mutate metadata about the oplog itself. In particular, it inserts
-//       and updates individual oplog entries itself. However, in the case of oplog
-//       reclamation the KVDBOplogBlockManager "knows" that individual oplog entries
-//       are in the same KVS that it stores its own "marker" information. A side
-//       effective is that prefix deletes in "truncate" (almost assuredly) aren't
-//       doing what they appear to do.
-//
-//   (B) No non-static member function may be called by another non-static member
-//       function passing as arguments non-static member variables. Further, every
-//       single argument to a function must be needed by that function unless the
-//       calling signature is dictated by inheritance from a subclass. This code
-//       violates this in a pervasive fashion. It was only in trying to fix this
-//       that the problem described in (A) was discovered.
-//
 
 class KVDBOplogBlockManager;
 
@@ -218,8 +194,8 @@ class KVDBOplogBlockManager {
 public:
     KVDBOplogBlockManager(OperationContext* opctx,
                           KVDB& db,
-                          KVSHandle& blockKvs,
-                          KVSHandle& metadataKvs,
+                          KVSHandle& kvs,
+                          KVSHandle& largeKvs,
                           uint32_t prefix,
                           int64_t cappedMaxSize);
     ~KVDBOplogBlockManager();
@@ -227,44 +203,32 @@ public:
     string getCurrentBlockId();
     uint32_t getBlockId(const RecordId& loc);
 
-    Status truncate(OperationContext* opctx, const KVSHandle& kvs, const KVSHandle& largeKvs);
+    Status truncate(OperationContext* opctx);
     uint32_t getBlockIdToInsert(const RecordId& loc);
     uint32_t getBlockIdToInsertAndGrow(const RecordId& loc, int64_t nRecs, int64_t size);
     Status cappedTruncateAfter(OperationContext* opctx,
-                               KVSHandle& kvs,
-                               KVSHandle& largeKvs,
                                const RecordId& end,
                                bool inclusive,
                                RecordId& lastKeptId,
                                int64_t& numRecsDel,
                                int64_t& sizeDel);
-    static hse::Status cursorRead(
+    hse::Status cursorRead(
         KVDBRecoveryUnit* ru, KvsCursor* cursor, KVDBData& key, KVDBData& val, bool& eof);
     void awaitHasExcessBlocksOrDead();
     void stop();
     bool isDead();
     boost::optional<KVDBOplogBlock> getOldestBlockIfExcess();
     void removeOldestBlock();
-    static hse::Status deleteBlock(KVDBRecoveryUnit* ru,
-                                   KVSHandle& kvs,
-                                   KVSHandle& largeKvs,
-                                   bool usePdel,
-                                   uint32_t prefix,
-                                   const KVDBOplogBlock& block);
-    hse::Status updateLastBlkDeleted(KVDBRecoveryUnit* ru,
-                                     KVSHandle& kvs,
-                                     KVSHandle& largeKvs,
-                                     uint32_t blockId);
-    static void importBlocks(OperationContext* opctx,
-                             KVSHandle& kvs,
-                             KVSHandle& largeKvs,
-                             uint32_t prefix,
-                             deque<KVDBOplogBlock>& blockList,
-                             KVDBOplogBlock& currBlock);
-    static void dropAllBlocks(OperationContext* opctx,
-                              KVSHandle& kvs,
-                              KVSHandle& largeKvs,
-                              uint32_t prefix);
+    hse::Status deleteBlock(KVDBRecoveryUnit* ru,
+                            bool usePdel,
+                            uint32_t prefix,
+                            const KVDBOplogBlock& block);
+    hse::Status updateLastBlkDeleted(KVDBRecoveryUnit* ru, uint32_t blockId);
+    void importBlocks(OperationContext* opctx,
+                      uint32_t prefix,
+                      deque<KVDBOplogBlock>& blockList,
+                      KVDBOplogBlock& currBlock);
+    void dropAllBlocks(OperationContext* opctx, uint32_t prefix);
     RecordId getHighestFromPrevBlk(OperationContext* opctx, uint32_t blkId);
     RecordId getHighestSeenLoc();
 
@@ -283,59 +247,46 @@ private:
 
     static string _computeCurrentBlockKey(uint32_t prefix);
 
-    static hse::Status _readLastDeletedBlockId(KVDBRecoveryUnit* ru,
-                                               KVSHandle& kvs,
-                                               KVSHandle& largeKvs,
-                                               string key,
-                                               uint32_t& lastBlockId,
-                                               bool& found);
+    hse::Status _readLastDeletedBlockId(KVDBRecoveryUnit* ru,
+                                        string key,
+                                        uint32_t& lastBlockId,
+                                        bool& found);
     KVDBOplogBlock& _getCurrBlock();
     uint32_t _getNextBlockId(uint32_t prevId);
     string _getCurrentBlockId();
     hse::Status _findLastKeptIdInclusive(KVDBRecoveryUnit* ru,
-                                         KVSHandle& kvs,
-                                         KVSHandle& largeKvs,
                                          RecordId& lastKeptId,
                                          const RecordId& end,
                                          KVDBOplogBlock& block);
     hse::Status _deleteBlockByScan(KVDBRecoveryUnit* ru,
-                                   KVSHandle& kvs,
-                                   KVSHandle& largeKvs,
                                    KVDBOplogBlock& block,
                                    const RecordId& start,
                                    bool inclusive);
-    hse::Status _delKeyHelper(
-        KVDBRecoveryUnit* ru, KVSHandle& kvs, KVSHandle& largeKvs, KVDBData& key, uint32_t valLen);
+    hse::Status _delKeyHelper(KVDBRecoveryUnit* ru, KVDBData& key, uint32_t valLen);
     hse::Status _writeMarker(const KVDBOplogBlock& block);
     hse::Status _deleteMarker(uint32_t blockId);
-    static hse::Status _readMarker(OperationContext* opctx,
-                                   KVSHandle& kvs,
-                                   KVSHandle& largeKvs,
-                                   uint32_t prefix,
-                                   uint32_t blockId,
-                                   KVDBOplogBlock& block,
-                                   bool& found);
+    hse::Status _readMarker(OperationContext* opctx,
+                            uint32_t prefix,
+                            uint32_t blockId,
+                            KVDBOplogBlock& block,
+                            bool& found);
 
     bool _hasExcessBlocks();
     void _pokeReclaimThreadIfNeeded();
     hse::Status _writeCurrentBlkMarker();
     hse::Status _eraseCurrentBlkMarker();
 
-    static hse::Status _readCurrBlockKey(KVDBRecoveryUnit* ru,
-                                         KVSHandle& kvs,
-                                         KVSHandle& largeKvs,
-                                         uint32_t prefix,
-                                         KVDBOplogBlock& currBlock,
-                                         bool& found);
+    hse::Status _readCurrBlockKey(KVDBRecoveryUnit* ru,
+                                  uint32_t prefix,
+                                  KVDBOplogBlock& currBlock,
+                                  bool& found);
 
-    static hse::Status _importCurrBlockByScan(KVDBRecoveryUnit* ru,
-                                              KVSHandle& kvs,
-                                              KVSHandle& largeKvs,
-                                              uint32_t prefix,
-                                              KVDBOplogBlock& currBlock,
-                                              uint32_t blkId);
+    hse::Status _importCurrBlockByScan(KVDBRecoveryUnit* ru,
+                                       uint32_t prefix,
+                                       KVDBOplogBlock& currBlock,
+                                       uint32_t blkId);
 
-    void _reset(OperationContext* opctx, KVSHandle& kvs, KVSHandle& largeKvs);
+    void _reset(OperationContext* opctx);
 
     KVDB& _db;
     KVSHandle& _kvs;

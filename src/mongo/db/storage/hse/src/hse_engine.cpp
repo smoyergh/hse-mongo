@@ -275,17 +275,21 @@ std::unique_ptr<RecordStore> KVDBEngine::getRecordStore(OperationContext* opCtx,
                                                                    compparms);
         } else {
             invariantHse(colOpts.capped);
-            recordStore = stdx::make_unique<KVDBOplogStore>(opCtx,
-                                                            ns,
-                                                            ident,
-                                                            _db,
-                                                            _oplogKvs,
-                                                            _oplogLargeKvs,
-                                                            prefix,
-                                                            durRef,
-                                                            counterRef,
-                                                            cappedMaxSize,
-                                                            compparms);
+            std::unique_ptr<KVDBOplogStore> oplogRs =
+                stdx::make_unique<KVDBOplogStore>(opCtx,
+                                                  ns,
+                                                  ident,
+                                                  _db,
+                                                  _oplogKvs,
+                                                  _oplogLargeKvs,
+                                                  prefix,
+                                                  durRef,
+                                                  counterRef,
+                                                  cappedMaxSize,
+                                                  compparms);
+
+            _oplogBlkMgr = oplogRs->getOplogBlkMgr();
+            recordStore = std::move(oplogRs);
         }
     }
 
@@ -396,7 +400,7 @@ Status KVDBEngine::dropIdent(OperationContext* opCtx, StringData ident) {
 
         _identCollectionMap.erase(ident);
     } else if (KVDBIdentType::OPLOG == type) {
-        KVDBOplogBlockManager::dropAllBlocks(opCtx, _oplogKvs, _oplogLargeKvs, prefixVal);
+        _oplogBlkMgr->dropAllBlocks(opCtx, prefixVal);
         _identCollectionMap.erase(ident);
     } else {  // Index
         KVDBData indexSizeKey{KVDB_prefix + "indexsize-" + ident.toString()};

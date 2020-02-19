@@ -1350,6 +1350,7 @@ KVDBOplogStore::KVDBOplogStore(OperationContext* opctx,
         // attempting to start the maintenance thread returns false if we're in repair mode
         _opBlkMgr = make_shared<KVDBOplogBlockManager>(
             opctx, _db, _colKvs, _largeKvs, _prefixVal, _cappedMaxSize);
+        invariantHse(_opBlkMgr != nullptr);
     }
 
     _cappedVisMgr->setHighestSeen(_opBlkMgr->getHighestSeenLoc());
@@ -1471,7 +1472,7 @@ Status KVDBOplogStore::truncate(OperationContext* opctx) {
     if (!_opBlkMgr)
         invariantHse(false);
 
-    Status st = _opBlkMgr->truncate(opctx, _colKvs, _largeKvs);
+    Status st = _opBlkMgr->truncate(opctx);
     if (!st.isOK())
         return st;
 
@@ -1604,10 +1605,10 @@ void KVDBOplogStore::reclaimOplog(OperationContext* opctx) {
             hse::Status st;
             WriteUnitOfWork wuow(opctx);
 
-            st = _opBlkMgr->updateLastBlkDeleted(ru, _colKvs, _largeKvs, block->blockId);
+            st = _opBlkMgr->updateLastBlkDeleted(ru, block->blockId);
             invariantHseSt(st);
 
-            st = _opBlkMgr->deleteBlock(ru, _colKvs, _largeKvs, true, _prefixVal, *block);
+            st = _opBlkMgr->deleteBlock(ru, true, _prefixVal, *block);
             invariantHseSt(st);
 
             _changeNumRecords(opctx, -block->numRecs.load());
@@ -1641,8 +1642,7 @@ void KVDBOplogStore::_oplogTruncateAfter(OperationContext* opctx, RecordId end, 
     if (!_opBlkMgr)
         invariantHse(false);
 
-    auto st = _opBlkMgr->cappedTruncateAfter(
-        opctx, _colKvs, _largeKvs, end, inclusive, lastKeptId, recDel, sizeDel);
+    auto st = _opBlkMgr->cappedTruncateAfter(opctx, end, inclusive, lastKeptId, recDel, sizeDel);
     invariantHse(st.isOK());
 
     _changeNumRecords(opctx, -recDel);

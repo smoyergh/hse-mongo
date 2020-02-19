@@ -498,6 +498,10 @@ public:
 
     void reclaimOplog(OperationContext* txn);
 
+    shared_ptr<KVDBOplogBlockManager> getOplogBlkMgr() {
+        return _opBlkMgr;
+    }
+
     // for testing
     KVDBOplogBlockManager* getOpBlkMgr();
 

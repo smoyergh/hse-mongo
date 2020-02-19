@@ -81,7 +81,7 @@ KVDBOplogBlockManager::KVDBOplogBlockManager(OperationContext* opctx,
     LOG(1) << "OPDBG: _minBytesPerBlock = " << _minBytesPerBlock;
 
     // this also sets the current block values
-    importBlocks(opctx, kvs, largeKvs, prefix, _blockList, _currBlock);
+    importBlocks(opctx, prefix, _blockList, _currBlock);
 
     // erase the current block marker
     hse::Status st = _eraseCurrentBlkMarker();
@@ -195,9 +195,7 @@ uint32_t KVDBOplogBlockManager::getBlockIdToInsertAndGrow(const RecordId& loc,
     return retBlk;
 }
 
-Status KVDBOplogBlockManager::truncate(OperationContext* opctx,
-                                       const KVSHandle& kvs,
-                                       const KVSHandle& largeKvs) {
+Status KVDBOplogBlockManager::truncate(OperationContext* opctx) {
     __attribute__((aligned(16))) struct KVDBOplogBlockKey blockKey;
     hse::Status st;
     lock_guard<mutex> lk{_mutex};
@@ -207,9 +205,9 @@ Status KVDBOplogBlockManager::truncate(OperationContext* opctx,
         KOBK_SET(blockKey, _prefixVal, block.blockId);
         KVDBData prefixKey{blockKey.data, KOBK_LEN(blockKey)};
 
-        st = ru->prefixDelete(kvs, prefixKey);
+        st = ru->prefixDelete(_kvs, prefixKey);
         invariantHseSt(st);
-        st = ru->prefixDelete(largeKvs, prefixKey);
+        st = ru->prefixDelete(_largeKvs, prefixKey);
         invariantHseSt(st);
     }
 
@@ -217,25 +215,23 @@ Status KVDBOplogBlockManager::truncate(OperationContext* opctx,
     KOBK_SET(blockKey, _prefixVal, _currBlock.blockId);
     KVDBData prefixKey{blockKey.data, KOBK_LEN(blockKey)};
 
-    st = ru->prefixDelete(kvs, prefixKey);
+    st = ru->prefixDelete(_kvs, prefixKey);
     invariantHseSt(st);
-    st = ru->prefixDelete(largeKvs, prefixKey);
+    st = ru->prefixDelete(_largeKvs, prefixKey);
     invariantHseSt(st);
 
     // reset blockList
-    _reset(opctx, _kvs, _largeKvs);
+    _reset(opctx);
 
     return Status::OK();
 }
 
-void KVDBOplogBlockManager::_reset(OperationContext* opctx, KVSHandle& kvs, KVSHandle& largeKvs) {
+void KVDBOplogBlockManager::_reset(OperationContext* opctx) {
     _blockList.clear();
     _currBlock = KVDBOplogBlock{};
 }
 
 Status KVDBOplogBlockManager::cappedTruncateAfter(OperationContext* opctx,
-                                                  KVSHandle& kvs,
-                                                  KVSHandle& largeKvs,
                                                   const RecordId& end,
                                                   bool inclusive,
                                                   RecordId& lastKeptId,
@@ -270,7 +266,7 @@ Status KVDBOplogBlockManager::cappedTruncateAfter(OperationContext* opctx,
 
     // find lastKeptId
     if (inclusive) {
-        auto st = _findLastKeptIdInclusive(ru, kvs, largeKvs, lastKeptId, end, *firstBlock);
+        auto st = _findLastKeptIdInclusive(ru, lastKeptId, end, *firstBlock);
         invariantHseSt(st);
     } else {
         lastKeptId = end;
@@ -280,7 +276,7 @@ Status KVDBOplogBlockManager::cappedTruncateAfter(OperationContext* opctx,
     numRecsDel += firstBlock->numRecs.load();
     sizeDel += firstBlock->sizeInBytes.load();
 
-    st = _deleteBlockByScan(ru, kvs, largeKvs, *firstBlock, end, inclusive);
+    st = _deleteBlockByScan(ru, *firstBlock, end, inclusive);
     invariantHseSt(st);
 
     numRecsDel -= firstBlock->numRecs.load();
@@ -290,7 +286,7 @@ Status KVDBOplogBlockManager::cappedTruncateAfter(OperationContext* opctx,
         _blockList.erase(bIter);
         auto savedIter = bIter;
         for (; _blockList.end() != bIter; bIter++) {
-            st = deleteBlock(ru, kvs, largeKvs, false, _prefixVal, *bIter);
+            st = deleteBlock(ru, false, _prefixVal, *bIter);
             invariantHseSt(st);
             numRecsDel += bIter->numRecs.load();
             sizeDel += bIter->sizeInBytes.load();
@@ -300,7 +296,7 @@ Status KVDBOplogBlockManager::cappedTruncateAfter(OperationContext* opctx,
         _blockList.erase(savedIter, _blockList.end());
 
         // delete current block
-        st = deleteBlock(ru, kvs, largeKvs, false, _prefixVal, _currBlock);
+        st = deleteBlock(ru, false, _prefixVal, _currBlock);
         invariantHseSt(st);
         numRecsDel += _currBlock.numRecs.load();
         sizeDel += _currBlock.sizeInBytes.load();
@@ -374,8 +370,6 @@ void KVDBOplogBlockManager::removeOldestBlock() {
 
 // static
 hse::Status KVDBOplogBlockManager::deleteBlock(KVDBRecoveryUnit* ru,
-                                               KVSHandle& kvs,
-                                               KVSHandle& largeKvs,
                                                bool usePdel,
                                                uint32_t prefix,
                                                const KVDBOplogBlock& block) {
@@ -384,32 +378,27 @@ hse::Status KVDBOplogBlockManager::deleteBlock(KVDBRecoveryUnit* ru,
     KOBK_SET(blockKey, prefix, block.blockId);
     KVDBData pfxToDel{blockKey.data, KOBK_LEN(blockKey)};
 
-    st = usePdel ? ru->prefixDelete(kvs, pfxToDel) : ru->iterDelete(kvs, pfxToDel);
+    st = usePdel ? ru->prefixDelete(_kvs, pfxToDel) : ru->iterDelete(_kvs, pfxToDel);
     if (!st.ok())
         return st;
 
-    st = usePdel ? ru->prefixDelete(largeKvs, pfxToDel) : ru->iterDelete(largeKvs, pfxToDel);
+    st = usePdel ? ru->prefixDelete(_largeKvs, pfxToDel) : ru->iterDelete(_largeKvs, pfxToDel);
     if (!st.ok())
         return st;
 
     return hse::Status{};
 }
 
-hse::Status KVDBOplogBlockManager::updateLastBlkDeleted(KVDBRecoveryUnit* ru,
-                                                        KVSHandle& kvs,
-                                                        KVSHandle& largeKvs,
-                                                        uint32_t blockId) {
+hse::Status KVDBOplogBlockManager::updateLastBlkDeleted(KVDBRecoveryUnit* ru, uint32_t blockId) {
     KVDBData key{_lastDeletedBlockKey};
     uint32_t beBlkId = endian::nativeToBig(blockId);
     KVDBData val{(const uint8_t*)&beBlkId, sizeof(uint32_t)};
 
-    return ru->put(largeKvs, key, val);
+    return ru->put(_largeKvs, key, val);
 }
 
 // static
 void KVDBOplogBlockManager::importBlocks(OperationContext* opctx,
-                                         KVSHandle& kvs,
-                                         KVSHandle& largeKvs,
                                          uint32_t prefix,
                                          deque<KVDBOplogBlock>& blockList,
                                          KVDBOplogBlock& currBlock) {
@@ -426,7 +415,7 @@ void KVDBOplogBlockManager::importBlocks(OperationContext* opctx,
 
     string lastDeletedBlockKey = _computeLastBlockDeletedKey(prefix);
 
-    st = _readLastDeletedBlockId(ru, kvs, largeKvs, lastDeletedBlockKey, lastDelBlk, found);
+    st = _readLastDeletedBlockId(ru, lastDeletedBlockKey, lastDelBlk, found);
     invariantHseSt(st);
 
     if (found)
@@ -439,7 +428,7 @@ void KVDBOplogBlockManager::importBlocks(OperationContext* opctx,
     found = true;
     while (true) {
         KVDBOplogBlock blockRead{};
-        st = _readMarker(opctx, kvs, largeKvs, prefix, blkToRead, blockRead, found);
+        st = _readMarker(opctx, prefix, blkToRead, blockRead, found);
         invariantHseSt(st);
 
         if (!found)
@@ -455,27 +444,24 @@ void KVDBOplogBlockManager::importBlocks(OperationContext* opctx,
     //    scan current block by assuming
     //    current block = last read marker block + 1
     found = false;
-    st = _readCurrBlockKey(ru, kvs, largeKvs, prefix, currBlock, found);
+    st = _readCurrBlockKey(ru, prefix, currBlock, found);
     invariantHseSt(st);
 
     if (!found) {
-        st = _importCurrBlockByScan(ru, kvs, largeKvs, prefix, currBlock, blkToRead);
+        st = _importCurrBlockByScan(ru, prefix, currBlock, blkToRead);
         invariantHseSt(st);
     }
 }
 
 // static
-void KVDBOplogBlockManager::dropAllBlocks(OperationContext* opctx,
-                                          KVSHandle& kvs,
-                                          KVSHandle& largeKvs,
-                                          uint32_t prefix) {
+void KVDBOplogBlockManager::dropAllBlocks(OperationContext* opctx, uint32_t prefix) {
     __attribute__((aligned(16))) struct KVDBOplogBlockKey blockKey;
     deque<KVDBOplogBlock> blockList;
     KVDBOplogBlock currBlock{};
     hse::Status st;
 
     // discover blocks
-    importBlocks(opctx, kvs, largeKvs, prefix, blockList, currBlock);
+    importBlocks(opctx, prefix, blockList, currBlock);
 
     KVDBRecoveryUnit* ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opctx);
 
@@ -484,9 +470,9 @@ void KVDBOplogBlockManager::dropAllBlocks(OperationContext* opctx,
         KOBK_SET(blockKey, prefix, block.blockId);
         KVDBData delPfx{blockKey.data, KOBK_LEN(blockKey)};
 
-        st = ru->prefixDelete(kvs, delPfx);
+        st = ru->prefixDelete(_kvs, delPfx);
         invariantHseSt(st);
-        st = ru->prefixDelete(largeKvs, delPfx);
+        st = ru->prefixDelete(_largeKvs, delPfx);
         invariantHseSt(st);
     }
 
@@ -494,9 +480,9 @@ void KVDBOplogBlockManager::dropAllBlocks(OperationContext* opctx,
         KOBK_SET(blockKey, prefix, currBlock.blockId);
         KVDBData delPfx{blockKey.data, KOBK_LEN(blockKey)};
 
-        st = ru->prefixDelete(kvs, delPfx);
+        st = ru->prefixDelete(_kvs, delPfx);
         invariantHseSt(st);
-        st = ru->prefixDelete(largeKvs, delPfx);
+        st = ru->prefixDelete(_largeKvs, delPfx);
         invariantHseSt(st);
     }
 }
@@ -623,8 +609,6 @@ string KVDBOplogBlockManager::_computeCurrentBlockKey(uint32_t prefix) {
 
 // static
 hse::Status KVDBOplogBlockManager::_readLastDeletedBlockId(KVDBRecoveryUnit* ru,
-                                                           KVSHandle& kvs,
-                                                           KVSHandle& largeKvs,
                                                            string key,
                                                            uint32_t& lastBlockId,
                                                            bool& found) {
@@ -632,7 +616,7 @@ hse::Status KVDBOplogBlockManager::_readLastDeletedBlockId(KVDBRecoveryUnit* ru,
     KVDBData val{};
     hse::Status st;
 
-    st = ru->getMCo(largeKvs, compatKey, val, found);
+    st = ru->getMCo(_largeKvs, compatKey, val, found);
     if (!st.ok() || !found)
         return st;
 
@@ -651,8 +635,6 @@ string KVDBOplogBlockManager::_getCurrentBlockId() {
 }
 
 hse::Status KVDBOplogBlockManager::_findLastKeptIdInclusive(KVDBRecoveryUnit* ru,
-                                                            KVSHandle& kvs,
-                                                            KVSHandle& largeKvs,
                                                             RecordId& lastKeptId,
                                                             const RecordId& end,
                                                             KVDBOplogBlock& block) {
@@ -667,7 +649,7 @@ hse::Status KVDBOplogBlockManager::_findLastKeptIdInclusive(KVDBRecoveryUnit* ru
 
     // reverse
     const struct CompParms compparms = {};  // no compression for oplog
-    st = ru->beginScan(kvs, pfxKey, false, &cursor, compparms);
+    st = ru->beginScan(_kvs, pfxKey, false, &cursor, compparms);
     if (!st.ok())
         return st;
 
@@ -711,8 +693,6 @@ hse::Status KVDBOplogBlockManager::_findLastKeptIdInclusive(KVDBRecoveryUnit* ru
 }
 
 hse::Status KVDBOplogBlockManager::_deleteBlockByScan(KVDBRecoveryUnit* ru,
-                                                      KVSHandle& kvs,
-                                                      KVSHandle& largeKvs,
                                                       KVDBOplogBlock& block,
                                                       const RecordId& start,
                                                       bool inclusive) {
@@ -727,7 +707,7 @@ hse::Status KVDBOplogBlockManager::_deleteBlockByScan(KVDBRecoveryUnit* ru,
     const struct CompParms compparms = {};  // no compression for oplog
 
     // forward
-    st = ru->beginScan(kvs, pfxKey, true, &cursor, compparms);
+    st = ru->beginScan(_kvs, pfxKey, true, &cursor, compparms);
     if (!st.ok())
         return st;
 
@@ -759,7 +739,7 @@ hse::Status KVDBOplogBlockManager::_deleteBlockByScan(KVDBRecoveryUnit* ru,
 
     if (inclusive) {
         invariantHse(!eof);
-        st = _delKeyHelper(ru, kvs, largeKvs, elKey, elVal.getNumChunks());
+        st = _delKeyHelper(ru, elKey, elVal.getNumChunks());
         if (!st.ok()) {
             ru->endScan(cursor);
             return st;
@@ -779,7 +759,7 @@ hse::Status KVDBOplogBlockManager::_deleteBlockByScan(KVDBRecoveryUnit* ru,
         if (eof)
             break;
 
-        st = _delKeyHelper(ru, kvs, largeKvs, elKey, elVal.getNumChunks());
+        st = _delKeyHelper(ru, elKey, elVal.getNumChunks());
         if (!st.ok()) {
             ru->endScan(cursor);
             return st;
@@ -801,12 +781,13 @@ hse::Status KVDBOplogBlockManager::_deleteBlockByScan(KVDBRecoveryUnit* ru,
     return hse::Status{};
 }
 
-hse::Status KVDBOplogBlockManager::_delKeyHelper(
-    KVDBRecoveryUnit* ru, KVSHandle& kvs, KVSHandle& largeKvs, KVDBData& key, uint32_t num_chunks) {
+hse::Status KVDBOplogBlockManager::_delKeyHelper(KVDBRecoveryUnit* ru,
+                                                 KVDBData& key,
+                                                 uint32_t num_chunks) {
     __attribute__((aligned(16))) struct KVDBRecordStoreKey chunkKey;
     hse::Status st;
 
-    st = ru->del(kvs, key);
+    st = ru->del(_kvs, key);
     if (!st.ok())
         return st;
 
@@ -822,7 +803,7 @@ hse::Status KVDBOplogBlockManager::_delKeyHelper(
 
     for (uint32_t chunk = 0; chunk < num_chunks; ++chunk) {
         KRSK_SET_CHUNK(chunkKey, chunk);
-        st = ru->del(largeKvs, KVDBData{chunkKey.data, KRSK_KEY_LEN(chunkKey)});
+        st = ru->del(_largeKvs, KVDBData{chunkKey.data, KRSK_KEY_LEN(chunkKey)});
         if (!st.ok())
             return st;
     }
@@ -854,13 +835,8 @@ hse::Status KVDBOplogBlockManager::_deleteMarker(uint32_t blockId) {
 }
 
 // static
-hse::Status KVDBOplogBlockManager::_readMarker(OperationContext* opctx,
-                                               KVSHandle& kvs,
-                                               KVSHandle& largeKvs,
-                                               uint32_t prefix,
-                                               uint32_t blkId,
-                                               KVDBOplogBlock& block,
-                                               bool& found) {
+hse::Status KVDBOplogBlockManager::_readMarker(
+    OperationContext* opctx, uint32_t prefix, uint32_t blkId, KVDBOplogBlock& block, bool& found) {
     __attribute__((aligned(16))) struct KVDBOplogBlockKey blockKey;
     hse::Status st;
     KVDBRecoveryUnit* ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opctx);
@@ -871,7 +847,7 @@ hse::Status KVDBOplogBlockManager::_readMarker(OperationContext* opctx,
     KVDBData val{};
 
     found = false;
-    st = ru->getMCo(kvs, key, val, found);
+    st = ru->getMCo(_kvs, key, val, found);
     if (!st.ok() || !found)
         return st;
 
@@ -907,8 +883,6 @@ hse::Status KVDBOplogBlockManager::_eraseCurrentBlkMarker() {
 
 // static
 hse::Status KVDBOplogBlockManager::_readCurrBlockKey(KVDBRecoveryUnit* ru,
-                                                     KVSHandle& kvs,
-                                                     KVSHandle& largeKvs,
                                                      uint32_t prefix,
                                                      KVDBOplogBlock& currBlock,
                                                      bool& found) {
@@ -918,7 +892,7 @@ hse::Status KVDBOplogBlockManager::_readCurrBlockKey(KVDBRecoveryUnit* ru,
     KVDBData val{};
 
     found = false;
-    st = ru->getMCo(largeKvs, compatKey, val, found);
+    st = ru->getMCo(_largeKvs, compatKey, val, found);
     if (!st.ok() || !found)
         return st;
 
@@ -928,8 +902,6 @@ hse::Status KVDBOplogBlockManager::_readCurrBlockKey(KVDBRecoveryUnit* ru,
 }
 
 hse::Status KVDBOplogBlockManager::_importCurrBlockByScan(KVDBRecoveryUnit* ru,
-                                                          KVSHandle& kvs,
-                                                          KVSHandle& largeKvs,
                                                           uint32_t prefix,
                                                           KVDBOplogBlock& currBlock,
                                                           uint32_t blkId) {
@@ -941,7 +913,7 @@ hse::Status KVDBOplogBlockManager::_importCurrBlockByScan(KVDBRecoveryUnit* ru,
     KvsCursor* cursor = 0;
 
     const struct CompParms compparms = {};  // no compression for oplog
-    st = ru->beginScan(kvs, pfxKey, true, &cursor, compparms);
+    st = ru->beginScan(_kvs, pfxKey, true, &cursor, compparms);
     if (!st.ok())
         return st;
 
