@@ -318,11 +318,6 @@ static inline bool operator==(const KVDBData& lhs, const KVDBData& rhs) {
     return lhs.len() == rhs.len() && memcmp(lhs.data(), rhs.data(), rhs.len()) == 0;
 }
 
-// MU_REVISIT: remove this define when KVDB supports reverse iteration
-#ifndef KVDB_KOP_FLAG_REVERSE
-#define KVDB_KOP_FLAG_REVERSE 1
-#endif
-
 // KVDB Interface
 class KVDB {
 public:
@@ -415,9 +410,6 @@ public:
                                      int* next_arg) = 0;
 
     virtual Status kvdb_get_c1_info(struct ikvdb_c1_info* info) = 0;
-
-    // TODO: HSE
-    virtual void dump(const bool raw = false) {}
 
     bool keyStartsWith(KVDBData key, const uint8_t* prefix, unsigned long pLen) {
         if (pLen <= key.len() && 0 == memcmp(key.data(), prefix, pLen)) {

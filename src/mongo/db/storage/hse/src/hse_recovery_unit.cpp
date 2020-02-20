@@ -108,7 +108,6 @@ void KVDBRecoveryUnit::commitUnitOfWork() {
         }
         _changes.clear();
     } catch (...) {
-        // [MU_REVISIT] the line below basically means "crash", which seems reckless ...
         invariantHse(false);  // abort
     }
 
@@ -172,10 +171,7 @@ void* KVDBRecoveryUnit::writingPtr(void* data, size_t len) {
     invariantHse(!"don't call writingPtr");
 }
 
-void KVDBRecoveryUnit::setRollbackWritesDisabled() {
-    // TODO: HSE
-    // Consider implementing this
-}
+void KVDBRecoveryUnit::setRollbackWritesDisabled() {}
 
 hse::Status KVDBRecoveryUnit::put(const KVSHandle& h, const KVDBData& key, const KVDBData& val) {
     _ensureTxn();
@@ -303,7 +299,6 @@ hse::Status KVDBRecoveryUnit::beginScan(const KVSHandle& h,
                                         const struct CompParms& compparm) {
     KvsCursor* lcursor = 0;
 
-    // [MU_REVISIT] - I'm not sure this code handles reverse cursors correctly
     _ensureTxn();
 
     try {
@@ -349,8 +344,6 @@ hse::Status KVDBRecoveryUnit::beginOplogScan(const KVSHandle& h,
                                              const struct CompParms& compparm,
                                              bool readAhead) {
     KvsCursor* lcursor = 0;
-
-    // [MU_REVISIT] - I'm not sure this code handles reverse cursors correctly
 
     try {
         lcursor = create_cursor(h, pfx, forward, compparm, _txn, readAhead);

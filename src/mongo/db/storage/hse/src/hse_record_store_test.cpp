@@ -530,7 +530,6 @@ StatusWith<RecordId> insertBSON(ServiceContext::UniqueOperationContext& opCtx,
     return res;
 }
 
-// TODO make generic
 TEST(KVDBRecordStoreTest, OplogHack) {
     KVDBRecordStoreHarnessHelper harnessHelper;
     // Use a large enough cappedMaxSize so that the limit is not reached by doing the inserts within

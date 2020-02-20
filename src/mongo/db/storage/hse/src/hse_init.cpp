@@ -67,10 +67,8 @@ public:
             formatVersion = kKVDBFormatVersion;
         }
 
-        // TODO : HSE
         auto engine =
             new KVDBEngine(params.dbpath + "/db", params.dur, formatVersion, params.readOnly);
-        // auto engine = (KVEngine *)nullptr;
 
         if (kvdbGlobalOptions.getMetricsEnabled()) {
             KVDBStat::enableStats(true);

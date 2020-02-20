@@ -512,10 +512,6 @@ SnapshotManager* KVDBEngine::getSnapshotManager() const {
     return nullptr;
 }
 
-/**
- * TODO: HSE
-static bool initRsOplogBackgroundThread(StringData ns);
-*/
 
 void KVDBEngine::setJournalListener(JournalListener* jl) {
     _durabilityManager->setJournalListener(jl);
@@ -633,8 +629,6 @@ void KVDBEngine::_setupDb() {
     parseKvsCParams(_db, kvdbGlobalOptions.getPriKvsCParamsStr(), params);
     parseKvsRParams(_db, kvdbGlobalOptions.getPriKvsRParamsStr(), params);
 
-    // MU_REVESIT: large kvs and oplog kvses currently mostly inherit the main
-    // kvs properties - except pfxlen.
     _open_kvs(kMainKvsName, _mainKvs, params);
     _open_kvs(kLargeKvsName, _largeKvs, params);
 
@@ -665,9 +659,6 @@ void KVDBEngine::_setupDb() {
 }
 
 void KVDBEngine::_loadMaxPrefix() {
-    // TODO: HSE , need to load the max prefix by looking at the
-    // last key in the kvs. This is need for crash safe behaviour.
-
     // load ident to prefix map. also update _maxPrefix if there's any prefix bigger than
     // current _maxPrefix
     stdx::lock_guard<stdx::mutex> lk(_identMapMutex);
@@ -703,8 +694,7 @@ void KVDBEngine::_loadMaxPrefix() {
         }
         uint32_t identPrefix = static_cast<uint32_t>(element.numberInt());
 
-        // TODO: HSE - remove debug
-        LOG(1) << "KVDB Debug: Loading Ident " << string((const char*)ident.data(), ident.len());
+        LOG(1) << "HSE: Loading Ident " << string((const char*)ident.data(), ident.len());
 
         _identMap[StringData((const char*)ident.clone().data(), ident.len())] =
             std::move(identConfig.getOwned());
@@ -764,8 +754,7 @@ Status KVDBEngine::_createIdent(OperationContext* opCtx,
     KVDBData key{(uint8_t*)keyStr.c_str(), keyStr.size()};
     KVDBData val{(uint8_t*)config.objdata(), (unsigned long)config.objsize()};
 
-    // TODO: HSE - remove debug
-    LOG(1) << "KVDB DEBUG: recording ident to kvs : " << ident.toString();
+    LOG(1) << "HSE: recording ident to kvs : " << ident.toString();
     auto ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opCtx);
     auto s = ru->nonTxnPut(_mainKvs, key, val);
 

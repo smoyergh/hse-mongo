@@ -42,8 +42,6 @@ using namespace std;
 namespace hse {
 
 // KVDB Implementation
-// TODO: HSE
-// Consider protecting handle
 class KVDBImpl : public KVDB {
 public:
     virtual Status kvdb_init();

@@ -146,7 +146,6 @@ void KVDBStatLatency::appendTo(BSONObjBuilder& bob) const {
 
 LatencyToken KVDBStatLatency::begin() const {
     if (!(statsEnabled || _enableOverride)) {
-        // MU_REVISIT - Does this incur cost?
         return std::chrono::time_point<std::chrono::high_resolution_clock>::min();
     } else {
         return chrono::high_resolution_clock::now();

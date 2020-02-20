@@ -356,7 +356,6 @@ KVDBRecordStore::~KVDBRecordStore() {
     }
     _counterManager.deregisterRecordStore(this);
 
-    // TODO: HSE, does this need to be protected?
     _shuttingDown = true;
 
     // if (_uncompressed_bytes.load())
@@ -1271,8 +1270,6 @@ Status KVDBCappedRecordStore::_baseCappedDeleteAsNeeded(OperationContext* opctx,
 void KVDBCappedRecordStore::_cappedTruncateAfter(OperationContext* opctx,
                                                  RecordId end,
                                                  bool inclusive) {
-    // TODO: needs to be redone
-
     // copied from WiredTigerRecordStore::temp_cappedTruncateAfter()
     WriteUnitOfWork wuow(opctx);
     RecordId lastKeptId = end;
@@ -1551,8 +1548,6 @@ boost::optional<RecordId> KVDBOplogStore::oplogStartHack(OperationContext* opctx
     invariantHseSt(st);
 
     if (lastLoc == RecordId(0)) {
-        // TODO OPB
-        // we may need to iterate backward..
         lastLoc = _opBlkMgr->getHighestFromPrevBlk(opctx, opBlk);
     }
 

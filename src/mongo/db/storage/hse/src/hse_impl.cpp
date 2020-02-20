@@ -81,8 +81,6 @@ namespace hse {
 struct hse_kvdb_txn;
 
 // KVDB Implementation
-// TODO: HSE
-// Consider protecting handle
 Status KVDBImpl::kvdb_init() {
     return Status(::hse_kvdb_init());
 }

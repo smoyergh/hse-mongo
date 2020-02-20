@@ -235,15 +235,6 @@ Status KvsCursor::seek(const KVDBData& key, const KVDBData* kmax, KVDBData* pos)
     const void* fkey;
     size_t flen;
 
-    // [MU_REVISIT] Re-enable once KVDB changes are in, to seek up to a max key.
-    // Also set kmax appropriately. Right now, it's set to persistBoundary.
-    // if (kmax != nullptr) {
-    //     filter.kcf_maxkey = kmax->data();
-    //     filter.kcf_maxklen = kmax->len();
-    //     seek_os.kop_filter = &filter;
-    // }
-
-
     while (true) {
         if (retries < FIB_LEN) {
             sleepTime = RETRY_FIB_SEQ_EAGAIN[retries % FIB_LEN];
@@ -254,8 +245,6 @@ Status KvsCursor::seek(const KVDBData& key, const KVDBData* kmax, KVDBData* pos)
                           << " retries";
         }
 
-        //        ret = ::hse_kvs_cursor_seek(_cursor, (kmax == nullptr) ? 0 : &seek_os, key.data(),
-        //        key.len(), &fkey, &flen);
         ret = ::hse_kvs_cursor_seek(_cursor, 0, key.data(), key.len(), &fkey, &flen);
         if (ret != EAGAIN) {
             break;
