@@ -209,13 +209,6 @@ if has_hse_tree_path or (has_hse_source_path and has_hse_build_path):
             ]
         )
 
-    LIBARRAY.extend(
-        [
-            'components/ui/libmpool_ui.a',
-            'components/ui/libdevice_ui.a',
-        ]
-    )
-
     if build_type == 'debug':
         LIBARRAY.extend(
             [
@@ -260,8 +253,6 @@ else:
 
     if build_type == 'debug':
         HSE_LIBARRAY.append('mpool-test')
-
-    HSE_LIBARRAY.extend(['mpool_ui', 'device_ui'])
 
     if build_type == 'debug':
         HSE_LIBARRAY.extend(
