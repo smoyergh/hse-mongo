@@ -62,6 +62,8 @@ class MongoDFixture(interface.Fixture):
 
             self._hse_executable = utils.default_if_none(
                 config.HSE_EXECUTABLE, config.DEFAULT_HSE_EXECUTABLE)
+            self._mpool_executable = utils.default_if_none(
+                config.MPOOL_EXECUTABLE, config.DEFAULT_MPOOL_EXECUTABLE)
 
             if "hseMpoolName" not in self.mongod_options:
                 pfx = utils.default_if_none(
@@ -122,30 +124,26 @@ class MongoDFixture(interface.Fixture):
                 )
                 self.logger.info(cmd)
                 self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-
-                cmd = 'sudo {} device prepare -f {}'.format(self._hse_executable, lvpath)
-                self.logger.info(cmd)
-                self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
             else:
                 try:
-                    cmd = 'sudo {} mpool umount {}'.format(self._hse_executable, mpname)
+                    cmd = 'sudo {} activate {}'.format(self._mpool_executable, mpname)
                     self.logger.info(cmd)
                     self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
 
-                    cmd = 'sudo {} mpool destroy {}'.format(self._hse_executable, mpname)
+                    cmd = 'sudo {} destroy {}'.format(self._mpool_executable, mpname)
                     self.logger.info(cmd)
                     self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
                 except subprocess.CalledProcessError as e:
-                    if 'is not mounted' not in e.output:
+                    if 'Cannot activate' not in e.output:
                         raise
 
-            cmd = 'sudo {} mpool create {} {} uid={} gid={}'.format(
-                self._hse_executable, self._hse_mpool_name, lvpath, os.getuid(), os.getgid()
+            cmd = 'sudo {} create {} {} uid={} gid={}'.format(
+                self._mpool_executable, self._hse_mpool_name, lvpath, os.getuid(), os.getgid()
             )
             self.logger.info(cmd)
             self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
 
-            cmd = 'sudo {} mpool mount {}'.format(self._hse_executable, self._hse_mpool_name)
+            cmd = 'sudo {} activate {}'.format(self._mpool_executable, self._hse_mpool_name)
             self.logger.info(cmd)
             self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
 

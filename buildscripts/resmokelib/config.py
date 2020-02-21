@@ -19,6 +19,7 @@ DEFAULT_MONGO_EXECUTABLE = os.path.join(os.curdir, "mongo")
 DEFAULT_MONGOD_EXECUTABLE = os.path.join(os.curdir, "mongod")
 DEFAULT_MONGOS_EXECUTABLE = os.path.join(os.curdir, "mongos")
 DEFAULT_HSE_EXECUTABLE = "/usr/bin/hse"
+DEFAULT_MPOOL_EXECUTABLE = "/usr/bin/mpool"
 
 # Default root directory for where resmoke.py puts directories containing data files of mongod's it
 # starts, as well as those started by individual tests.
@@ -81,6 +82,7 @@ DEFAULTS = {
     "hseCollectionParams": None,
     "continueOnCrash": False,
     "hse": None,
+    "mpool": None,
     "vg": None,
 }
 

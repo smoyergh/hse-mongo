@@ -142,6 +142,7 @@ def mongo_shell_program(logger, executable=None, connection_string=None, filenam
         "hseKvdbCParams": (config.HSE_KVDB_CPARAMS, ""),
         "hseMpoolNamePrefix": (config.HSE_MPOOL_NAME_PREFIX, ""),
         "hse": (config.HSE_EXECUTABLE, config.DEFAULT_HSE_EXECUTABLE),
+        "mpool": (config.MPOOL_EXECUTABLE, config.DEFAULT_MPOOL_EXECUTABLE),
         "vg": (config.VOLUME_GROUP, ""),
     }
 
