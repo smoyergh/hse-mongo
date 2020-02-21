@@ -707,8 +707,8 @@ class CleanTestMpools(CustomBehavior):
         self._vg = config.VOLUME_GROUP
 
         if self._storage_engine == "hse":
-            self._hse_executable = utils.default_if_none(
-                config.HSE_EXECUTABLE, config.DEFAULT_HSE_EXECUTABLE)
+            self._mpool_executable = utils.default_if_none(
+                config.MPOOL_EXECUTABLE, config.DEFAULT_MPOOL_EXECUTABLE)
 
     @staticmethod
     def _make_lv_path(vgname, lvname):
@@ -723,11 +723,11 @@ class CleanTestMpools(CustomBehavior):
         for lv in lvs:
             lvpath = self._make_lv_path(self._vg, lv)
 
-            cmd = 'sudo {} mpool umount {}'.format(self._hse_executable, lv)
+            cmd = 'sudo {} deactivate {}'.format(self._mpool_executable, lv)
             self.logger.info(cmd)
             subprocess.check_call(cmd.split())
 
-            cmd = 'sudo {} mpool destroy {}'.format(self._hse_executable, lv)
+            cmd = 'sudo {} destroy {}'.format(self._mpool_executable, lv)
             self.logger.info(cmd)
             subprocess.check_call(cmd.split())
 

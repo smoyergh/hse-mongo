@@ -806,14 +806,16 @@ string makeLvPath(const string& vgName, const string& lvName) {
 BSONObj ResetKvdb(const BSONObj& a, void* data) {
     using std::to_string;
 
-    verify(a.nFields() == 5);
+    verify(a.nFields() == 6);
     BSONObjIterator i(a);
     string hseExecutable = i.next().str();
+    string mpoolExecutable = i.next().str();
     string vgName = i.next().str();
     string mpoolName = i.next().str();
     string kvdbName = i.next().str();
     string kvdbCParams = i.next().str();
     verify(!hseExecutable.empty());
+    verify(!mpoolExecutable.empty());
     verify(!mpoolName.empty());
     verify(!kvdbName.empty());
 
@@ -828,29 +830,29 @@ BSONObj ResetKvdb(const BSONObj& a, void* data) {
 
     if (!boost::filesystem::exists(lvPathObj)) {
         cmd = "sudo lvcreate -y --size 50G --name " + mpoolName + " " + vgName;
-        rc = system(cmd.c_str());
-        if (rc)
-            return BSON(string("") << rc);
-
-        cmd = "sudo " + hseExecutable + " device prepare -f " + lvPath;
+        cout << cmd << endl;
         rc = system(cmd.c_str());
         if (rc)
             return BSON(string("") << rc);
     } else {
-        cmd = "sudo " + hseExecutable + " mpool umount " + mpoolName;
+        cmd = "sudo " + mpoolExecutable + " deactivate " + mpoolName;
+        cout << cmd << endl;
         rc = system(cmd.c_str()); /* ignore return code */
 
-        cmd = "sudo " + hseExecutable + " mpool destroy " + mpoolName;
+        cmd = "sudo " + mpoolExecutable + " destroy " + mpoolName;
+        cout << cmd << endl;
         rc = system(cmd.c_str()); /* ignore return code */
     }
 
-    cmd = "sudo " + hseExecutable + " mpool create " + mpoolName + " " + lvPath + " " + " uid=" +
+    cmd = "sudo " + mpoolExecutable + " create " + mpoolName + " " + lvPath + " " + " uid=" +
         to_string(geteuid()) + " gid=" + to_string(getegid());
+    cout << cmd << endl;
     rc = system(cmd.c_str());
     if (rc)
         return BSON(string("") << rc);
 
-    cmd = "sudo " + hseExecutable + " mpool mount " + mpoolName;
+    cmd = "sudo " + mpoolExecutable + " activate " + mpoolName;
+    cout << cmd << endl;
     rc = system(cmd.c_str());
     if (rc)
         return BSON(string("") << rc);
@@ -859,6 +861,7 @@ BSONObj ResetKvdb(const BSONObj& a, void* data) {
      * Create KVDB
      */
     cmd = "sudo " + hseExecutable + " kvdb create " + mpoolName;
+    cout << cmd << endl;
 
     if (!kvdbCParams.empty()) {
         /*
@@ -888,16 +891,17 @@ BSONObj DeleteKvdb(const BSONObj& a, void* data) {
 
     verify(a.nFields() == 5);
     BSONObjIterator i(a);
-    string hseExecutable = i.next().str();
+    string mpoolExecutable = i.next().str();
     string mpoolName = i.next().str();
     string vgName = i.next().str();
     string kvdbName = i.next().str();
     string kvdbCParams = i.next().str();
-    verify(!hseExecutable.empty());
+    verify(!mpoolExecutable.empty());
     verify(!mpoolName.empty());
+    verify(!vgName.empty());
     verify(!kvdbName.empty());
 
-    string cmd = "sudo " + hseExecutable + " mpool destroy " + mpoolName;
+    string cmd = "sudo " + mpoolExecutable + " destroy " + mpoolName;
     int rc = system(cmd.c_str());
 
     return BSON(string("") << rc);

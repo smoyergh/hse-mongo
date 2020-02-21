@@ -768,6 +768,7 @@ var MongoRunner, _startMongod, startMongoProgram, runMongoProgram, startMongoPro
                 if (storageEngine === "hse") {
                     print("Resetting kvdb '" + opts.hseMpoolName + "/" + opts.hseKvdbName + "'");
                     resetKvdb(jsTestOptions().hse,
+                              jsTestOptions().mpool,
                               jsTestOptions().vg,
                               opts.hseMpoolName,
                               opts.hseKvdbName,

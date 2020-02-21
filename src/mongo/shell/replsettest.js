@@ -1799,16 +1799,17 @@ var ReplSetTest = function(opts) {
         if (_allKvdbNames.size) {
             for (var kName of _allKvdbNames) {
                 if (resetKvdbs) {
-                    // This should be set when the test needs to restart the replset with empty KVDBs.
+                    // This should be set when the test needs to restart with empty KVDBs.
                     print("ReplSetTest stopSet resetting kvdb " + kName + "/" + kName);
                     resetKvdb(jsTestOptions().hse,
+                              jsTestOptions().mpool,
                               jsTestOptions().vg,
                               kName,
                               kName,
                               jsTestOptions().hseKvdbCParams);
                 } else {
                     print("ReplSetTest stopSet deleting kvdb " + kName + "/" + kName);
-                    deleteKvdb(jsTestOptions().hse,
+                    deleteKvdb(jsTestOptions().mpool,
                                jsTestOptions().vg,
                                kName,
                                kName,

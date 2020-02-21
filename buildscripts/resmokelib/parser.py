@@ -64,6 +64,7 @@ DEST_TO_CONFIG = {
     "hse_collection_params": "hseCollectionParams",
     "continue_on_crash": "continueOnCrash",
     "hse_executable": "hse",
+    "mpool_executable": "mpool",
     "volume_group": "vg",
 }
 
@@ -259,6 +260,10 @@ def parse_command_line():
                       help="The path to the HSE CLI executable for resmoke.py to use.  "
                            "MUST BE ENABLED FOR PASSWORDLESS SUDO!")
 
+    parser.add_option("--mpool", dest="mpool_executable", metavar="PATH",
+                      help="The path to the mpool CLI executable for resmoke.py to use.  "
+                           "MUST BE ENABLED FOR PASSWORDLESS SUDO!")
+
     parser.add_option("--vg", dest="volume_group", metavar="VG",
                       help="Volume group that will be used to create mpools.  "
                            "WARNING!  DATA ON THIS VG WILL BE LOST!")
@@ -373,6 +378,7 @@ def update_config_vars(values):
     _config.HSE_COLLECTION_PARAMS = config.pop("hseCollectionParams")
     _config.CONTINUE_ON_CRASH = config.pop("continueOnCrash")
     _config.HSE_EXECUTABLE = _expand_user(config.pop("hse"))
+    _config.MPOOL_EXECUTABLE = _expand_user(config.pop("mpool"))
     _config.VOLUME_GROUP = _expand_user(config.pop("vg"))
 
     if _config.STORAGE_ENGINE == 'hse':

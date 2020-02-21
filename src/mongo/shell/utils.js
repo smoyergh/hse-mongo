@@ -275,6 +275,7 @@ jsTestOptions = function() {
                 TestData.forceValidationWithFeatureCompatibilityVersion,
             skipValidationNamespaces: TestData.skipValidationNamespaces || [],
             hse: TestData.hse,
+            mpool: TestData.mpool,
             vg: TestData.vg,
             hseKvdbCParams: TestData.hseKvdbCParams,
             hseCollectionParams: TestData.hseCollectionParams,

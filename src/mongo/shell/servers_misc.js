@@ -29,6 +29,7 @@ ToolTest = function(name, extraOptions) {
               "'");
 
         resetKvdb(jsTestOptions().hse,
+                  jsTestOptions().mpool,
                   jsTestOptions().vg,
                   this.options.hseMpoolName,
                   this.options.hseKvdbName,
