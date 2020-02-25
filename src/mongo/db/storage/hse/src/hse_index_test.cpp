@@ -128,7 +128,7 @@ public:
     }
 
     std::unique_ptr<SortedDataInterface> newSortedDataInterface(bool unique) {
-        // [MU_REVISIT] Passes 0 for numFields, so doesn't exercise point gets.
+        // [HSE_REVISIT] Passes 0 for numFields, so doesn't exercise point gets.
         // Changing the code to not verify numFields in _seek indicates that the tests
         // still pass. Need to fix this to automatically test the point get path.
         BSONObjBuilder configBuilder;

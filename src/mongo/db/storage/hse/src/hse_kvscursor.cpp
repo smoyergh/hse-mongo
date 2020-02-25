@@ -178,7 +178,7 @@ Status KvsCursor::update(ClientTxn* lnkd_txn) {
         opspec.kop_txn = lnkd_txn->get_kvdb_txn();
     }
 
-    /* [MU_REVISIT] Limit retries. */
+    /* [HSE_REVISIT] Limit retries. */
     _hseKvsCursorUpdateCounter.add();
     auto lt = _hseKvsCursorUpdateLatency.begin();
     ret = ::hse_kvs_cursor_update(_cursor, &opspec);

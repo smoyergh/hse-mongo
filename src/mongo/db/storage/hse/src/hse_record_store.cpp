@@ -463,7 +463,7 @@ bool KVDBRecordStore::_baseFindRecord(OperationContext* opctx,
     uint64_t dataLen = val.len() - offset;
     invariantHse(val.getTotalLen() == dataLen);
 
-    // [MU_REVISIT] The value is copied from KVDBData to RecordData.
+    // [HSE_REVISIT] The value is copied from KVDBData to RecordData.
     // Avoid the copy by reading into a pre-allocated SharedBuffer.
     RecordData rd((const char*)val.data() + offset, dataLen);
     rd.makeOwned();
@@ -683,7 +683,7 @@ hse::Status KVDBRecordStore::_baseUpdateRecord(OperationContext* opctx,
 
     _increaseDataStorageSizes(opctx, len - oldLen, new_len_comp - oldValue.getTotalLenComp());
 
-    // MU_REVISIT - updateRecord currently treated as a whole app write for accounting.
+    // HSE_REVISIT - updateRecord currently treated as a whole app write for accounting.
     _hseAppBytesWrittenCounter.add(len);
 
 
@@ -1168,7 +1168,7 @@ Status KVDBCappedRecordStore::_baseCappedDeleteAsNeeded(OperationContext* opctx,
         hse::Status st;
         RecordId newestOld;
 
-        // [MU_REVISIT] - Why is this a map? We only ever iterate over it. It even has a capped
+        // [HSE_REVISIT] - Why is this a map? We only ever iterate over it. It even has a capped
         //                size of 20000 elements - shouldn't it just be a vector.
         //
         //                Even worse, we're making a heap-allocated copy of every key that we are
@@ -1357,7 +1357,7 @@ KVDBOplogStore::~KVDBOplogStore() {
     // this will be set again in the base destructor, but it's idempotent
     _shuttingDown = true;
 
-    // [MU_REVISIT] - I suspect there might be a race condition here. The oplog background thread
+    // [HSE_REVISIT] - I suspect there might be a race condition here. The oplog background thread
     //                could run at any time after seeing that _shuttingDown is false. What happens
     //                if this destructor has completed first?
     if (_opBlkMgr) {
@@ -1510,7 +1510,7 @@ boost::optional<RecordId> KVDBOplogStore::oplogStartHack(OperationContext* opctx
     if (!_opBlkMgr)
         invariantHse(false);
 
-    // [MU_REVISIT] Should this cursor be able to see records that haven't persisted?
+    // [HSE_REVISIT] Should this cursor be able to see records that haven't persisted?
 
     auto ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opctx);
 

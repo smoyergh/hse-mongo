@@ -114,7 +114,7 @@ public:
     KVDBStatLatency(const string name, int32_t buckets = 1000, int64_t interval = 1000000000);
     virtual void appendTo(BSONObjBuilder& bob) const override;
 
-    // MU_REVISIT:  consider passing as ref
+    // HSE_REVISIT:  consider passing as ref
     LatencyToken begin() const;
     void end(LatencyToken& token);
 
@@ -181,7 +181,7 @@ private:
     static std::unique_ptr<RateThread> _rateThread;
 };
 
-// MU_REVISIT - TODO class KVDBStatGeneral - constructor takes register list as arg
+// HSE_REVISIT - TODO class KVDBStatGeneral - constructor takes register list as arg
 
 // Global hse stat lists
 extern vector<KVDBStat*> gHseStatVersionList;

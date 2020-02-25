@@ -98,7 +98,7 @@ public:
 
     virtual void abandonSnapshot();
 
-    // [MU_REVISIT] - Default for now
+    // [HSE_REVISIT] - Default for now
     // virtual Status setReadFromMajorityCommittedSnapshot() {
     //    return {ErrorCodes::CommandNotSupported,
     //            "Current storage engine does not support majority

@@ -160,7 +160,7 @@ void KVDBStatLatency::end(LatencyToken& bTime) {
     auto eTime = chrono::high_resolution_clock::now();
     int64_t latency = (std::chrono::duration_cast<std::chrono::nanoseconds>(eTime - bTime)).count();
 
-    // MU_REVISIT - need faster approach?
+    // HSE_REVISIT - need faster approach?
     int32_t bucket = latency / _interval;
 
     if (bucket > (_buckets - 1)) {

@@ -68,7 +68,7 @@ private:
     void _syncAllCounters();
     void _syncCountersIfNeeded();
 
-    // MU_REVISIT Implement a crash safe semantic
+    // HSE_REVISIT Implement a crash safe semantic
     bool _crashSafe = false;
 
     std::atomic<bool> _syncing{false};

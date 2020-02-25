@@ -64,7 +64,7 @@ void KVDBDurabilityManager::setJournalListener(JournalListener* jl) {
 void KVDBDurabilityManager::setOplogVisibilityManager(KVDBCappedVisibilityManager* kcvm) {
     std::lock_guard<std::mutex> lock(_oplogMutex);
     if (kcvm) {
-        // [MU_REVISIT] In an earlier version of the code we knew things about how many
+        // [HSE_REVISIT] In an earlier version of the code we knew things about how many
         //              times the _oplogVisibilityManager could be set to a non-NULL
         //              value. It's unclear how and whether to bring back that sort of
         //              constraint. The issue is hit in the unit tests, at the least,
@@ -97,7 +97,7 @@ void KVDBDurabilityManager::sync() {
     if (_oplogVisibilityManager) {
         // Some oplog records may have been persisted as a result of this sync. Notify
         // the visibility manager about the records newly persisted.
-        // [MU_REVISIT] Avoid calling this if the newBound hasn't changed. The only case
+        // [HSE_REVISIT] Avoid calling this if the newBound hasn't changed. The only case
         // to handle is when persistBoundary changes to something other than what we
         // notified the visibility manager about (truncate/init/any reset).
         _oplogVisibilityManager->durableCallback(newBound);

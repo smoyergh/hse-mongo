@@ -468,7 +468,7 @@ int KVDBEngine::flushAllFiles(bool sync) {
 }
 
 Status KVDBEngine::beginBackup(OperationContext* txn) {
-    // MU_REVISIT: nothing to do here yet.
+    // HSE_REVISIT: nothing to do here yet.
     return Status::OK();
 }
 
