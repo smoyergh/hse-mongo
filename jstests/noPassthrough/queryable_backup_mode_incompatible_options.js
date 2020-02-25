@@ -1,4 +1,12 @@
 /**
+ *    SPDX-License-Identifier: AGPL-3.0-only
+ *
+ *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *
+ *    This code is derived from and modifies the MongoDB project.
+ */
+
+/**
  * Tests that the following mongod command line options are incompatible with --queryableBackupMode:
  *   --replSet
  *   --configsvr

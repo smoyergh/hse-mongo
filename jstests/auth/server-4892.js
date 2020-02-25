@@ -1,4 +1,12 @@
 /**
+ *    SPDX-License-Identifier: AGPL-3.0-only
+ *
+ *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *
+ *    This code is derived from and modifies the MongoDB project.
+ */
+
+/**
  * Regression test for SERVER-4892.
  *
  * Verify that a client can delete cursors that it creates, when mongod is running with "auth"

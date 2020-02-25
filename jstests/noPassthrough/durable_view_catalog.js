@@ -1,4 +1,12 @@
 /**
+ *    SPDX-License-Identifier: AGPL-3.0-only
+ *
+ *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *
+ *    This code is derived from and modifies the MongoDB project.
+ */
+
+/**
  * Tests that view creation and modification is correctly persisted.
  *
  * This test requires persistence to ensure data survives a restart.

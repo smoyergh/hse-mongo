@@ -1,3 +1,11 @@
+/**
+ *    SPDX-License-Identifier: AGPL-3.0-only
+ *
+ *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *
+ *    This code is derived from and modifies the MongoDB project.
+ */
+
 // Test that removing and re-adding shard works correctly.
 
 load("jstests/replsets/rslib.js");

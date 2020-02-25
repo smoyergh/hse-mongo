@@ -1,4 +1,12 @@
 /**
+ *    SPDX-License-Identifier: AGPL-3.0-only
+ *
+ *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *
+ *    This code is derived from and modifies the MongoDB project.
+ */
+
+/**
  * Tests the interaction of the default index version and the featureCompatibilityVersion:
  *   - Index version v=2 is the default when the featureCompatibilityVersion is 3.4
  *   - Index version v=1 is the default when the featureCompatibilityVersion is 3.2

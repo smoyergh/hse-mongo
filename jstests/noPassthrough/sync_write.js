@@ -1,4 +1,12 @@
 /**
+ *    SPDX-License-Identifier: AGPL-3.0-only
+ *
+ *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *
+ *    This code is derived from and modifies the MongoDB project.
+ */
+
+/**
  * SERVER-20617: Tests that journaled write operations survive a kill -9 of the mongod.
  *
  * This test requires persistence to ensure data survives a restart.

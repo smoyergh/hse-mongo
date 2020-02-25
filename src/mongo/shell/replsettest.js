@@ -1,4 +1,12 @@
 /**
+ *    SPDX-License-Identifier: AGPL-3.0-only
+ *
+ *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *
+ *    This code is derived from and modifies the MongoDB project.
+ */
+
+/**
  * Sets up a replica set. To make the set running, call {@link #startSet},
  * followed by {@link #initiate} (and optionally,
  * {@link #awaitSecondaryNodes} to block till the  set is fully operational).

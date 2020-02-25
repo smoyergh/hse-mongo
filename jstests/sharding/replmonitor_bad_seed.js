@@ -1,4 +1,12 @@
 /**
+ *    SPDX-License-Identifier: AGPL-3.0-only
+ *
+ *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *
+ *    This code is derived from and modifies the MongoDB project.
+ */
+
+/**
  * This tests tries to check that a ReplicaSetMonitor initialized with a
  * replica set seed that has none of the nodes up will be able to recover
  * once the replica set come back up.

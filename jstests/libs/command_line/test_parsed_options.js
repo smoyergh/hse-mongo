@@ -1,3 +1,11 @@
+/**
+ *    SPDX-License-Identifier: AGPL-3.0-only
+ *
+ *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *
+ *    This code is derived from and modifies the MongoDB project.
+ */
+
 // Merge the two options objects.  Used as a helper when we are trying to actually compare options
 // despite the fact that our test framework adds extra stuff to it.  Anything set in the second
 // options object overrides the first options object.  The two objects must have the same structure.

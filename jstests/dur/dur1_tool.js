@@ -1,3 +1,11 @@
+/**
+ *    SPDX-License-Identifier: AGPL-3.0-only
+ *
+ *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *
+ *    This code is derived from and modifies the MongoDB project.
+ */
+
 /*
    test durability option with tools (same a dur1.js but use mongorestore to do repair)
 */

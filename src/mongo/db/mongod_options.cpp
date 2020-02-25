@@ -3,7 +3,7 @@
  *
  *    Copyright (C) 2017-2020 Micron Technology, Inc.
  *
- *    This code is derived from and modifies the mongodb server project.
+ *    This code is derived from and modifies the MongoDB project.
  *
  *    Copyright (C) 2013 10gen Inc.
  *

@@ -1,3 +1,11 @@
+#
+#    SPDX-License-Identifier: AGPL-3.0-only
+#
+#    Copyright (C) 2017-2020 Micron Technology, Inc.
+#
+#    This code is derived from and modifies the MongoDB project.
+#
+
 """
 Customize the behavior of a fixture by allowing special code to be
 executed before or after each test, and before or after each suite.

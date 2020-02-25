@@ -1,4 +1,12 @@
 /**
+ *    SPDX-License-Identifier: AGPL-3.0-only
+ *
+ *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *
+ *    This code is derived from and modifies the MongoDB project.
+ */
+
+/**
  * Tests that temporary collections are not dropped when a member of a replica set is started up as
  * a stand-alone mongod, i.e. without the --replSet parameter.
  *
