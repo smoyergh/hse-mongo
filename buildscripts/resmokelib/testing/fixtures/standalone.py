@@ -145,7 +145,7 @@ class MongoDFixture(interface.Fixture):
                     if 'Cannot activate' not in e.output:
                         raise
 
-            cmd = 'sudo {} create {} {} uid={} gid={}'.format(
+            cmd = 'sudo {} create -f {} {} uid={} gid={}'.format(
                 self._mpool_executable, self._hse_mpool_name, lvpath, os.getuid(), os.getgid()
             )
             self.logger.info(cmd)

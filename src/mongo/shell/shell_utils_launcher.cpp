@@ -852,7 +852,7 @@ BSONObj ResetKvdb(const BSONObj& a, void* data) {
         rc = system(cmd.c_str()); /* ignore return code */
     }
 
-    cmd = "sudo " + mpoolExecutable + " create " + mpoolName + " " + lvPath + " " + " uid=" +
+    cmd = "sudo " + mpoolExecutable + " create -f " + mpoolName + " " + lvPath + " uid=" +
         to_string(geteuid()) + " gid=" + to_string(getegid());
     cout << cmd << endl;
     rc = system(cmd.c_str());

@@ -15,3 +15,6 @@ executor:
           TestData:
             networkMessageCompressors: snappy
         readMode: commands
+    hooks:
+    - class: CleanTestMpools
+      n: 5

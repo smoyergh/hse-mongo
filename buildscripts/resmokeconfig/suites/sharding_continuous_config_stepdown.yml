@@ -140,3 +140,6 @@ executor:
         eval: "load('jstests/libs/override_methods/sharding_continuous_config_stepdown.js');"
         nodb: ''
         readMode: commands
+    hooks:
+    - class: CleanTestMpools
+      n: 5

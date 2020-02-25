@@ -12,3 +12,6 @@ executor:
             networkMessageCompressors: snappy
         nodb: ''
         readMode: commands
+    hooks:
+    - class: CleanTestMpools
+      n: 5
