@@ -1,3 +1,11 @@
+#
+#    SPDX-License-Identifier: AGPL-3.0-only
+#
+#    Copyright (C) 2017-2020 Micron Technology, Inc.
+#
+#    This code is derived from and modifies the MongoDB project.
+#
+
 selector:
   js_test:
     roots:
@@ -15,3 +23,6 @@ executor:
           TestData:
             networkMessageCompressors: snappy
         readMode: commands
+    hooks:
+    - class: CleanTestMpools
+      n: 5
