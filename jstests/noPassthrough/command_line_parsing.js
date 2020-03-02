@@ -61,7 +61,7 @@ var m3result = m3.getDB("admin").runCommand("getCmdLineOpts");
 delete m3result.parsed.storage.mmapv1;
 delete m3result.parsed.setParameter;
 delete m3result.parsed.storage.engine;
-delete m2result.parsed.storage.hse;
+delete m3result.parsed.storage.hse;
 delete m3result.parsed.storage.journal;
 delete m3result.parsed.storage.rocksdb;
 delete m3result.parsed.storage.wiredTiger;
