@@ -81,12 +81,11 @@ class MongoDFixture(interface.Fixture):
                 mpname = self.mongod_options["hseMpoolName"]
 
             self.mongod_options["hseMpoolName"] = mpname
-            self.mongod_options["hseKvdbName"] = mpname
-            self.mongod_options["hseCollectionParams"] = config.HSE_COLLECTION_PARAMS
+            self.mongod_options["hseCollComprAlgo"] = config.HSE_COLL_COMPR_ALGO
 
             self._hse_mpool_name = mpname
-            self._hse_kvdb_cparams = utils.default_if_none(
-                config.HSE_KVDB_CPARAMS, self.mongod_options.get("hseKvdbCParams"))
+            self._hse_params = utils.default_if_none(
+                config.HSE_PARAMS, self.mongod_options.get("hseParams"))
 
         self.mongod = None
 
@@ -157,8 +156,8 @@ class MongoDFixture(interface.Fixture):
 
             cmd = 'sudo {} kvdb create {}'.format(self._hse_executable, mpname)
 
-            if self._hse_kvdb_cparams:
-                cmd += ' {}'.format(self._hse_kvdb_cparams.replace(';', ' '))
+            if self._hse_params:
+                cmd += ' {}'.format(self._hse_params.replace(';', ' '))
 
             done = False
             while not done:

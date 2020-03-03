@@ -49,7 +49,7 @@ def mongod_program(logger, executable=None, process_kwargs=None, **kwargs):
         "wiredTigerCollectionConfigString": config.WT_COLL_CONFIG,
         "wiredTigerEngineConfigString": config.WT_ENGINE_CONFIG,
         "wiredTigerIndexConfigString": config.WT_INDEX_CONFIG,
-        "hseKvdbCParams": config.HSE_KVDB_CPARAMS,
+        "hseParams": config.HSE_PARAMS,
     }
 
     if config.STORAGE_ENGINE == "rocksdb":
@@ -146,8 +146,9 @@ def mongo_shell_program(logger, executable=None, connection_string=None, filenam
         "wiredTigerCollectionConfigString": (config.WT_COLL_CONFIG, ""),
         "wiredTigerEngineConfigString": (config.WT_ENGINE_CONFIG, ""),
         "wiredTigerIndexConfigString": (config.WT_INDEX_CONFIG, ""),
-        "hseCollectionParams": (config.HSE_COLLECTION_PARAMS, ""),
-        "hseKvdbCParams": (config.HSE_KVDB_CPARAMS, ""),
+        "hseCollComprAlgo": (config.HSE_COLL_COMPR_ALGO, ""),
+        "hseCollComprMinSz": (config.HSE_COLL_COMPR_MINSZ, ""),
+        "hseParams": (config.HSE_PARAMS, ""),
         "hseMpoolNamePrefix": (config.HSE_MPOOL_NAME_PREFIX, ""),
         "hse": (config.HSE_EXECUTABLE, config.DEFAULT_HSE_EXECUTABLE),
         "mpool": (config.MPOOL_EXECUTABLE, config.DEFAULT_MPOOL_EXECUTABLE),

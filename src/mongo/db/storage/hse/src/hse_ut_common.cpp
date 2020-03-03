@@ -49,11 +49,10 @@ KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
 
     hse_params_create(&_params);
     ASSERT_FALSE(nullptr == _params);
-    
+
     if (_kvdbPerUt) {
         st = _db.kvdb_params_set(_params, string("kvdb.dur_capacity"), std::to_string(16));
         ASSERT_EQUALS(0, st.getErrno());
-
     }
 
     int err{0};

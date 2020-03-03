@@ -30,18 +30,16 @@ ToolTest = function(name, extraOptions) {
 
         var pathOpts = {port: this.port};
 
-        this.options.hseKvdbName = MongoRunner.toRealKvdbName("$kvdbPrefix-mongod-$port", pathOpts);
-        this.options.hseMpoolName = this.options.hseKvdbName;
+        var _kvdbName = MongoRunner.toRealKvdbName("$kvdbPrefix-mongod-$port", pathOpts);
+        this.options.hseMpoolName = _kvdbName;
 
-        print("Resetting kvdb '" + this.options.hseMpoolName + "/" + this.options.hseKvdbName +
-              "'");
+        print("Resetting kvdb '" + this.options.hseMpoolName + "'");
 
         resetKvdb(jsTestOptions().hse,
                   jsTestOptions().mpool,
                   jsTestOptions().vg,
                   this.options.hseMpoolName,
-                  this.options.hseKvdbName,
-                  jsTestOptions().hseKvdbCParams);
+                  jsTestOptions().hseParams);
     }
 };
 

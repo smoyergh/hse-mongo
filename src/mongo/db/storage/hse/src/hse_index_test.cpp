@@ -75,8 +75,8 @@ public:
         invariantHse(nullptr != _params);
 
         string paramName = string("kvs.pfxlen");
-        invariantHseSt(_db.kvdb_params_set(
-            _params, paramName, std::to_string(hse::DEFAULT_PFX_LEN)));
+        invariantHseSt(
+            _db.kvdb_params_set(_params, paramName, std::to_string(hse::DEFAULT_PFX_LEN)));
 
         hse::Status hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), _params);
         invariantHseSt(hseSt);
@@ -85,8 +85,8 @@ public:
         invariantHseSt(hseSt);
 
         paramName = string("kvs.") + _uniqIdxKvsName + string(".sfxlen");
-        invariantHseSt(_db.kvdb_params_set(
-            _params, paramName, std::to_string(hse::DEFAULT_SFX_LEN)));
+        invariantHseSt(
+            _db.kvdb_params_set(_params, paramName, std::to_string(hse::DEFAULT_SFX_LEN)));
         hseSt = _db.kvdb_kvs_make(_uniqIdxKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 
@@ -94,8 +94,8 @@ public:
         invariantHseSt(hseSt);
 
         paramName = string("kvs.") + _stdIdxKvsName + string(".sfxlen");
-        invariantHseSt(_db.kvdb_params_set(
-            _params, paramName, std::to_string(hse::STDIDX_SFX_LEN)));
+        invariantHseSt(
+            _db.kvdb_params_set(_params, paramName, std::to_string(hse::STDIDX_SFX_LEN)));
         hseSt = _db.kvdb_kvs_make(_stdIdxKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 

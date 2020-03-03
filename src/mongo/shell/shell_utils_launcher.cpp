@@ -814,18 +814,16 @@ string makeLvPath(const string& vgName, const string& lvName) {
 BSONObj ResetKvdb(const BSONObj& a, void* data) {
     using std::to_string;
 
-    verify(a.nFields() == 6);
+    verify(a.nFields() == 5);
     BSONObjIterator i(a);
     string hseExecutable = i.next().str();
     string mpoolExecutable = i.next().str();
     string vgName = i.next().str();
     string mpoolName = i.next().str();
-    string kvdbName = i.next().str();
-    string kvdbCParams = i.next().str();
+    string hseParams = i.next().str();
     verify(!hseExecutable.empty());
     verify(!mpoolExecutable.empty());
     verify(!mpoolName.empty());
-    verify(!kvdbName.empty());
 
     int rc;
     string cmd;
@@ -871,21 +869,21 @@ BSONObj ResetKvdb(const BSONObj& a, void* data) {
     cmd = "sudo " + hseExecutable + " kvdb create " + mpoolName;
     cout << cmd << endl;
 
-    if (!kvdbCParams.empty()) {
+    if (!hseParams.empty()) {
         /*
          * Change semicolon-delimited params to space-delimited.
          */
         size_t pos = 0;
 
-        while ((pos = kvdbCParams.find(';', pos))) {
+        while ((pos = hseParams.find(';', pos))) {
             if (pos == string::npos) {
                 break;
             }
-            kvdbCParams[pos] = ' ';
+            hseParams[pos] = ' ';
         }
 
         cmd += " ";
-        cmd += kvdbCParams;
+        cmd += hseParams;
     }
 
     cout << cmd << endl;
@@ -897,20 +895,33 @@ BSONObj ResetKvdb(const BSONObj& a, void* data) {
 BSONObj DeleteKvdb(const BSONObj& a, void* data) {
     using std::to_string;
 
-    verify(a.nFields() == 5);
+    verify(a.nFields() == 4);
     BSONObjIterator i(a);
     string mpoolExecutable = i.next().str();
     string mpoolName = i.next().str();
     string vgName = i.next().str();
-    string kvdbName = i.next().str();
-    string kvdbCParams = i.next().str();
+    string hseParams = i.next().str();
     verify(!mpoolExecutable.empty());
     verify(!mpoolName.empty());
     verify(!vgName.empty());
-    verify(!kvdbName.empty());
 
     string cmd = "sudo " + mpoolExecutable + " destroy " + mpoolName;
     int rc = system(cmd.c_str());
+    if (rc)
+        return BSON(string("") << rc);
+    
+    /*
+     * delete the lv
+     */
+    string lvPath = makeLvPath(vgName, mpoolName);
+    boost::filesystem::path lvPathObj(lvPath);
+    if (boost::filesystem::exists(lvPathObj)) {
+        cmd = "sudo lvremove -y " + lvPath;
+        cout << cmd << endl;
+        rc = system(cmd.c_str());
+        if (rc ) 
+            return BSON(string("") << rc);
+    }
 
     return BSON(string("") << rc);
 }

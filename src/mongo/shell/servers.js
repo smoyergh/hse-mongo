@@ -574,11 +574,11 @@ var MongoRunner, _startMongod, startMongoProgram, runMongoProgram, startMongoPro
 
         var storageEngine = opts.storageEngine || jsTestOptions().storageEngine;
         if (storageEngine === "hse") {
-            opts.hseKvdbName =
+            var _kvdbName =
                 MongoRunner.toRealKvdbName(opts.hseKvdbName || opts.dbpath, opts.pathOpts);
-            opts.hseMpoolName = opts.hseKvdbName;
-            opts.hseKvdbCParams = MongoRunner.hseCParams;
-            opts.hseCollectionParams = MongoRunner.hseCollectionParams;
+            opts.hseMpoolName = _kvdbName;
+            opts.hseParams = MongoRunner.hseParams;
+            opts.hseCollComprAlgo = MongoRunner.hseCollComprAlgo;
         }
 
         opts.pathOpts = Object.merge(opts.pathOpts, {dbpath: opts.dbpath});
@@ -774,13 +774,12 @@ var MongoRunner, _startMongod, startMongoProgram, runMongoProgram, startMongoPro
 
                 var storageEngine = opts.storageEngine || jsTestOptions().storageEngine;
                 if (storageEngine === "hse") {
-                    print("Resetting kvdb '" + opts.hseMpoolName + "/" + opts.hseKvdbName + "'");
+                    print("Resetting kvdb '" + opts.hseMpoolName + "'");
                     resetKvdb(jsTestOptions().hse,
                               jsTestOptions().mpool,
                               jsTestOptions().vg,
                               opts.hseMpoolName,
-                              opts.hseKvdbName,
-                              jsTestOptions().hseKvdbCParams);
+                              jsTestOptions().hseParams);
                 }
             }
 
