@@ -69,7 +69,7 @@ DEST_TO_CONFIG = {
     "wt_index_config": "wiredTigerIndexConfigString",
     "hse_params": "hseParams",
     "hse_mpool_name_prefix": "hseMpoolNamePrefix",
-    "hse_coll_compr_algo": "hseCollComprAlgo",
+    "hse_coll_compr": "hseCollectionCompression",
     "continue_on_crash": "continueOnCrash",
     "hse_executable": "hse",
     "mpool_executable": "mpool",
@@ -258,7 +258,7 @@ def parse_command_line():
                       help="The name prefix of mpools created by resmoke.py or the tests "
                            "themselves.  OPTIONAL.")
 
-    parser.add_option("--hseCollComprAlgo", dest="hse_coll_compr_algo", metavar="PARAMS",
+    parser.add_option("--hseCollectionCompression", dest="hse_coll_compr", metavar="PARAMS",
                       help="Collection compression algorithm.")
 
     parser.add_option("--continueOnCrash", action="store_true", dest="continue_on_crash",
@@ -383,8 +383,8 @@ def update_config_vars(values):
     _config.WT_INDEX_CONFIG = config.pop("wiredTigerIndexConfigString")
     _config.HSE_PARAMS = config.pop("hseParams")
     _config.HSE_MPOOL_NAME_PREFIX = config.pop("hseMpoolNamePrefix")
-    _config.HSE_COLL_COMPR_ALGO = config.pop("hseCollComprAlgo")
-    _config.HSE_COLL_COMPR_MINSZ = config.pop("hseCollComprMinSz")
+    _config.HSE_COLL_COMPR = config.pop("hseCollectionCompression")
+    _config.HSE_COLL_COMPR_MIN_BYTES = config.pop("hseCollectionCompressionMinBytes")
     _config.CONTINUE_ON_CRASH = config.pop("continueOnCrash")
     _config.HSE_EXECUTABLE = _expand_user(config.pop("hse"))
     _config.MPOOL_EXECUTABLE = _expand_user(config.pop("mpool"))

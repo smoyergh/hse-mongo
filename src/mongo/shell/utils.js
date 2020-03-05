@@ -286,7 +286,7 @@ jsTestOptions = function() {
             mpool: TestData.mpool,
             vg: TestData.vg,
             hseParams: TestData.hseParams,
-            hseCollComprAlgo: TestData.hseCollComprAlgo,
+            hseCollectionCompression: TestData.hseCollectionCompression,
         });
     }
     return _jsTestOptions;

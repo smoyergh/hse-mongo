@@ -46,12 +46,12 @@ namespace mongo {
 
 const std::string KVDBGlobalOptions::kDefaultMpoolName = "mp1";
 const int KVDBGlobalOptions::kDefaultForceLag = 0;
-const std::string KVDBGlobalOptions::kDefaultProfilePathStr = "";
+const std::string KVDBGlobalOptions::kDefaultConfigPathStr = "";
 const std::string KVDBGlobalOptions::kDefaultParamsStr = "";
 
 // Collection options
-const std::string KVDBGlobalOptions::kDefaultCollComprAlgoStr = "lz4";
-const std::string KVDBGlobalOptions::kDefaultCollComprMinSzStr = "0";
+const std::string KVDBGlobalOptions::kDefaultCollectionCompressionStr = "lz4";
+const std::string KVDBGlobalOptions::kDefaultCollectionCompressionMinBytesStr = "0";
 
 const bool KVDBGlobalOptions::kDefaultEnableMetrics = false;
 
@@ -65,7 +65,7 @@ const std::string mpoolNameOptStr = modName + "MpoolName";
 
 const std::string forceLagOptStr = modName + "ForceLag";
 
-const std::string profilePathOptStr = modName + "ProfilePath";
+const std::string configPathOptStr = modName + "ConfigPath";
 
 const std::string paramsOptStr = modName + "Params";
 
@@ -75,16 +75,17 @@ const std::string mpoolNameCfgStr = cfgStrPrefix + "mpoolName";
 
 const std::string forceLagCfgStr = cfgStrPrefix + "forceLag";
 
-const std::string profilePathCfgStr = cfgStrPrefix + "profilePath";
+const std::string configPathCfgStr = cfgStrPrefix + "configPath";
 
 const std::string paramsCfgStr = cfgStrPrefix + "params";
 
 
 // Collection options.
-const std::string collComprAlgoCfgStr = cfgStrPrefix + "collComprAlgo";
-const std::string collComprMinSzCfgStr = cfgStrPrefix + "collComprMinSz";
-const std::string collComprAlgoOptStr = modName + "CollComprAlgo";
-const std::string collComprMinSzOptStr = modName + "CollComprMinSz";
+const std::string collectionCompressionCfgStr = cfgStrPrefix + "collectionCompression";
+const std::string collectionCompressionMinBytesCfgStr =
+    cfgStrPrefix + "collectionCompressionMinBytes";
+const std::string collectionCompressionOptStr = modName + "CollectionCompression";
+const std::string collectionCompressionMinBytesOptStr = modName + "CollectionCompressionMinBytes";
 
 // Enable metrics
 const std::string enableMetricsCfgStr = cfgStrPrefix + "enableMetrics";
@@ -103,26 +104,26 @@ Status KVDBGlobalOptions::add(moe::OptionSection* options) {
         .hidden()
         .setDefault(moe::Value(kDefaultForceLag));
     kvdbOptions
-        .addOptionChaining(profilePathCfgStr, profilePathOptStr, moe::String, "HSE profile path")
+        .addOptionChaining(configPathCfgStr, configPathOptStr, moe::String, "HSE config path")
         .setDefault(moe::Value(kDefaultParamsStr));
     kvdbOptions.addOptionChaining(paramsCfgStr, paramsOptStr, moe::String, "HSE parameters")
         .setDefault(moe::Value(kDefaultParamsStr));
 
     // Collection options
     kvdbOptions
-        .addOptionChaining(collComprAlgoCfgStr,
-                           collComprAlgoOptStr,
+        .addOptionChaining(collectionCompressionCfgStr,
+                           collectionCompressionOptStr,
                            moe::String,
                            "collection compression algorithm [none|lz4]")
         .format("(:?none)|(:?lz4)", "[none|lz4]")
-        .setDefault(moe::Value(kDefaultCollComprAlgoStr));
+        .setDefault(moe::Value(kDefaultCollectionCompressionStr));
     kvdbOptions
-        .addOptionChaining(collComprMinSzCfgStr,
-                           collComprMinSzOptStr,
+        .addOptionChaining(collectionCompressionMinBytesCfgStr,
+                           collectionCompressionMinBytesOptStr,
                            moe::String,
                            "compression minimum size <values whose size is <= to this size are "
                            "not compressed>")
-        .setDefault(moe::Value(kDefaultCollComprMinSzStr));
+        .setDefault(moe::Value(kDefaultCollectionCompressionMinBytesStr));
 
     kvdbOptions
         .addOptionChaining(
@@ -145,9 +146,9 @@ Status KVDBGlobalOptions::store(const moe::Environment& params,
         log() << "Force Lag: " << kvdbGlobalOptions._forceLag;
     }
 
-    if (params.count(profilePathCfgStr)) {
-        kvdbGlobalOptions._profilePathStr = params[profilePathCfgStr].as<std::string>();
-        log() << "HSE profile path str: " << kvdbGlobalOptions._profilePathStr;
+    if (params.count(configPathCfgStr)) {
+        kvdbGlobalOptions._configPathStr = params[configPathCfgStr].as<std::string>();
+        log() << "HSE config path str: " << kvdbGlobalOptions._configPathStr;
     }
 
     if (params.count(paramsCfgStr)) {
@@ -155,15 +156,17 @@ Status KVDBGlobalOptions::store(const moe::Environment& params,
         log() << "HSE params str: " << kvdbGlobalOptions._paramsStr;
     }
 
-    if (params.count(collComprAlgoCfgStr)) {
-        kvdbGlobalOptions._collComprAlgoStr = params[collComprAlgoCfgStr].as<std::string>();
-        log() << "Collection compression Algo str: " << kvdbGlobalOptions._collComprAlgoStr;
+    if (params.count(collectionCompressionCfgStr)) {
+        kvdbGlobalOptions._collectionCompressionStr =
+            params[collectionCompressionCfgStr].as<std::string>();
+        log() << "Collection compression Algo str: " << kvdbGlobalOptions._collectionCompressionStr;
     }
 
-    if (params.count(collComprMinSzCfgStr)) {
-        kvdbGlobalOptions._collComprMinSzStr = params[collComprMinSzCfgStr].as<std::string>();
+    if (params.count(collectionCompressionMinBytesCfgStr)) {
+        kvdbGlobalOptions._collectionCompressionMinBytesStr =
+            params[collectionCompressionMinBytesCfgStr].as<std::string>();
         log() << "Collection compression minimum size  str: "
-              << kvdbGlobalOptions._collComprMinSzStr;
+              << kvdbGlobalOptions._collectionCompressionMinBytesStr;
     }
 
     if (params.count(enableMetricsCfgStr)) {
@@ -182,20 +185,20 @@ bool KVDBGlobalOptions::getCrashSafeCounters() const {
     return _crashSafeCounters;
 }
 
-std::string KVDBGlobalOptions::getProfilePathStr() const {
-    return _profilePathStr;
+std::string KVDBGlobalOptions::getConfigPathStr() const {
+    return _configPathStr;
 }
 
 std::string KVDBGlobalOptions::getParamsStr() const {
     return _paramsStr;
 }
 
-std::string KVDBGlobalOptions::getCollComprAlgoStr() const {
-    return _collComprAlgoStr;
+std::string KVDBGlobalOptions::getCollectionCompressionStr() const {
+    return _collectionCompressionStr;
 }
 
-std::string KVDBGlobalOptions::getCollComprMinSzStr() const {
-    return _collComprMinSzStr;
+std::string KVDBGlobalOptions::getCollectionCompressionMinBytesStr() const {
+    return _collectionCompressionMinBytesStr;
 }
 
 bool KVDBGlobalOptions::getMetricsEnabled() const {

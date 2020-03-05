@@ -578,7 +578,7 @@ var MongoRunner, _startMongod, startMongoProgram, runMongoProgram, startMongoPro
                 MongoRunner.toRealKvdbName(opts.hseKvdbName || opts.dbpath, opts.pathOpts);
             opts.hseMpoolName = _kvdbName;
             opts.hseParams = MongoRunner.hseParams;
-            opts.hseCollComprAlgo = MongoRunner.hseCollComprAlgo;
+            opts.hseCollectionCompression = MongoRunner.hseCollectionCompression;
         }
 
         opts.pathOpts = Object.merge(opts.pathOpts, {dbpath: opts.dbpath});

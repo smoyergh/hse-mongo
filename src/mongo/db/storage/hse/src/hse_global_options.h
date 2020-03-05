@@ -45,10 +45,10 @@ public:
     KVDBGlobalOptions()
         : _mpoolName{kDefaultMpoolName},
           _forceLag{kDefaultForceLag},
-          _profilePathStr{kDefaultProfilePathStr},
+          _configPathStr{kDefaultConfigPathStr},
           _paramsStr{kDefaultParamsStr},
-          _collComprAlgoStr{kDefaultCollComprAlgoStr},
-          _collComprMinSzStr{kDefaultCollComprMinSzStr},
+          _collectionCompressionStr{kDefaultCollectionCompressionStr},
+          _collectionCompressionMinBytesStr{kDefaultCollectionCompressionMinBytesStr},
           _enableMetrics{kDefaultEnableMetrics},
           _crashSafeCounters{false},
           _kvdbC1Enabled{false} {}
@@ -60,12 +60,12 @@ public:
 
     std::string getKvdbName() const;
 
-    std::string getProfilePathStr() const;
+    std::string getConfigPathStr() const;
 
     std::string getParamsStr() const;
 
-    std::string getCollComprAlgoStr() const;
-    std::string getCollComprMinSzStr() const;
+    std::string getCollectionCompressionStr() const;
+    std::string getCollectionCompressionMinBytesStr() const;
 
 
     bool getMetricsEnabled() const;
@@ -78,20 +78,20 @@ private:
     static const std::string kDefaultMpoolName;
     static const std::string kDefaultKvdbName;
     static const int kDefaultForceLag;
-    static const std::string kDefaultProfilePathStr;
+    static const std::string kDefaultConfigPathStr;
     static const std::string kDefaultParamsStr;
 
-    static const std::string kDefaultCollComprAlgoStr;
-    static const std::string kDefaultCollComprMinSzStr;
+    static const std::string kDefaultCollectionCompressionStr;
+    static const std::string kDefaultCollectionCompressionMinBytesStr;
     static const bool kDefaultEnableMetrics;
 
     std::string _mpoolName;
     int _forceLag;
-    std::string _profilePathStr;
+    std::string _configPathStr;
     std::string _paramsStr;
 
-    std::string _collComprAlgoStr;
-    std::string _collComprMinSzStr;
+    std::string _collectionCompressionStr;
+    std::string _collectionCompressionMinBytesStr;
     bool _enableMetrics;
 
     bool _crashSafeCounters;

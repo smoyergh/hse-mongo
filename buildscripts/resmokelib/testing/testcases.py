@@ -357,7 +357,7 @@ class JSTestCase(TestCase):
             global_vars["MongoRunner.mpoolNamePrefix"] = pfx
             global_vars["MongoRunner.volumeGroup"] = config.VOLUME_GROUP
             global_vars["MongoRunner.hseParams"] = config.HSE_PARAMS
-            global_vars["MongoRunner.hseCollComprAlgo"] = config.HSE_COLL_COMPR_ALGO
+            global_vars["MongoRunner.hseCollectionCompression"] = config.HSE_COLL_COMPR
 
         test_data = global_vars.get("TestData", {}).copy()
         test_data["minPort"] = core.network.PortAllocator.min_test_port(fixture.job_num)

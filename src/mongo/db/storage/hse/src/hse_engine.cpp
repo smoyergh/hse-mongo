@@ -154,9 +154,10 @@ Status KVDBEngine::createRecordStore(OperationContext* opCtx,
     if (engine.isEmpty()) {
         // If no compression option where provided at the time of the
         // collection creation, use the global options.
-        Status st = collconf::collectionOptions2compParms(kvdbGlobalOptions.getCollComprAlgoStr(),
-                                                          kvdbGlobalOptions.getCollComprMinSzStr(),
-                                                          compparms);
+        Status st = collconf::collectionOptions2compParms(
+            kvdbGlobalOptions.getCollectionCompressionStr(),
+            kvdbGlobalOptions.getCollectionCompressionMinBytesStr(),
+            compparms);
         if (!st.isOK())
             return st;
 
@@ -515,12 +516,12 @@ void KVDBEngine::_open_kvs(const string& kvs, KVSHandle& h, struct hse_params* p
 }
 
 void KVDBEngine::_set_hse_params(struct hse_params* params) {
-    // get profile string
-    const string profilePath = kvdbGlobalOptions.getProfilePathStr();
+    // get config path  string
+    const string configPath = kvdbGlobalOptions.getConfigPathStr();
 
-    // load params from profile
-    if (profilePath != "") {
-        invariantHseSt(_db.kvdb_params_from_file(params, profilePath));
+    // load params from config
+    if (configPath != "") {
+        invariantHseSt(_db.kvdb_params_from_file(params, configPath));
     }
 
     // get params from cmdline
