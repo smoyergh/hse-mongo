@@ -113,7 +113,8 @@ Status KVDBGlobalOptions::add(moe::OptionSection* options) {
         .addOptionChaining(collComprAlgoCfgStr,
                            collComprAlgoOptStr,
                            moe::String,
-                           "collection compression algorithm")
+                           "collection compression algorithm [none|lz4]")
+        .format("(:?none)|(:?lz4)", "[none|lz4]")
         .setDefault(moe::Value(kDefaultCollComprAlgoStr));
     kvdbOptions
         .addOptionChaining(collComprMinSzCfgStr,

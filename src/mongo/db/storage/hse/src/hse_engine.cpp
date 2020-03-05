@@ -92,8 +92,8 @@ void parseParams(KVDB& db, string paramStr, struct hse_params* params) {
         string key{};
         string val{};
 
-        invariantHse(std::getline(ss1, key, '='));
-        invariantHse(std::getline(ss1, val, '='));
+        invariantHse(std::getline(ss2, key, '='));
+        invariantHse(std::getline(ss2, val, '='));
 
         // HSE_REVISIT: remove
         LOG(1) << "CMD Params : " << key << "=" << val;
@@ -154,9 +154,12 @@ Status KVDBEngine::createRecordStore(OperationContext* opCtx,
     if (engine.isEmpty()) {
         // If no compression option where provided at the time of the
         // collection creation, use the global options.
-        collconf::collectionOptions2compParms(kvdbGlobalOptions.getCollComprAlgoStr(),
+        Status st = collconf::collectionOptions2compParms(kvdbGlobalOptions.getCollComprAlgoStr(),
                                               kvdbGlobalOptions.getCollComprMinSzStr(),
                                               compparms);
+        if (!st.isOK())
+            return st;
+
     } else {
         // The collection creation is passing some storage engine options.
         Status st = collconf::validateCollectionOptions(engine, compparms);
@@ -492,10 +495,6 @@ void KVDBEngine::_open_kvdb(const string& mp,
 }
 
 void KVDBEngine::_open_kvs(const string& kvs, KVSHandle& h, struct hse_params* params) {
-
-
-    parseParams(_db, kvdbGlobalOptions.getParamsStr(), params);
-    parseParams(_db, kvdbGlobalOptions.getParamsStr(), params);
 
     auto st = _db.kvdb_kvs_open(kvs.c_str(), params, h);
     if (st.getErrno()) {
