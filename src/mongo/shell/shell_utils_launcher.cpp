@@ -909,7 +909,7 @@ BSONObj DeleteKvdb(const BSONObj& a, void* data) {
     int rc = system(cmd.c_str());
     if (rc)
         return BSON(string("") << rc);
-    
+
     /*
      * delete the lv
      */
@@ -919,7 +919,7 @@ BSONObj DeleteKvdb(const BSONObj& a, void* data) {
         cmd = "sudo lvremove -y " + lvPath;
         cout << cmd << endl;
         rc = system(cmd.c_str());
-        if (rc ) 
+        if (rc)
             return BSON(string("") << rc);
     }
 

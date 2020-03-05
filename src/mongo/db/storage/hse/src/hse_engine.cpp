@@ -155,8 +155,8 @@ Status KVDBEngine::createRecordStore(OperationContext* opCtx,
         // If no compression option where provided at the time of the
         // collection creation, use the global options.
         Status st = collconf::collectionOptions2compParms(kvdbGlobalOptions.getCollComprAlgoStr(),
-                                              kvdbGlobalOptions.getCollComprMinSzStr(),
-                                              compparms);
+                                                          kvdbGlobalOptions.getCollComprMinSzStr(),
+                                                          compparms);
         if (!st.isOK())
             return st;
 
