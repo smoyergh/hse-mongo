@@ -81,7 +81,8 @@ class MongoDFixture(interface.Fixture):
                 mpname = self.mongod_options["hseMpoolName"]
 
             self.mongod_options["hseMpoolName"] = mpname
-            self.mongod_options["hseCollectionCompression"] = config.HSE_COLL_COMPR
+            self.mongod_options["hseCollectionCompression"] = utils.default_if_none(
+                config.HSE_COLL_COMPR, config.DEFAULT_HSE_COLL_COMPR)
 
             self._hse_mpool_name = mpname
             self._hse_params = utils.default_if_none(
