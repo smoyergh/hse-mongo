@@ -232,17 +232,18 @@ protected:
 
         // Create all the kvses
         for (unsigned int i = 0; i < TEST_KVS_CNT; i++) {
-            hse_params_create(&_kvsCParams[i]);
-            hse_params_create(&_kvsRParams[i]);
+            hse_params_create(&_params[i]);
+            ASSERT_FALSE(nullptr == _params[i]);
 
-            hse_params_set(_kvsCParams[i], "kvs.cparams.pfxlen", std::to_string(4).c_str());
-            st = _db.kvdb_kvs_make(_kvsNames[i], _kvsCParams[i]);
+            string paramName = string("kvs.pfxlen");
+            st = _db.kvdb_params_set(_params[i], paramName, std::to_string(hse::DEFAULT_PFX_LEN));
             ASSERT_EQUALS(0, st.getErrno());
-            st = _db.kvdb_kvs_open(_kvsNames[i], _kvsRParams[i], _kvsHandles[i]);
+            st = _db.kvdb_kvs_make(_kvsNames[i], _params[i]);
+            ASSERT_EQUALS(0, st.getErrno());
+            st = _db.kvdb_kvs_open(_kvsNames[i], _params[i], _kvsHandles[i]);
             ASSERT_EQUALS(0, st.getErrno());
 
-            hse_params_destroy(_kvsCParams[i]);
-            hse_params_destroy(_kvsRParams[i]);
+            hse_params_destroy(_params[i]);
         }
 
 
@@ -269,12 +270,9 @@ protected:
     hse::KVDB& _db = _dbFixture.getDb();
 
     const char* _kvsNames[2] = {"KVS1", "KVS2"};
-    struct hse_params* _kvsCParams1;
-    struct hse_params* _kvsCParams2;
-    struct hse_params* _kvsCParams[2] = {_kvsCParams1, _kvsCParams1};
-
-    struct hse_params* _kvsRParams1;
-    struct hse_params* _kvsRParams[2] = {_kvsRParams1, _kvsRParams1};
+    struct hse_params* _params1{nullptr};
+    struct hse_params* _params2{nullptr};
+    struct hse_params* _params[2] = {_params1, _params2};
 
     KVSHandle _kvsHandles[TEST_KVS_CNT];
 };

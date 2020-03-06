@@ -51,7 +51,6 @@ public:
         boost::filesystem::remove_all(_dbpath.path());
 
         _dbFixture.closeDb();
-        kvdbGlobalOptions.setKvdbName(_dbFixture.getDbName());
         restartEngine();
     }
 

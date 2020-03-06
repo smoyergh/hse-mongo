@@ -47,14 +47,17 @@ KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
     hse::Status st = _db.kvdb_init();
     ASSERT_EQUALS(0, st.getErrno());
 
-    hse_params_create(&_kvdbCfg);
+    hse_params_create(&_params);
+    ASSERT_FALSE(nullptr == _params);
+
     if (_kvdbPerUt) {
-        hse_params_set(_kvdbCfg, "kvdb.cparams.dur_capacity", std::to_string(16).c_str());
+        st = _db.kvdb_params_set(_params, string("kvdb.dur_capacity"), std::to_string(16));
+        ASSERT_EQUALS(0, st.getErrno());
     }
 
     int err{0};
     while (true) {
-        st = _db.kvdb_make(_mpoolName.c_str(), _kvdbName.c_str(), _kvdbCfg);
+        st = _db.kvdb_make(_mpoolName.c_str(), _kvdbName.c_str(), _params);
 
         err = st.getErrno();
         if (EAGAIN != err) {
@@ -68,8 +71,7 @@ KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
 
     ASSERT_EQUALS(0, err);
 
-    hse_params_create(&_kvdbRnCfg);
-    st = _db.kvdb_open(_mpoolName.c_str(), _kvdbName.c_str(), _kvdbRnCfg, _snapId);
+    st = _db.kvdb_open(_mpoolName.c_str(), _kvdbName.c_str(), _params, _snapId);
     ASSERT_EQUALS(0, st.getErrno());
 
     _dbClosed = false;
@@ -81,7 +83,7 @@ void KVDBTestSuiteFixture::reset() {
         hse::Status st = _db.kvdb_init();
         ASSERT_EQUALS(0, st.getErrno());
 
-        st = _db.kvdb_open(_mpoolName.c_str(), _kvdbName.c_str(), _kvdbRnCfg, _snapId);
+        st = _db.kvdb_open(_mpoolName.c_str(), _kvdbName.c_str(), _params, _snapId);
         ASSERT_EQUALS(0, st.getErrno());
 
         _dbClosed = false;
@@ -111,7 +113,7 @@ void KVDBTestSuiteFixture::reset() {
     st = _db.kvdb_close();
     ASSERT_EQUALS(0, st.getErrno());
 
-    st = _db.kvdb_open(_mpoolName.c_str(), _kvdbName.c_str(), _kvdbRnCfg, _snapId);
+    st = _db.kvdb_open(_mpoolName.c_str(), _kvdbName.c_str(), _params, _snapId);
     ASSERT_EQUALS(0, st.getErrno());
 }
 
@@ -120,7 +122,7 @@ KVDBTestSuiteFixture::~KVDBTestSuiteFixture() {
         hse::Status st = _db.kvdb_init();
         ASSERT_EQUALS(0, st.getErrno());
 
-        st = _db.kvdb_open(_mpoolName.c_str(), _kvdbName.c_str(), _kvdbRnCfg, _snapId);
+        st = _db.kvdb_open(_mpoolName.c_str(), _kvdbName.c_str(), _params, _snapId);
         ASSERT_EQUALS(0, st.getErrno());
 
         _dbClosed = false;
@@ -129,8 +131,7 @@ KVDBTestSuiteFixture::~KVDBTestSuiteFixture() {
     hse::Status st = _db.kvdb_close();
     ASSERT_EQUALS(0, st.getErrno());
 
-    hse_params_destroy(_kvdbCfg);
-    hse_params_destroy(_kvdbRnCfg);
+    hse_params_destroy(_params);
 
     _db.kvdb_fini();
     _dbClosed = true;

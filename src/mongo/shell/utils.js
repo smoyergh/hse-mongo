@@ -285,8 +285,8 @@ jsTestOptions = function() {
             hse: TestData.hse,
             mpool: TestData.mpool,
             vg: TestData.vg,
-            hseKvdbCParams: TestData.hseKvdbCParams,
-            hseCollectionParams: TestData.hseCollectionParams,
+            hseParams: TestData.hseParams,
+            hseCollectionCompression: TestData.hseCollectionCompression,
         });
     }
     return _jsTestOptions;

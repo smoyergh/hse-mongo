@@ -71,43 +71,44 @@ public:
     }
 
     void setupDb() {
-        hse_params_create(&_colKvsCParams);
-        hse_params_create(&_uniqIdxKvsCParams);
-        hse_params_create(&_stdIdxKvsCParams);
-        hse_params_create(&_largeKvsCParams);
+        hse_params_create(&_params);
+        invariantHse(nullptr != _params);
 
-        hse::Status hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), nullptr);
+        string paramName = string("kvs.pfxlen");
+        invariantHseSt(
+            _db.kvdb_params_set(_params, paramName, std::to_string(hse::DEFAULT_PFX_LEN)));
+
+        hse::Status hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_colKvsName.c_str(), nullptr, _colKvs);
+        hseSt = _db.kvdb_kvs_open(_colKvsName.c_str(), _params, _colKvs);
         invariantHseSt(hseSt);
 
-        hse_params_set(
-            _uniqIdxKvsCParams, "kvs.cparams.sfxlen", std::to_string(hse::DEFAULT_SFX_LEN).c_str());
-        hseSt = _db.kvdb_kvs_make(_uniqIdxKvsName.c_str(), _uniqIdxKvsCParams);
+        paramName = string("kvs.") + _uniqIdxKvsName + string(".sfxlen");
+        invariantHseSt(
+            _db.kvdb_params_set(_params, paramName, std::to_string(hse::DEFAULT_SFX_LEN)));
+        hseSt = _db.kvdb_kvs_make(_uniqIdxKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_uniqIdxKvsName.c_str(), nullptr, _uniqIdxKvs);
+        hseSt = _db.kvdb_kvs_open(_uniqIdxKvsName.c_str(), _params, _uniqIdxKvs);
         invariantHseSt(hseSt);
 
-        hse_params_set(
-            _stdIdxKvsCParams, "kvs.cparams.sfxlen", std::to_string(hse::STDIDX_SFX_LEN).c_str());
-        hseSt = _db.kvdb_kvs_make(_stdIdxKvsName.c_str(), _stdIdxKvsCParams);
+        paramName = string("kvs.") + _stdIdxKvsName + string(".sfxlen");
+        invariantHseSt(
+            _db.kvdb_params_set(_params, paramName, std::to_string(hse::STDIDX_SFX_LEN)));
+        hseSt = _db.kvdb_kvs_make(_stdIdxKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_stdIdxKvsName.c_str(), nullptr, _stdIdxKvs);
+        hseSt = _db.kvdb_kvs_open(_stdIdxKvsName.c_str(), _params, _stdIdxKvs);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_make(_largeKvsName.c_str(), _largeKvsCParams);
+        hseSt = _db.kvdb_kvs_make(_largeKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_largeKvsName.c_str(), nullptr, _largeKvs);
+        hseSt = _db.kvdb_kvs_open(_largeKvsName.c_str(), _params, _largeKvs);
         invariantHseSt(hseSt);
 
-        hse_params_destroy(_colKvsCParams);
-        hse_params_destroy(_uniqIdxKvsCParams);
-        hse_params_destroy(_stdIdxKvsCParams);
-        hse_params_destroy(_largeKvsCParams);
+        hse_params_destroy(_params);
     }
 
     void teardownDb() {
@@ -166,20 +167,18 @@ public:
 private:
     Ordering _order;
 
+    struct hse_params* _params{nullptr};
+
     string _colKvsName = "ColKvs";
-    struct hse_params* _colKvsCParams;
     KVSHandle _colKvs;
 
     string _uniqIdxKvsName = "UniqIdxKvs";
-    struct hse_params* _uniqIdxKvsCParams;
     KVSHandle _uniqIdxKvs;
 
     string _stdIdxKvsName = "StdIdxKvs";
-    struct hse_params* _stdIdxKvsCParams;
     KVSHandle _stdIdxKvs;
 
     string _largeKvsName = "LargeKVS";
-    struct hse_params* _largeKvsCParams;
     KVSHandle _largeKvs;
 
     hse::KVDBTestSuiteFixture& _dbFixture = KVDBTestSuiteFixture::getFixture();

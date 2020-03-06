@@ -154,7 +154,11 @@ public:
 
 private:
     void _setupDb();
-    void _open_kvdb(const string& mpoolName, const string& kvdbName, unsigned int snap);
+    void _set_hse_params(struct hse_params* params);
+    void _open_kvdb(const string& mpoolName,
+                    const string& kvdbName,
+                    struct hse_params* params,
+                    unsigned int snap);
     void _open_kvs(const string& kvsName, KVSHandle& h, struct hse_params* params);
     void _cleanShutdown();
     void _loadMaxPrefix();

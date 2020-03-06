@@ -142,58 +142,54 @@ public:
     }
 
     void setupDb() {
-        hse_params_create(&_colKvsCParams);
-        hse_params_create(&_idxKvsCParams);
-        hse_params_create(&_largeKvsCParams);
-        hse_params_create(&_oplogKvsCParams);
-        hse_params_create(&_oplogLargeKvsCParams);
+        hse_params_create(&_params);
+        invariantHse(nullptr != _params);
 
-        hse_params_set(
-            _colKvsCParams, "kvs.cparams.pfxlen", std::to_string(hse::DEFAULT_PFX_LEN).c_str());
-        hse::Status hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), _colKvsCParams);
+        string paramName = string("kvs.pfxlen");
+
+        hse::Status hseSt =
+            _db.kvdb_params_set(_params, paramName, std::to_string(hse::DEFAULT_PFX_LEN));
+        invariantHseSt(hseSt);
+
+        hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 
         hseSt = _db.kvdb_kvs_open(_colKvsName.c_str(), nullptr, _colKvs);
         invariantHseSt(hseSt);
 
-        hse_params_set(
-            _idxKvsCParams, "kvs.cparams.pfxlen", std::to_string(hse::DEFAULT_PFX_LEN).c_str());
-        hseSt = _db.kvdb_kvs_make(_idxKvsName.c_str(), _idxKvsCParams);
+        hseSt = _db.kvdb_kvs_make(_idxKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 
         hseSt = _db.kvdb_kvs_open(_idxKvsName.c_str(), nullptr, _idxKvs);
         invariantHseSt(hseSt);
 
-        hse_params_set(
-            _largeKvsCParams, "kvs.cparams.pfxlen", std::to_string(hse::DEFAULT_PFX_LEN).c_str());
-        hseSt = _db.kvdb_kvs_make(_largeKvsName.c_str(), _largeKvsCParams);
+        hseSt = _db.kvdb_kvs_make(_largeKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 
         hseSt = _db.kvdb_kvs_open(_largeKvsName.c_str(), nullptr, _largeKvs);
         invariantHseSt(hseSt);
 
-        hse_params_set(
-            _oplogKvsCParams, "kvs.cparams.pfxlen", std::to_string(hse::OPLOG_PFX_LEN).c_str());
-        hseSt = _db.kvdb_kvs_make(_oplogKvsName.c_str(), _oplogKvsCParams);
+        paramName = string("kvs.") + _oplogKvsName + string(".pfxlen");
+        hseSt = _db.kvdb_params_set(_params, paramName, std::to_string(hse::OPLOG_PFX_LEN));
+        invariantHseSt(hseSt);
+
+        paramName = string("kvs.") + _oplogLargeKvsName + string(".pfxlen");
+        hseSt = _db.kvdb_params_set(_params, paramName, std::to_string(hse::OPLOG_PFX_LEN));
+        invariantHseSt(hseSt);
+
+        hseSt = _db.kvdb_kvs_make(_oplogKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 
         hseSt = _db.kvdb_kvs_open(_oplogKvsName.c_str(), nullptr, _oplogKvs);
         invariantHseSt(hseSt);
 
-        hse_params_set(_oplogLargeKvsCParams,
-                       "kvs.cparams.pfxlen",
-                       std::to_string(hse::OPLOG_PFX_LEN).c_str());
-        hseSt = _db.kvdb_kvs_make(_oplogLargeKvsName.c_str(), _oplogLargeKvsCParams);
+        hseSt = _db.kvdb_kvs_make(_oplogLargeKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 
         hseSt = _db.kvdb_kvs_open(_oplogLargeKvsName.c_str(), nullptr, _oplogLargeKvs);
         invariantHseSt(hseSt);
 
-        hse_params_destroy(_colKvsCParams);
-        hse_params_destroy(_idxKvsCParams);
-        hse_params_destroy(_largeKvsCParams);
-        hse_params_destroy(_oplogKvsCParams);
-        hse_params_destroy(_oplogLargeKvsCParams);
+        hse_params_destroy(_params);
     }
 
     void teardownDb() {
@@ -217,24 +213,21 @@ public:
     }
 
 private:
+    struct hse_params* _params{nullptr};
+
     string _colKvsName = "ColKVS";
-    struct hse_params* _colKvsCParams;
     KVSHandle _colKvs;
 
     string _idxKvsName = "IdxKVS";
-    struct hse_params* _idxKvsCParams;
     KVSHandle _idxKvs;
 
     string _largeKvsName = "LargeKVS";
-    struct hse_params* _largeKvsCParams;
     KVSHandle _largeKvs;
 
     string _oplogKvsName = "OplogKVS";
-    struct hse_params* _oplogKvsCParams;
     KVSHandle _oplogKvs;
 
     string _oplogLargeKvsName = "OplogLargeKVS";
-    struct hse_params* _oplogLargeKvsCParams;
     KVSHandle _oplogLargeKvs;
 
     hse::KVDBTestSuiteFixture& _dbFixture = KVDBTestSuiteFixture::getFixture();

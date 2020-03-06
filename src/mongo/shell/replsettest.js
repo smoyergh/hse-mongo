@@ -1656,10 +1656,10 @@ var ReplSetTest = function(opts) {
 
         // Make sure to call _addPath, otherwise folders won't be cleaned.
         this._addPath(conn.dbpath);
-        // also add kvdbname if found
-        if (conn.fullOptions.hasOwnProperty("hseKvdbName")) {
-            print("ReplSetTest: adding kvdbname = " + conn.fullOptions.hseKvdbName);
-            this._addKvdbName(conn.fullOptions.hseKvdbName);
+        // also add kvdbname if found, mpoolname == kvdbname
+        if (conn.fullOptions.hasOwnProperty("hseMpoolName")) {
+            print("ReplSetTest: adding kvdbname = " + conn.fullOptions.hseMpoolName);
+            this._addKvdbName(conn.fullOptions.hseMpoolName);
         }
 
         if (_useBridge) {
@@ -1808,20 +1808,18 @@ var ReplSetTest = function(opts) {
             for (var kName of _allKvdbNames) {
                 if (resetKvdbs) {
                     // This should be set when the test needs to restart with empty KVDBs.
-                    print("ReplSetTest stopSet resetting kvdb " + kName + "/" + kName);
+                    print("ReplSetTest stopSet resetting kvdb " + kName);
                     resetKvdb(jsTestOptions().hse,
                               jsTestOptions().mpool,
                               jsTestOptions().vg,
                               kName,
-                              kName,
-                              jsTestOptions().hseKvdbCParams);
+                              jsTestOptions().hseParams);
                 } else {
-                    print("ReplSetTest stopSet deleting kvdb " + kName + "/" + kName);
+                    print("ReplSetTest stopSet deleting kvdb " + kName);
                     deleteKvdb(jsTestOptions().mpool,
+                               kName,
                                jsTestOptions().vg,
-                               kName,
-                               kName,
-                               jsTestOptions().hseKvdbCParams);
+                               jsTestOptions().hseParams);
                 }
             }
         }

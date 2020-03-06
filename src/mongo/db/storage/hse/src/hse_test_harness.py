@@ -76,9 +76,6 @@ def run_test(pwd, test):
     logfile = open('%s/%s.out' % (pwd, test), 'w')
     devlist_str = ' '.join(_DEVICE_LIST)
 
-    # Reset mpool
-    cmdargs = [ '%s umount %s' % (_MPOOLBIN, _MPOOL_NAME), '>>', '%s/%s.out' % (pwd, test), '2>&1']
-    _run_cmd(cmdargs, logfile)
     cmdargs = [ '%s destroy %s' % (_MPOOLBIN, _MPOOL_NAME), '>>', '%s/%s.out' % (pwd, test), '2>&1']
     _run_cmd(cmdargs, logfile)
 
@@ -99,10 +96,6 @@ def run_test(pwd, test):
     exit_code = 0
 
     cmdargs = [ '%s  create %s /dev/%s/%s' % (_MPOOLBIN, _MPOOL_NAME, harness_vg, harness_lv), '>>', '%s/%s.out' % (pwd, test), '2>&1']
-    exit_code = _run_cmd(cmdargs, logfile)
-    if exit_code != 0:
-        return exit_code
-    cmdargs = [ '%s mount %s' % (_MPOOLBIN, _MPOOL_NAME), '>>', '%s/%s.out' % (pwd, test), '2>&1']
     exit_code = _run_cmd(cmdargs, logfile)
     if exit_code != 0:
         return exit_code
