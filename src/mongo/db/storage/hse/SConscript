@@ -33,8 +33,6 @@
 #    it in the license file.
 #
 Import("env")
-Import("get_option")
-Import("has_option")
 
 import os
 import subprocess
@@ -140,127 +138,12 @@ def configure(conf, env):
 
 configure(None, env)
 
-HSE_LIBARRAY = None
-
-#
-# If you wish to build against a collection of HSE headers and libraries that
-# are not installed via RPM then you must give either just 'hse-tree-path' or
-# both of 'hse-source-path' and 'hse-build-path' as options to scons.
-#
-# If you work with your hse build output directory underneath '.../hse/' itself
-# then you can just use 'hse-tree-path' and the scons option 'dbg' will dictate
-# which of the debug or release targets are referenced.  Otherwise, specify
-# 'hse-source-path' for the location of the hse tree you wish to include header
-# files from and 'hse-build-path' for the full path of the root of the
-# particular build artifacts to link against. The value of the scons 'dbg'
-# option has no effect on how this path is used/interpreted.
-#
-# WARNING: --hse*path options need to be passed without quotes.
-# If quotes are included on the command line, the quotes become part of the
-# variable value in scons and break the build in strange ways.
-#
-
-build_type = 'debug' if get_option('dbg') == 'on' else 'release'
-
-#
-# Need to catch AttributeError in the case we're building with an
-# upstream mongo tree where --hse* options don't exist.
-#
-try:
-    has_hse_build_path = has_option('hse-build-path')
-except AttributeError:
-    has_hse_build_path = False
-
-try:
-    has_hse_source_path = has_option('hse-source-path')
-except AttributeError:
-    has_hse_source_path = False
-
-try:
-    has_hse_tree_path = has_option('hse-tree-path')
-except AttributeError:
-    has_hse_tree_path = False
-
-
-if has_hse_tree_path or (has_hse_source_path and has_hse_build_path):
-    if has_hse_tree_path:
-        hse_tree_root = get_option('hse-tree-path').rstrip(os.path.sep)
-        build_dir_root = os.path.join(hse_tree_root, 'builds', build_type)
-        source_dir_root = hse_tree_root
-    else:
-        build_dir_root = get_option('hse-build-path').rstrip(os.path.sep)
-        source_dir_root = get_option('hse-source-path').rstrip(os.path.sep)
-
-    #
-    # This is a little messy; however, there is a dependency ordering for
-    # library link lists.
-    #
-    LIBARRAY = [
-        'components/kvdb/source/libhse_kvdb.a',
-        'components/mpool/libmpool.a',
-    ]
-
-    if build_type == 'debug':
-        LIBARRAY.extend(
-            [
-                    'components/mpool/libmpool-test.a',
-                    'components/mpool/libhse_mpctl_ut_support.a'
-            ]
-        )
-
-    if build_type == 'debug':
-        LIBARRAY.append(
-            'components/platform/source/libhse_platform_kernel_ut.a'
-        )
-
-    LIBARRAY.extend(
-        [
-            'ext_install/lib/libyaml.so',
-            'ext_install/lib/libblkid_hse.so',
-        ]
-    )
-
-    # Set up all the absolute paths for HSE libraries to link against
-    HSE_LIBARRAY = [File(os.path.join(build_dir_root, x)) for x in LIBARRAY]
-    
-    # Set up all the paths for HSE include files
-    platform_inc = os.path.join(source_dir_root, 'components/platform/include')
-    kvdb_inc = os.path.join(source_dir_root, 'components/kvdb/include')
-
-    env.Prepend(CPPPATH=platform_inc)
-    env.Prepend(CPPPATH=os.path.join(build_dir_root, 'stage/gensrc'))
-    env.Prepend(CPPPATH=kvdb_inc)
-
-    env.Prepend(CCFLAGS='-DHSE_TREE_BUILD')
-
-else:
-    HSE_LIBARRAY = [
-        'hse_kvdb',
-        'mpool',
-    ]
-
-    if build_type == 'debug':
-        HSE_LIBARRAY.append('mpool-test')
-
-    if build_type == 'debug':
-        HSE_LIBARRAY.extend(
-            [
-            'cli_test',
-            'hse_test_support',
-            'hse_mpctl_ut_support'
-            ]
-        )
-
-
-    if build_type == 'debug':
-        HSE_LIBARRAY.append('hse_platform_kernel_ut')
-
-    HSE_LIBARRAY.extend(
-        [
-            'blkid_nf',
-            'yaml',
-        ]
-    )
+HSE_LIBARRAY = [
+    'hse_kvdb',
+    'mpool',
+    'blkid_nf',
+    'yaml',
+]
 
 
 HSE_THIRD_PARTY_LIBDEPS = [
