@@ -197,7 +197,6 @@ if has_hse_tree_path or (has_hse_source_path and has_hse_build_path):
     #
     LIBARRAY = [
         'components/kvdb/source/libhse_kvdb.a',
-        'components/ui/libkvdb_ui.a',
         'components/mpool/libmpool.a',
     ]
 
@@ -210,22 +209,12 @@ if has_hse_tree_path or (has_hse_source_path and has_hse_build_path):
         )
 
     if build_type == 'debug':
-        LIBARRAY.extend(
-            [
-                'components/ui/libcli_test.a',
-                'test/library/source/libhse_test_support.a'
-            ]
-        )
-
-
-    if build_type == 'debug':
         LIBARRAY.append(
             'components/platform/source/libhse_platform_kernel_ut.a'
         )
 
     LIBARRAY.extend(
         [
-            'components/ui/libplatform_ui.a',
             'ext_install/lib/libyaml.so',
             'ext_install/lib/libblkid_hse.so',
         ]
@@ -247,7 +236,6 @@ if has_hse_tree_path or (has_hse_source_path and has_hse_build_path):
 else:
     HSE_LIBARRAY = [
         'hse_kvdb',
-        'kvdb_ui',
         'mpool',
     ]
 
@@ -269,7 +257,6 @@ else:
 
     HSE_LIBARRAY.extend(
         [
-            'platform_ui',
             'blkid_nf',
             'yaml',
         ]
