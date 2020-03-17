@@ -141,25 +141,13 @@ configure(None, env)
 HSE_LIBARRAY = [
     'hse_kvdb',
     'mpool',
-    'blkid_nf',
-    'yaml',
 ]
 
 
 HSE_THIRD_PARTY_LIBDEPS = [
-    'uuid',
-    'dyncall_s',
-    'crypto',
-    'umberlog',
     'pthread',
-    'microhttpd',
-    'urcu-bp',
-    'bsd',
     'lz4',
 ]
-
-env.Prepend(LIBS=HSE_THIRD_PARTY_LIBDEPS)
-env.Prepend(LIBS=HSE_LIBARRAY)
 
 env.Library(
     target='storage_hse_base',
