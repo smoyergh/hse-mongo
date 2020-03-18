@@ -529,7 +529,7 @@ void KVDBEngine::_set_hse_params(struct hse_params* params) {
 
     // set internal params that cannot be overridden
     // Set a long KVDB txn timeout (99 days)
-    invariantHseSt(_db.kvdb_params_set(params, string("kvdb.txn_ttl"), string("0x1FFFFFFFF")));
+    invariantHseSt(_db.kvdb_params_set(params, string("kvdb.txn_timeout"), string("0x1FFFFFFFF")));
 
     unsigned int ms = DUR_LAG;
     if (isDurable()) {
@@ -537,17 +537,17 @@ void KVDBEngine::_set_hse_params(struct hse_params* params) {
             ms = storageGlobalParams.journalCommitIntervalMs;
     }
     // Set KVDB c1 dur_lag to the journal commit interval.
-    invariantHseSt(_db.kvdb_params_set(params, string("kvdb.dur_lag"), std::to_string(ms)));
+    invariantHseSt(_db.kvdb_params_set(params, string("kvdb.dur_intvl"), std::to_string(ms)));
 
     // applies to all kvses
-    string paramName = string("kvs.pfxlen");
+    string paramName = string("kvs.pfx_len");
     invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(DEFAULT_PFX_LEN)));
 
     // applies to oplog
     paramName = string("kvs.") + kOplogKvsName + string(".fanout");
     invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(OPLOG_FANOUT)));
 
-    paramName = string("kvs.") + kOplogKvsName + string(".pfxlen");
+    paramName = string("kvs.") + kOplogKvsName + string(".pfx_len");
     invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(OPLOG_PFX_LEN)));
 
     paramName = string("kvs.") + kOplogKvsName + string(".kvs_ext01");
@@ -557,15 +557,15 @@ void KVDBEngine::_set_hse_params(struct hse_params* params) {
     paramName = string("kvs.") + kOplogLargeKvsName + string(".fanout");
     invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(OPLOG_FANOUT)));
 
-    paramName = string("kvs.") + kOplogLargeKvsName + string(".pfxlen");
+    paramName = string("kvs.") + kOplogLargeKvsName + string(".pfx_len");
     invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(OPLOG_PFX_LEN)));
 
     // applies to uniq idx
-    paramName = string("kvs.") + kUniqIdxKvsName + string(".sfxlen");
+    paramName = string("kvs.") + kUniqIdxKvsName + string(".sfx_len");
     invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(DEFAULT_SFX_LEN)));
 
     // applies to std idx
-    paramName = string("kvs.") + kStdIdxKvsName + string(".sfxlen");
+    paramName = string("kvs.") + kStdIdxKvsName + string(".sfx_len");
     invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(STDIDX_SFX_LEN)));
 }
 

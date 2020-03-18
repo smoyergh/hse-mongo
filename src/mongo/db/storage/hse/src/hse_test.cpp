@@ -235,7 +235,7 @@ protected:
             hse_params_create(&_params[i]);
             ASSERT_FALSE(nullptr == _params[i]);
 
-            string paramName = string("kvs.pfxlen");
+            string paramName = string("kvs.pfx_len");
             st = _db.kvdb_params_set(_params[i], paramName, std::to_string(hse::DEFAULT_PFX_LEN));
             ASSERT_EQUALS(0, st.getErrno());
             st = _db.kvdb_kvs_make(_kvsNames[i], _params[i]);
