@@ -537,7 +537,7 @@ void KVDBEngine::_set_hse_params(struct hse_params* params) {
             ms = storageGlobalParams.journalCommitIntervalMs;
     }
     // Set KVDB c1 dur_lag to the journal commit interval.
-    invariantHseSt(_db.kvdb_params_set(params, string("kvdb.dur_intvl"), std::to_string(ms)));
+    invariantHseSt(_db.kvdb_params_set(params, string("kvdb.dur_intvl_ms"), std::to_string(ms)));
 
     // applies to all kvses
     string paramName = string("kvs.pfx_len");
