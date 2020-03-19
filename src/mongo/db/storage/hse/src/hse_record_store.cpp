@@ -823,10 +823,6 @@ void KVDBRecordStore::appendCustomStats(OperationContext* opctx,
 void KVDBRecordStore::updateStatsAfterRepair(OperationContext* opctx,
                                              long long numRecords,
                                              long long dataSize) {
-    KVDBRecoveryUnit* ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opctx);
-
-    invariantHse(ru->ActiveClientTxn());
-
     _numRecords.store(numRecords);
     _dataSize.store(dataSize);
     updateCounters();
