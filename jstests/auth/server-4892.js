@@ -24,7 +24,6 @@ if (jsTest.options().storageEngine == 'hse') {
               TestData.mpool,
               TestData.vg,
               MongoRunner.toRealKvdbName(dbpath, {}),
-              MongoRunner.toRealKvdbName(dbpath, {}),
               TestData.hseKvdbCParams);
 }
 var mongodCommonArgs = {
