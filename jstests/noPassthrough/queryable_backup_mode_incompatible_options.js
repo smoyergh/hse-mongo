@@ -31,7 +31,6 @@
                   TestData.mpool,
                   TestData.vg,
                   MongoRunner.toRealKvdbName(dbpath, {}),
-                  MongoRunner.toRealKvdbName(dbpath, {}),
                   TestData.hseKvdbCParams);
     }
 
