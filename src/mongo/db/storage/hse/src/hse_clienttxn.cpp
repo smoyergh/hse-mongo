@@ -33,16 +33,6 @@
  */
 #define MONGO_LOG_DEFAULT_COMPONENT ::mongo::logger::LogComponent::kStorage
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include <hse_kvdb/hse.h>
-
-#ifdef __cplusplus
-}
-#endif
-
 #include "mongo/platform/basic.h"
 #include "mongo/util/log.h"
 

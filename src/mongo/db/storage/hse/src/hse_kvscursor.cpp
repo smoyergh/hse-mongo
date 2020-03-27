@@ -33,11 +33,6 @@
  */
 #define MONGO_LOG_DEFAULT_COMPONENT ::mongo::logger::LogComponent::kStorage
 
-extern "C" {
-
-#include <hse_kvdb/hse.h>
-}
-
 #include "mongo/platform/basic.h"
 #include "mongo/util/log.h"
 
