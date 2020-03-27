@@ -45,7 +45,7 @@
 extern "C" {
 #endif
 
-#include <hse_kvdb/hse.h>
+#include <hse/hse.h>
 
 #ifdef __cplusplus
 }
