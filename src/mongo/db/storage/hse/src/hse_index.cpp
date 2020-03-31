@@ -755,9 +755,6 @@ Status KVDBUniqIdx::insert(OperationContext* opctx,
     // value. When we remove
     // down to a single value, it will be cleaned up.
 
-    if (!dupsAllowed) {
-        return Status(ErrorCodes::DuplicateKey, dupKeyError(key));
-    }
 
     // need to read the value first
     hseSt = ru->getMCo(_idxKvs, pKey, iVal, found);
@@ -784,6 +781,10 @@ Status KVDBUniqIdx::insert(OperationContext* opctx,
         // Copy from old to new value
         valueVector.appendRecordId(locInIndex);
         valueVector.appendTypeBits(KeyString::TypeBits::fromBuffer(_keyStringVersion, &br));
+    }
+
+    if (!dupsAllowed) {
+        return Status(ErrorCodes::DuplicateKey, dupKeyError(key));
     }
 
     if (!insertedLoc) {
