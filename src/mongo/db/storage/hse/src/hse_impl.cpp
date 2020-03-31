@@ -352,10 +352,6 @@ Status KVDBImpl::kvdb_sync() {
     return Status{ret};
 }
 
-Status KVDBImpl::kvdb_get_c1_info(struct ikvdb_c1_info* info) {
-    return Status(::kvdb_get_c1_info(_handle, info));
-}
-
 Status KVDBImpl::kvdb_params_from_file(struct hse_params* params, const string& filePath) {
     return Status(::hse_params_from_file(params, filePath.c_str()));
 }

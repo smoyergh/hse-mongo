@@ -483,16 +483,6 @@ void KVDBEngine::_open_kvdb(const string& mp,
     }
 
     invariantHseSt(st);
-
-    if (isDurable()) {
-        struct ikvdb_c1_info info;
-
-        st = _db.kvdb_get_c1_info(&info);
-        invariantHseSt(st);
-
-        if (info.c1_denabled != 0)
-            kvdbGlobalOptions.setKvdbC1Enabled(true);
-    }
 }
 
 void KVDBEngine::_open_kvs(const string& kvs, KVSHandle& h, struct hse_params* params) {
@@ -742,10 +732,8 @@ void KVDBJournalFlusher::run() {
 
     LOG(1) << "starting " << name() << " thread";
 
-    if (kvdbGlobalOptions.getKvdbC1Enabled()) {
-        if (storageGlobalParams.journalCommitIntervalMs > 0)
-            ms = storageGlobalParams.journalCommitIntervalMs;
-    }
+    if (storageGlobalParams.journalCommitIntervalMs > 0)
+        ms = storageGlobalParams.journalCommitIntervalMs;
 
     while (!_shuttingDown.load()) {
         now_ms = std::chrono::duration_cast<milliseconds>(system_clock::now().time_since_epoch())

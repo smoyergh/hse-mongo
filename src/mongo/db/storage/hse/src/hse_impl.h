@@ -110,8 +110,6 @@ public:
 
     virtual Status kvdb_sync();
 
-    virtual Status kvdb_get_c1_info(struct ikvdb_c1_info* info);
-
     virtual Status kvdb_params_from_file(struct hse_params* params, const string& filePath);
 
     virtual Status kvdb_params_set(struct hse_params* params, const string& key, const string& val);
