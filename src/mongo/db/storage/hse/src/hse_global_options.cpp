@@ -205,16 +205,8 @@ bool KVDBGlobalOptions::getMetricsEnabled() const {
     return _enableMetrics;
 }
 
-bool KVDBGlobalOptions::getKvdbC1Enabled() const {
-    return _kvdbC1Enabled;
-}
-
 int KVDBGlobalOptions::getForceLag() const {
     return _forceLag;
-}
-
-void KVDBGlobalOptions::setKvdbC1Enabled(bool enabled) {
-    _kvdbC1Enabled = enabled;
 }
 
 }  // namespace mongo

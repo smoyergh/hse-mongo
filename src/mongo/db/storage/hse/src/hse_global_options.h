@@ -50,8 +50,7 @@ public:
           _collectionCompressionStr{kDefaultCollectionCompressionStr},
           _collectionCompressionMinBytesStr{kDefaultCollectionCompressionMinBytesStr},
           _enableMetrics{kDefaultEnableMetrics},
-          _crashSafeCounters{false},
-          _kvdbC1Enabled{false} {}
+          _crashSafeCounters{false} {}
 
     Status add(moe::OptionSection* options);
     Status store(const moe::Environment& params, const std::vector<std::string>& args);
@@ -71,8 +70,6 @@ public:
     bool getMetricsEnabled() const;
     bool getCrashSafeCounters() const;
     int getForceLag() const;
-    bool getKvdbC1Enabled() const;
-    void setKvdbC1Enabled(bool enabled);
 
 private:
     static const std::string kDefaultMpoolName;
@@ -95,7 +92,6 @@ private:
     bool _enableMetrics;
 
     bool _crashSafeCounters;
-    bool _kvdbC1Enabled;
 };
 
 extern KVDBGlobalOptions kvdbGlobalOptions;
