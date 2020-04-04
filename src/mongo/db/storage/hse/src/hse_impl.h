@@ -52,8 +52,7 @@ public:
 
     virtual Status kvdb_open(const char* mp_name,
                              const char* kvdb_name,
-                             struct hse_params* params,
-                             unsigned long snapshot_id);
+                             struct hse_params* params);
 
     virtual Status kvdb_kvs_open(const char* kvs_name,
                                  struct hse_params* params,

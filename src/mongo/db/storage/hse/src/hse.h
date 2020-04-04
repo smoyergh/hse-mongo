@@ -46,6 +46,7 @@ extern "C" {
 #endif
 
 #include <hse/hse.h>
+#include <hse/hse_experimental.h>
 
 #ifdef __cplusplus
 }

@@ -86,9 +86,8 @@ Status KVDBImpl::kvdb_make(const char* mp_name, const char* kvdb_name, struct hs
 
 Status KVDBImpl::kvdb_open(const char* mp_name,
                            const char* kvdb_name,
-                           struct hse_params* params,
-                           unsigned long snapshot_id) {
-    auto st = ::hse_kvdb_open(mp_name, params, snapshot_id, &_handle);
+                           struct hse_params* params) {
+    auto st = ::hse_kvdb_open(mp_name, params, &_handle);
     g_txn_cache->set_kvdb(_handle);
     return Status(st);
 }
@@ -140,9 +139,10 @@ Status KVDBImpl::kvs_put(KVSHandle handle,
                          const KVDBData& key,
                          const KVDBData& val) {
     struct hse_kvs* kvs = (struct hse_kvs*)handle;
-    struct hse_kvdb_opspec opspec {
-        0U, txn ? txn->get_kvdb_txn() : 0
-    };
+    struct hse_kvdb_opspec opspec;
+
+    HSE_KVDB_OPSPEC_INIT(&opspec);
+    opspec.kop_txn = txn ? txn->get_kvdb_txn() : 0;
 
     _hseKvsPutCounter.add();
     auto lt = _hseKvsPutLatency.begin();
@@ -153,9 +153,10 @@ Status KVDBImpl::kvs_put(KVSHandle handle,
 
 Status KVDBImpl::kvs_put(KVSHandle handle, const KVDBData& key, const KVDBData& val) {
     struct hse_kvs* kvs = (struct hse_kvs*)handle;
-    struct hse_kvdb_opspec opspec {
-        .kop_flags = HSE_KVDB_KOP_FLAG_PRIORITY,
-    };
+    struct hse_kvdb_opspec opspec;
+
+    HSE_KVDB_OPSPEC_INIT(&opspec);
+    opspec.kop_flags = HSE_KVDB_KOP_FLAG_PRIORITY;
 
     _hseKvsPutCounter.add();
     auto lt = _hseKvsPutLatency.begin();
@@ -167,10 +168,11 @@ Status KVDBImpl::kvs_put(KVSHandle handle, const KVDBData& key, const KVDBData& 
 Status KVDBImpl::kvs_get(
     KVSHandle handle, ClientTxn* txn, const KVDBData& key, KVDBData& val, bool& found) {
     struct hse_kvs* kvs = (struct hse_kvs*)handle;
-    struct hse_kvdb_opspec opspec {
-        0U, txn ? txn->get_kvdb_txn() : 0
-    };
+    struct hse_kvdb_opspec opspec;
     size_t flen;
+
+    HSE_KVDB_OPSPEC_INIT(&opspec);
+    opspec.kop_txn = txn ? txn->get_kvdb_txn() : 0;
 
     _hseKvsGetCounter.add();
     auto lt = _hseKvsGetLatency.begin();
@@ -190,10 +192,11 @@ Status KVDBImpl::kvs_get(
 Status KVDBImpl::kvs_probe_len(
     KVSHandle handle, ClientTxn* txn, const KVDBData& key, KVDBData& val, bool& found) {
     struct hse_kvs* kvs = (struct hse_kvs*)handle;
-    struct hse_kvdb_opspec opspec {
-        0U, txn ? txn->get_kvdb_txn() : 0
-    };
+    struct hse_kvdb_opspec opspec;
     size_t flen;
+
+    HSE_KVDB_OPSPEC_INIT(&opspec);
+    opspec.kop_txn = txn ? txn->get_kvdb_txn() : 0;
 
     _hseKvsGetCounter.add();
     auto lt = _hseKvsGetLatency.begin();
@@ -217,9 +220,10 @@ Status KVDBImpl::kvs_prefix_probe(KVSHandle handle,
                                   KVDBData& val,
                                   hse_kvs_pfx_probe_cnt& found) {
     struct hse_kvs* kvs = (struct hse_kvs*)handle;
-    struct hse_kvdb_opspec opspec {
-        0U, txn ? txn->get_kvdb_txn() : 0
-    };
+    struct hse_kvdb_opspec opspec;
+
+    HSE_KVDB_OPSPEC_INIT(&opspec);
+    opspec.kop_txn = txn ? txn->get_kvdb_txn() : 0;
 
     size_t klen, vlen;
     int ret = ::hse_kvs_prefix_probe(kvs,
@@ -247,10 +251,11 @@ Status KVDBImpl::kvs_prefix_probe(KVSHandle handle,
 Status KVDBImpl::kvs_probe_key(KVSHandle handle, ClientTxn* txn, const KVDBData& key, bool& found) {
 
     struct hse_kvs* kvs = (struct hse_kvs*)handle;
-    struct hse_kvdb_opspec opspec {
-        0U, txn ? txn->get_kvdb_txn() : 0
-    };
+    struct hse_kvdb_opspec opspec;
     size_t valLen = 0;
+
+    HSE_KVDB_OPSPEC_INIT(&opspec);
+    opspec.kop_txn = txn ? txn->get_kvdb_txn() : 0;
 
     // treating this kvs_get as a probe wrt metrics
     _hseKvsProbeCounter.add();
@@ -267,9 +272,10 @@ Status KVDBImpl::kvs_probe_key(KVSHandle handle, ClientTxn* txn, const KVDBData&
 
 Status KVDBImpl::kvs_delete(KVSHandle handle, ClientTxn* txn, const KVDBData& key) {
     struct hse_kvs* kvs = (struct hse_kvs*)handle;
-    struct hse_kvdb_opspec opspec {
-        0U, txn ? txn->get_kvdb_txn() : 0
-    };
+    struct hse_kvdb_opspec opspec;
+
+    HSE_KVDB_OPSPEC_INIT(&opspec);
+    opspec.kop_txn = txn ? txn->get_kvdb_txn() : 0;
 
     _hseKvsDeleteCounter.add();
     auto lt = _hseKvsDeleteLatency.begin();
@@ -281,9 +287,10 @@ Status KVDBImpl::kvs_delete(KVSHandle handle, ClientTxn* txn, const KVDBData& ke
 
 Status KVDBImpl::kvs_prefix_delete(KVSHandle handle, ClientTxn* txn, const KVDBData& prefix) {
     struct hse_kvs* kvs = (struct hse_kvs*)handle;
-    struct hse_kvdb_opspec opspec {
-        0U, txn ? txn->get_kvdb_txn() : 0
-    };
+    struct hse_kvdb_opspec opspec;
+
+    HSE_KVDB_OPSPEC_INIT(&opspec);
+    opspec.kop_txn = txn ? txn->get_kvdb_txn() : 0;
 
     _hseKvsPrefixDeleteCounter.add();
     auto lt = _hseKvsPrefixDeleteLatency.begin();
@@ -296,9 +303,10 @@ Status KVDBImpl::kvs_prefix_delete(KVSHandle handle, ClientTxn* txn, const KVDBD
 Status KVDBImpl::kvs_iter_delete(KVSHandle handle, ClientTxn* txn, const KVDBData& prefix) {
     struct hse_kvs* kvs = (struct hse_kvs*)handle;
     struct hse_kvs_cursor* lCursor = nullptr;
-    struct hse_kvdb_opspec opspec {
-        0U, txn ? txn->get_kvdb_txn() : 0
-    };
+    struct hse_kvdb_opspec opspec;
+
+    HSE_KVDB_OPSPEC_INIT(&opspec);
+    opspec.kop_txn = txn ? txn->get_kvdb_txn() : 0;
 
     _hseKvsCursorCreateCounter.add();
     auto lt = _hseKvsCursorCreateLatency.begin();

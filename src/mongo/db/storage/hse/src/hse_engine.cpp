@@ -461,10 +461,9 @@ void KVDBEngine::setJournalListener(JournalListener* jl) {
 
 void KVDBEngine::_open_kvdb(const string& mp,
                             const string& db,
-                            struct hse_params* params,
-                            unsigned int snap) {
+                            struct hse_params* params) {
 
-    auto st = _db.kvdb_open(mp.c_str(), db.c_str(), params, snap);
+    auto st = _db.kvdb_open(mp.c_str(), db.c_str(), params);
     if (st.getErrno()) {
         /**
          * KVDBs must be created by an application script external to
@@ -479,7 +478,7 @@ void KVDBEngine::_open_kvdb(const string& mp,
         st = _db.kvdb_make(mp.c_str(), db.c_str(), params);
         invariantHseSt(st);
 
-        st = _db.kvdb_open(mp.c_str(), db.c_str(), params, snap);
+        st = _db.kvdb_open(mp.c_str(), db.c_str(), params);
     }
 
     invariantHseSt(st);
@@ -572,10 +571,8 @@ void KVDBEngine::_setupDb() {
 
     _set_hse_params(params);
 
-    unsigned int snapId = 0;
-
     // kvdb name and mpool name are the same for now as per the HSE API.
-    _open_kvdb(mpoolName, mpoolName, params, snapId);
+    _open_kvdb(mpoolName, mpoolName, params);
 
     _open_kvs(kMainKvsName, _mainKvs, params);
     _open_kvs(kLargeKvsName, _largeKvs, params);
@@ -594,9 +591,6 @@ void KVDBEngine::_loadMaxPrefix() {
     // load ident to prefix map. also update _maxPrefix if there's any prefix bigger than
     // current _maxPrefix
     stdx::lock_guard<stdx::mutex> lk(_identMapMutex);
-    struct hse_kvdb_opspec opSpec;
-    opSpec.kop_txn = nullptr;
-    opSpec.kop_flags = 0;
     KVDBData kPrefix{(uint8_t*)kMetadataPrefix.c_str(), kMetadataPrefix.size()};
     KvsCursor* cursor;
 

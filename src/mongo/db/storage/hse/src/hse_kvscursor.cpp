@@ -106,9 +106,11 @@ KvsCursor::KvsCursor(KVSHandle handle,
       _compparms(compparms),
       _eof(false) {
     struct hse_kvs* kvs = (struct hse_kvs*)handle;
-    struct hse_kvdb_opspec opspec = {0, 0};
+    struct hse_kvdb_opspec opspec;
     int retries = 0;
     unsigned long long sleepTime = 0;
+
+    HSE_KVDB_OPSPEC_INIT(&opspec);
 
     if (_lnkd_txn) {
         // the client is requesting a bound cursor
@@ -162,9 +164,11 @@ KvsCursor::~KvsCursor() {
 
 Status KvsCursor::update(ClientTxn* lnkd_txn) {
     int ret = 0;
-    struct hse_kvdb_opspec opspec = {0, 0};
+    struct hse_kvdb_opspec opspec;
     int retries = 0;
     unsigned long long sleepTime = 0;
+
+    HSE_KVDB_OPSPEC_INIT(&opspec);
 
     _lnkd_txn = lnkd_txn;
     if (lnkd_txn) {
@@ -223,7 +227,6 @@ Status KvsCursor::update(ClientTxn* lnkd_txn) {
 }
 
 Status KvsCursor::seek(const KVDBData& key, const KVDBData* kmax, KVDBData* pos) {
-    // struct hse_kvdb_opspec seek_os = {0};
     int ret = 0;
     int retries = 0;
     unsigned long long sleepTime = 0;
