@@ -459,9 +459,7 @@ void KVDBEngine::setJournalListener(JournalListener* jl) {
     _durabilityManager->setJournalListener(jl);
 }
 
-void KVDBEngine::_open_kvdb(const string& mp,
-                            const string& db,
-                            struct hse_params* params) {
+void KVDBEngine::_open_kvdb(const string& mp, const string& db, struct hse_params* params) {
 
     auto st = _db.kvdb_open(mp.c_str(), db.c_str(), params);
     if (st.getErrno()) {

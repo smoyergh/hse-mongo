@@ -78,8 +78,8 @@ public:
     string ToString() const {
         stringstream ss{};
         char buf[300];
-        ss << "HSE Error: " << hse_err_to_string(_err, buf, sizeof(buf), 0) << " - #" << this->getErrno()
-           << endl;
+        ss << "HSE Error: " << hse_err_to_string(_err, buf, sizeof(buf), 0) << " - #"
+           << this->getErrno() << endl;
         return ss.str();
     }
 
@@ -334,8 +334,7 @@ public:
 
     virtual Status kvdb_open(const char* mp_name,
                              const char* kvdb_name,
-                             struct hse_params* params,
-                             unsigned long snapshot_id) = 0;
+                             struct hse_params* params) = 0;
 
     virtual Status kvdb_kvs_open(const char* kvs_name,
                                  struct hse_params* params,
