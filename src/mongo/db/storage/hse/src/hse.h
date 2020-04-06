@@ -65,7 +65,7 @@ class ClientTxn;
 
 class Status {
 public:
-    Status(unsigned long e = 0) : _err(e) {}
+    Status(hse_err_t e = 0) : _err(e) {}
 
     bool ok() const {
         return (0 == _err);
@@ -77,14 +77,14 @@ public:
 
     string ToString() const {
         stringstream ss{};
-        char buf[256];
-        ss << "KVDB Error: " << hse_err_to_string(_err, buf, 256) << " - #" << this->getErrno()
+        char buf[300];
+        ss << "HSE Error: " << hse_err_to_string(_err, buf, sizeof(buf), 0) << " - #" << this->getErrno()
            << endl;
         return ss.str();
     }
 
 private:
-    unsigned long _err;
+    hse_err_t _err;
 };
 
 class KVDBData {
