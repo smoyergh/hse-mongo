@@ -46,6 +46,7 @@ extern "C" {
 #endif
 
 #include <hse/hse.h>
+#include <hse/hse_experimental.h>
 
 #ifdef __cplusplus
 }
@@ -64,7 +65,7 @@ class ClientTxn;
 
 class Status {
 public:
-    Status(unsigned long e = 0) : _err(e) {}
+    Status(hse_err_t e = 0) : _err(e) {}
 
     bool ok() const {
         return (0 == _err);
@@ -76,14 +77,14 @@ public:
 
     string ToString() const {
         stringstream ss{};
-        char buf[256];
-        ss << "KVDB Error: " << hse_err_to_string(_err, buf, 256) << " - #" << this->getErrno()
-           << endl;
+        char buf[300];
+        ss << "HSE Error: " << hse_err_to_string(_err, buf, sizeof(buf), 0) << " - #"
+           << this->getErrno() << endl;
         return ss.str();
     }
 
 private:
-    unsigned long _err;
+    hse_err_t _err;
 };
 
 class KVDBData {
@@ -333,8 +334,7 @@ public:
 
     virtual Status kvdb_open(const char* mp_name,
                              const char* kvdb_name,
-                             struct hse_params* params,
-                             unsigned long snapshot_id) = 0;
+                             struct hse_params* params) = 0;
 
     virtual Status kvdb_kvs_open(const char* kvs_name,
                                  struct hse_params* params,

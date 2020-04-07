@@ -106,9 +106,11 @@ KvsCursor::KvsCursor(KVSHandle handle,
       _compparms(compparms),
       _eof(false) {
     struct hse_kvs* kvs = (struct hse_kvs*)handle;
-    struct hse_kvdb_opspec opspec = {0, 0};
+    struct hse_kvdb_opspec opspec;
     int retries = 0;
     unsigned long long sleepTime = 0;
+
+    HSE_KVDB_OPSPEC_INIT(&opspec);
 
     if (_lnkd_txn) {
         // the client is requesting a bound cursor
@@ -126,8 +128,6 @@ KvsCursor::KvsCursor(KVSHandle handle,
     }
 
     while (true) {
-        int ret;
-
         if (retries < FIB_LEN) {
             sleepTime = RETRY_FIB_SEQ_EAGAIN[retries % FIB_LEN];
         } else {
@@ -139,12 +139,13 @@ KvsCursor::KvsCursor(KVSHandle handle,
 
         _hseKvsCursorCreateCounter.add();
         auto lt = _hseKvsCursorCreateLatency.begin();
-        ret = ::hse_kvs_cursor_create(kvs, &opspec, (const void*)_pfx.data(), _pfx.len(), &_cursor);
+        Status st = Status{
+            ::hse_kvs_cursor_create(kvs, &opspec, (const void*)_pfx.data(), _pfx.len(), &_cursor)};
         _hseKvsCursorCreateLatency.end(lt);
-        if (!ret)
+        if (st.ok())
             break;
 
-        if (ret != EAGAIN)
+        if (st.getErrno() != EAGAIN)
             throw KVDBException("non EAGAIN failure from hse_kvs_cursor_create()");
 
         this_thread::sleep_for(chrono::milliseconds(sleepTime));
@@ -161,10 +162,11 @@ KvsCursor::~KvsCursor() {
 }
 
 Status KvsCursor::update(ClientTxn* lnkd_txn) {
-    int ret = 0;
-    struct hse_kvdb_opspec opspec = {0, 0};
+    struct hse_kvdb_opspec opspec;
     int retries = 0;
     unsigned long long sleepTime = 0;
+
+    HSE_KVDB_OPSPEC_INIT(&opspec);
 
     _lnkd_txn = lnkd_txn;
     if (lnkd_txn) {
@@ -176,9 +178,9 @@ Status KvsCursor::update(ClientTxn* lnkd_txn) {
     /* [HSE_REVISIT] Limit retries. */
     _hseKvsCursorUpdateCounter.add();
     auto lt = _hseKvsCursorUpdateLatency.begin();
-    ret = ::hse_kvs_cursor_update(_cursor, &opspec);
+    Status st = Status{::hse_kvs_cursor_update(_cursor, &opspec)};
     _hseKvsCursorUpdateLatency.end(lt);
-    if (ret) {
+    if (!st.ok()) {
         _hseKvsCursorDestroyCounter.add();
         auto lt = _hseKvsCursorDestroyLatency.begin();
         ::hse_kvs_cursor_destroy(_cursor);
@@ -206,12 +208,12 @@ Status KvsCursor::update(ClientTxn* lnkd_txn) {
 
             _hseKvsCursorCreateCounter.add();
             auto lt = _hseKvsCursorCreateLatency.begin();
-            ret = ::hse_kvs_cursor_create(_kvs, &opspec, _pfx.data(), _pfx.len(), &_cursor);
+            st = Status{::hse_kvs_cursor_create(_kvs, &opspec, _pfx.data(), _pfx.len(), &_cursor)};
             _hseKvsCursorCreateLatency.end(lt);
-            if (!ret)
+            if (st.ok())
                 break;
 
-            if (ret != EAGAIN)
+            if (st.getErrno() != EAGAIN)
                 throw KVDBException("non EAGAIN failure from hse_kvs_cursor_create()");
 
             this_thread::sleep_for(chrono::milliseconds(sleepTime));
@@ -219,16 +221,15 @@ Status KvsCursor::update(ClientTxn* lnkd_txn) {
         }
     }
 
-    return Status(ret);
+    return st;
 }
 
 Status KvsCursor::seek(const KVDBData& key, const KVDBData* kmax, KVDBData* pos) {
-    // struct hse_kvdb_opspec seek_os = {0};
-    int ret = 0;
     int retries = 0;
     unsigned long long sleepTime = 0;
     const void* fkey;
     size_t flen;
+    Status st{};
 
     while (true) {
         if (retries < FIB_LEN) {
@@ -240,8 +241,8 @@ Status KvsCursor::seek(const KVDBData& key, const KVDBData* kmax, KVDBData* pos)
                           << " retries";
         }
 
-        ret = ::hse_kvs_cursor_seek(_cursor, 0, key.data(), key.len(), &fkey, &flen);
-        if (ret != EAGAIN) {
+        st = Status{::hse_kvs_cursor_seek(_cursor, 0, key.data(), key.len(), &fkey, &flen)};
+        if (st.getErrno() != EAGAIN) {
             break;
         }
 
@@ -250,13 +251,13 @@ Status KvsCursor::seek(const KVDBData& key, const KVDBData* kmax, KVDBData* pos)
         retries++;
     }
 
-    if (!ret) {
+    if (st.ok()) {
         _read_kvs();
         if (pos)
             *pos = KVDBData((const uint8_t*)fkey, (int)flen);
     }
 
-    return Status(ret);
+    return st;
 }
 
 Status KvsCursor::read(KVDBData& key, KVDBData& val, bool& eof) {
@@ -290,13 +291,12 @@ Status KvsCursor::read(KVDBData& key, KVDBData& val, bool& eof) {
 
 int KvsCursor::_read_kvs() {
     int ret = 0;
+    Status st{};
     int retries = 0;
     unsigned long long sleepTime = 0;
     _kvs_stale = false;
 
     while (true) {
-        int ret;
-
         if (retries < FIB_LEN) {
             sleepTime = RETRY_FIB_SEQ_EAGAIN[retries % FIB_LEN];
         } else {
@@ -308,10 +308,10 @@ int KvsCursor::_read_kvs() {
 
         _hseKvsCursorReadCounter.add();
         auto lt = _hseKvsCursorReadLatency.begin();
-        ret = ::hse_kvs_cursor_read(
-            _cursor, 0, &_kvs_key, &_kvs_klen, &_kvs_val, &_kvs_vlen, &_kvs_eof);
+        st = Status{::hse_kvs_cursor_read(
+            _cursor, 0, &_kvs_key, &_kvs_klen, &_kvs_val, &_kvs_vlen, &_kvs_eof)};
         _hseKvsCursorReadLatency.end(lt);
-        if (ret != EAGAIN) {
+        if (st.getErrno() != EAGAIN) {
             break;
         }
 
@@ -319,7 +319,7 @@ int KvsCursor::_read_kvs() {
 
         retries++;
     }
-    if (!ret && !_kvs_eof) {
+    if (st.ok() && !_kvs_eof) {
         unsigned int off_comp;
 
         computeFraming((const uint8_t*)_kvs_val,
@@ -337,22 +337,21 @@ int KvsCursor::_read_kvs() {
         if (this->_compparms.compdoit && !_kvs_num_chunks) {
             void* kvs_val;
             size_t kvs_len;
-            hse::Status hseSt;
 
-            hseSt = decompressdata1(
+            st = decompressdata1(
                 this->_compparms, _kvs_val, _kvs_vlen, off_comp, &kvs_val, &kvs_len);
-            if (hseSt.ok()) {
+            if (st.ok()) {
                 _kvs_val = kvs_val;
                 _kvs_vlen = kvs_len;
                 // Free the old _kvs_val buffer and attach the new one to _uncompressed_val.
                 _uncompressed_val.reset(static_cast<unsigned char*>(kvs_val));
             } else {
-                ret = EILSEQ;
+                return EILSEQ;
             }
         }
     }
 
-    return ret;
+    return st.getErrno();
 }
 
 Status KvsCursor::save() {
