@@ -639,6 +639,7 @@ void KVDBEngine::_cleanShutdown() {
         _journalFlusher->shutdown();
         _journalFlusher.reset();
     }
+    _durabilityManager->prepareForShutdown();
     _durabilityManager.reset();
 
     _counterManager->sync();
