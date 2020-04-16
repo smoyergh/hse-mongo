@@ -2026,10 +2026,6 @@ void KVDBOplogStoreCursor::_reallySeek(const RecordId& id) {
     _needSeek = false;
 }
 
-bool KVDBOplogStoreCursor::_needReadAhead() {
-    return (_hseOplogCursorReadRate.getRate() > READ_AHEAD_THRESHOLD);
-}
-
 KvsCursor* KVDBOplogStoreCursor::_getMCursor() {
     KVDBRecoveryUnit* ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(_opctx);
     hse::Status st;
@@ -2038,7 +2034,7 @@ KvsCursor* KVDBOplogStoreCursor::_getMCursor() {
         KVDBData compatKey{(uint8_t*)&_prefixValBE, sizeof(_prefixValBE)};
         _updateReadUntil();
         st = ru->beginOplogScan(
-            _colKvs, compatKey, _forward, &_mCursor, this->_compparms, _needReadAhead());
+            _colKvs, compatKey, _forward, &_mCursor, this->_compparms);
         invariantHseSt(st);
         _cursorValid = true;
         _needSeek =
