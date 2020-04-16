@@ -62,9 +62,13 @@ public:
         return _forceLag;
     }
 
+    void prepareForShutdown();
+
 private:
     hse::KVDB& _db;
     uint64_t _numSyncs;
+    std::atomic<uint64_t> _numWaits{0};
+    std::atomic<bool> _shuttingDown{false};
     int _forceLag;
     bool _durable;
 

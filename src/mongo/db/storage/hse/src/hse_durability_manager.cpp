@@ -33,6 +33,7 @@
  */
 #include "mongo/db/storage/journal_listener.h"
 #include "mongo/platform/basic.h"
+#include "mongo/util/scopeguard.h"
 
 #include "hse.h"
 #include "hse_durability_manager.h"
@@ -115,14 +116,25 @@ void KVDBDurabilityManager::sync() {
 }
 
 void KVDBDurabilityManager::waitUntilDurable() {
+    _numWaits++;
+    auto waitUndo = MakeGuard([&] { _numWaits--; });
+
     if (!_durable)
         return;
 
     stdx::unique_lock<stdx::mutex> lk(_syncMutex);
-
     const auto waitingFor = _numSyncs;
 
-    _syncDoneCV.wait(lk, [&] { return _numSyncs > waitingFor + 1; });
+    _syncDoneCV.wait(lk, [&] { return _shuttingDown.load() || (_numSyncs > waitingFor + 1); });
+}
+
+void KVDBDurabilityManager::prepareForShutdown() {
+    // make sure no threads are waiting on syncs.
+    this->sync();
+    _shuttingDown.store(true);
+    while (_numWaits.load()) {
+        sleepmillis(50);
+    }
 }
 
 /* End KVDBDurabilityManager */
