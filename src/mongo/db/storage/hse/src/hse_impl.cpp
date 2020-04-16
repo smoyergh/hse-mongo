@@ -104,10 +104,6 @@ Status KVDBImpl::kvdb_kvs_close(KVSHandle handle) {
     return Status(::hse_kvdb_kvs_close(kvsH));
 }
 
-Status KVDBImpl::kvdb_kvs_count(unsigned int* count) {
-    return Status(::hse_kvdb_kvs_count(_handle, count));
-}
-
 Status KVDBImpl::kvdb_get_names(unsigned int* count, char*** kvs_list) {
     return Status(::hse_kvdb_get_names(_handle, count, kvs_list));
 }

@@ -223,12 +223,8 @@ class KVDBREGTEST : public unittest::Test {
 protected:
     void setUp() {
         unsigned kvsCnt = 0;
-        hse::Status st = _db.kvdb_kvs_count(&kvsCnt);
-        ASSERT_EQUALS(0, st.getErrno());
 
-        ASSERT_EQ((unsigned int)0, kvsCnt);
-
-        //      ASSERT_EQ(0, _db._testGetMaxIdx());
+        // ASSERT_EQ(0, _db._testGetMaxIdx());
 
         // Create all the kvses
         for (unsigned int i = 0; i < TEST_KVS_CNT; i++) {
@@ -245,12 +241,6 @@ protected:
 
             hse_params_destroy(_params[i]);
         }
-
-
-        st = _db.kvdb_kvs_count(&kvsCnt);
-        ASSERT_EQUALS(0, st.getErrno());
-
-        ASSERT_EQ(TEST_KVS_CNT, kvsCnt);
     }
 
     void tearDown() {

@@ -70,9 +70,8 @@ KvsCursor* create_cursor(KVSHandle kvs,
                          KVDBData& prefix,
                          bool forward,
                          const struct CompParms& compparms,
-                         ClientTxn* lnkd_txn,
-                         bool enableRa) {
-    return new KvsCursor(kvs, prefix, forward, lnkd_txn, compparms, enableRa);
+                         ClientTxn* lnkd_txn) {
+    return new KvsCursor(kvs, prefix, forward, lnkd_txn, compparms);
 }
 
 //
@@ -82,12 +81,10 @@ KvsCursor::KvsCursor(KVSHandle handle,
                      KVDBData& prefix,
                      bool forward,
                      ClientTxn* lnkd_txn,
-                     const struct CompParms& compparms,
-                     bool enableRa)
+                     const struct CompParms& compparms)
     : _kvs((struct hse_kvs*)handle),
       _pfx(prefix),
       _forward(forward),
-      _enableRa{enableRa},
       _lnkd_txn(lnkd_txn),
       _cursor(0),
       _start(0),
@@ -121,10 +118,6 @@ KvsCursor::KvsCursor(KVSHandle handle,
 
     if (!_forward) {
         opspec.kop_flags |= HSE_KVDB_KOP_FLAG_REVERSE;
-    }
-
-    if (_enableRa) {
-        opspec.kop_flags |= HSE_KVDB_KOP_FLAG_CURSOR_RA;
     }
 
     while (true) {
@@ -200,10 +193,6 @@ Status KvsCursor::update(ClientTxn* lnkd_txn) {
 
             if (!_forward) {
                 opspec.kop_flags |= HSE_KVDB_KOP_FLAG_REVERSE;
-            }
-
-            if (_enableRa) {
-                opspec.kop_flags |= HSE_KVDB_KOP_FLAG_CURSOR_RA;
             }
 
             _hseKvsCursorCreateCounter.add();
