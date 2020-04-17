@@ -222,8 +222,6 @@ namespace mongo {
 class KVDBREGTEST : public unittest::Test {
 protected:
     void setUp() {
-        unsigned kvsCnt = 0;
-
         // ASSERT_EQ(0, _db._testGetMaxIdx());
 
         // Create all the kvses
@@ -232,7 +230,8 @@ protected:
             ASSERT_FALSE(nullptr == _params[i]);
 
             string paramName = string("kvs.pfx_len");
-            st = _db.kvdb_params_set(_params[i], paramName, std::to_string(hse::DEFAULT_PFX_LEN));
+            hse::Status st =
+                _db.kvdb_params_set(_params[i], paramName, std::to_string(hse::DEFAULT_PFX_LEN));
             ASSERT_EQUALS(0, st.getErrno());
             st = _db.kvdb_kvs_make(_kvsNames[i], _params[i]);
             ASSERT_EQUALS(0, st.getErrno());

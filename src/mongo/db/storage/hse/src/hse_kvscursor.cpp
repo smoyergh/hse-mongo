@@ -279,7 +279,6 @@ Status KvsCursor::read(KVDBData& key, KVDBData& val, bool& eof) {
 }
 
 int KvsCursor::_read_kvs() {
-    int ret = 0;
     Status st{};
     int retries = 0;
     unsigned long long sleepTime = 0;

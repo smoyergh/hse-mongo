@@ -2033,8 +2033,7 @@ KvsCursor* KVDBOplogStoreCursor::_getMCursor() {
     if (!_cursorValid) {
         KVDBData compatKey{(uint8_t*)&_prefixValBE, sizeof(_prefixValBE)};
         _updateReadUntil();
-        st = ru->beginOplogScan(
-            _colKvs, compatKey, _forward, &_mCursor, this->_compparms);
+        st = ru->beginOplogScan(_colKvs, compatKey, _forward, &_mCursor, this->_compparms);
         invariantHseSt(st);
         _cursorValid = true;
         _needSeek =
