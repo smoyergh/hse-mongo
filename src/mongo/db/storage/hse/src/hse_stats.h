@@ -153,7 +153,7 @@ private:
 
 class KVDBStatRate final : public KVDBStat {
 public:
-    KVDBStatRate(const string name, bool enableOverride);
+    KVDBStatRate(const string name, bool enableOverride = false);
     static void init();
     virtual void appendTo(BSONObjBuilder& bob) const override;
     void update(uint64_t incr = 1);

@@ -165,8 +165,7 @@ public:
                                KVDBData prefix,
                                bool forward,
                                KvsCursor** cursor,
-                               const struct hse::CompParms& compparm,
-                               bool readAhead = false);
+                               const struct hse::CompParms& compparm);
     hse::Status oplogCursorUpdate(KvsCursor* cursor);
     hse::Status oplogCursorSeek(KvsCursor* cursor,
                                 const KVDBData& key,

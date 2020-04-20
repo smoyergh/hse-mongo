@@ -61,8 +61,7 @@ KvsCursor* create_cursor(KVSHandle kvs,
                          KVDBData& prefix,
                          bool forward,
                          const struct CompParms& compparms,
-                         ClientTxn* lnkd_txn = 0,
-                         bool enableRa = false);
+                         ClientTxn* lnkd_txn = 0);
 
 class KvsCursor {
 public:
@@ -70,8 +69,7 @@ public:
               KVDBData& prefix,
               bool forward,
               ClientTxn* lnkd_txn,
-              const struct CompParms& compparms,
-              bool enableRa = false);
+              const struct CompParms& compparms);
 
     virtual ~KvsCursor();
 
@@ -101,7 +99,6 @@ protected:
     struct hse_kvs* _kvs;  // not owned
     KVDBData _pfx;
     bool _forward{true};
-    bool _enableRa{false};
     ClientTxn* _lnkd_txn;  // not owned
     std::mutex _mutex;
     bool _is_ready;
