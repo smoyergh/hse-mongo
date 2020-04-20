@@ -336,7 +336,7 @@ KVDBStatAppBytes _hseAppBytesReadCounter{"hseAppBytesRead"};
 KVDBStatAppBytes _hseAppBytesWrittenCounter{"hseAppBytesWritten"};
 
 // Rate stats
-KVDBStatRate _hseOplogCursorReadRate{"hseOplogCursorRead", true};
+KVDBStatRate _hseOplogCursorReadRate{"hseOplogCursorRead"};
 
 // End Stats declarations
 

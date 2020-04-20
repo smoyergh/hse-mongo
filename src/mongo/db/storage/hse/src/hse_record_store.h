@@ -688,7 +688,6 @@ private:
     // virtual
     hse::Status _currCursorRead(
         KVDBRecoveryUnit* ru, KvsCursor* cursor, KVDBData& elKey, KVDBData& elVal, bool& eof);
-    inline bool _needReadAhead();
 
     // virtual
     bool _currIsHidden(const RecordId& loc);
@@ -700,9 +699,6 @@ private:
 
     RecordId _readUntilForOplog;
     shared_ptr<KVDBOplogBlockManager> _opBlkMgr{};
-
-    // Heuristic oplog read rate that determines whether read ahead is needed.
-    const int64_t READ_AHEAD_THRESHOLD{100};
 };
 
 class KVDBCappedVisibilityManager {
