@@ -344,8 +344,6 @@ public:
 
     virtual struct hse_kvdb* kvdb_handle() = 0;
 
-    virtual Status kvdb_kvs_count(unsigned int* count) = 0;
-
     virtual Status kvdb_get_names(unsigned int* count, char*** kvs_list) = 0;
 
     virtual Status kvdb_free_names(char** kvsv) = 0;

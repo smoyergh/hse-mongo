@@ -341,12 +341,11 @@ hse::Status KVDBRecoveryUnit::beginOplogScan(const KVSHandle& h,
                                              KVDBData pfx,
                                              bool forward,
                                              KvsCursor** cursor,
-                                             const struct CompParms& compparm,
-                                             bool readAhead) {
+                                             const struct CompParms& compparm) {
     KvsCursor* lcursor = 0;
 
     try {
-        lcursor = create_cursor(h, pfx, forward, compparm, _txn, readAhead);
+        lcursor = create_cursor(h, pfx, forward, compparm, _txn);
     } catch (...) {
         return hse::Status(ENOMEM);
     }
