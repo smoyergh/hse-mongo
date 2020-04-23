@@ -414,12 +414,13 @@ Status addMongodOptions(moe::OptionSection* options) {
 
     // Replication Options
 
-    replication_options.addOptionChaining(
-        "replication.oplogSizeMB",
-        "oplogSize",
-        moe::Int,
-        "size to use (in MB) for replication op log. default is 5% of disk space "
-        "(i.e. large is good)");
+    replication_options
+        .addOptionChaining("replication.oplogSizeMB",
+                           "oplogSize",
+                           moe::Int,
+                           "size to use (in MB) for replication op log"
+                           "(large is good)")
+        .setDefault(moe::Value(32000));
 
     rs_options
         .addOptionChaining("replication.replSet",

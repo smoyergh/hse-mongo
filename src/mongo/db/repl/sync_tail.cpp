@@ -90,7 +90,7 @@ std::atomic<int> SyncTail::replBatchLimitOperations{50 * 1000};  // NOLINT
  */
 namespace {
 #if defined(MONGO_PLATFORM_64)
-int replWriterThreadCount = 16;
+int replWriterThreadCount = 64;
 #elif defined(MONGO_PLATFORM_32)
 int replWriterThreadCount = 2;
 #else

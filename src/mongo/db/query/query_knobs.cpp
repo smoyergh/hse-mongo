@@ -62,9 +62,9 @@ MONGO_EXPORT_SERVER_PARAMETER(internalQueryMaxScansToExplode, int, 200);
 
 MONGO_EXPORT_SERVER_PARAMETER(internalQueryExecMaxBlockingSortBytes, int, 32 * 1024 * 1024);
 
-// Yield every 128 cycles or 10ms.
-MONGO_EXPORT_SERVER_PARAMETER(internalQueryExecYieldIterations, int, 128);
-MONGO_EXPORT_SERVER_PARAMETER(internalQueryExecYieldPeriodMS, int, 10);
+// Yield every 100000 cycles or 1000ms for HSE
+MONGO_EXPORT_SERVER_PARAMETER(internalQueryExecYieldIterations, int, 100000);
+MONGO_EXPORT_SERVER_PARAMETER(internalQueryExecYieldPeriodMS, int, 1000);
 
 MONGO_EXPORT_SERVER_PARAMETER(internalQueryFacetBufferSizeBytes, int, 100 * 1024 * 1024);
 
