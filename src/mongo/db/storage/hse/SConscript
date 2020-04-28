@@ -59,7 +59,10 @@ def getHseConnectorGitSha(conf, env):
     s_pwd = os.getcwd()
     print s_pwd
     os.chdir(K_CON_SRC)
-    sha=subprocess.check_output(['git', 'rev-parse', 'HEAD'])
+    try:
+        sha=subprocess.check_output(['git', 'rev-parse', 'HEAD'])
+    except:
+        sha="nogit"
     os.chdir(s_pwd)
     return sha.strip().decode('utf-8')
 
