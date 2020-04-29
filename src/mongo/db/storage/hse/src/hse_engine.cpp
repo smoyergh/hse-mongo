@@ -681,7 +681,7 @@ Status KVDBEngine::_createIdent(OperationContext* opCtx,
 
     LOG(1) << "HSE: recording ident to kvs : " << ident.toString();
     auto ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opCtx);
-    auto s = ru->nonTxnPut(_mainKvs, key, val);
+    auto s = ru->put(_mainKvs, key, val);
 
     {
         stdx::lock_guard<stdx::mutex> lk(_identMapMutex);
