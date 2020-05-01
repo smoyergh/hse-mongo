@@ -409,12 +409,12 @@ KVDBRecoveryUnit* KVDBRecoveryUnit::newKVDBRecoveryUnit() {
 // private
 void KVDBRecoveryUnit::_ensureTxn() {
     if (!_txn) {
-        hse::Status st = 0;
+        hse::Status st{};
 
         try {
             _txn = new ClientTxn(_kvdb.kvdb_handle());
         } catch (...) {
-            st = 1;
+            st = hse::Status{1};
         }
         invariantHseSt(st);
 
