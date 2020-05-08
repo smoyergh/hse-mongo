@@ -697,8 +697,6 @@ void KVDBEngine::_loadMaxPrefix() {
     delete cursor;
 
     _checkMaxPrefix();
-
-    ++_maxPrefix;
 }
 
 void KVDBEngine::_cleanShutdown() {
