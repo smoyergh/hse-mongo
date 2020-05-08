@@ -666,7 +666,8 @@ void KVDBEngine::_loadMaxPrefix() {
     KVDBData val{};
     bool eof = false;
     while (!eof) {
-        cursor->read(key, val, eof);
+        auto st = cursor->read(key, val, eof);
+        invariantHseSt(st);
         if (eof) {
             break;
         }
