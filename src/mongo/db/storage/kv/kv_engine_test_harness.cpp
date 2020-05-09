@@ -104,9 +104,11 @@ TEST(KVEngineTestHarness, Restart1) {
         unique_ptr<RecordStore> rs;
         {
             MyOperationContext opCtx(engine);
+            WriteUnitOfWork uow(&opCtx);
             ASSERT_OK(engine->createRecordStore(&opCtx, ns, ns, CollectionOptions()));
             rs = engine->getRecordStore(&opCtx, ns, ns, CollectionOptions());
             ASSERT(rs);
+            uow.commit();
         }
 
         {
