@@ -14,18 +14,17 @@ var cursor;
 var res;
 
 //
-// Simple positive test for query: a ~300ms query with a 100ms time limit should be aborted.
+// Simple positive test for query: a ~3000ms query with a 1000ms time limit should be aborted.
 //
-
 t.drop();
 t.insert([{}, {}, {}]);
 cursor = t.find({
     $where: function() {
-        sleep(100);
+        sleep(1000);
         return true;
     }
 });
-cursor.maxTimeMS(100);
+cursor.maxTimeMS(1000);
 assert.throws(function() {
     cursor.itcount();
 }, [], "expected query to abort due to time limit");
