@@ -78,6 +78,11 @@ std::string encodePrefix(uint32_t prefix) {
     return std::string(reinterpret_cast<const char*>(&bigEndianPrefix), sizeof(uint32_t));
 }
 
+uint32_t decodePrefix(const uint8_t* prefixPtr) {
+    const uint32_t* bigEndianPrefix = reinterpret_cast<const uint32_t*>(prefixPtr);
+    return endian::bigToNative(*bigEndianPrefix);
+}
+
 void parseParams(KVDB& db, string paramStr, struct hse_params* params) {
     if (paramStr.size() == 0) {
         return;
@@ -585,6 +590,67 @@ void KVDBEngine::_setupDb() {
     hse_params_destroy(params);
 }
 
+uint32_t KVDBEngine::_getMaxPrefixInKvs(KVSHandle& kvs) {
+
+    uint32_t retPrefix = 0;
+
+    // create a reverse cursor
+    KvsCursor* cursor;
+    KVDBData kPrefix{(uint8_t*)"", 0};      // no prefix
+    const struct CompParms compparms = {};  // ignoring compression , since we just need key
+    cursor = new KvsCursor(kvs, kPrefix, false, 0, compparms);
+    invariantHse(cursor != 0);
+
+    KVDBData key{};
+    KVDBData val{};
+    bool eof = false;
+
+    // read one kv
+    auto st = cursor->read(key, val, eof);
+    invariantHseSt(st);
+    if (eof) {
+        retPrefix = 0;
+    } else {
+        retPrefix = decodePrefix(key.data());
+    }
+
+    delete cursor;
+
+    return retPrefix;
+}
+
+void KVDBEngine::_checkMaxPrefix() {
+
+    uint32_t maxPrefix = 0, tmpMaxPrefix = 0;
+
+    // for each kvs figure out maxPrefix.
+    // _mainkvs
+    tmpMaxPrefix = _getMaxPrefixInKvs(_mainKvs);
+    maxPrefix = std::max(maxPrefix, tmpMaxPrefix);
+
+    // _stdIdxKvs
+    tmpMaxPrefix = _getMaxPrefixInKvs(_stdIdxKvs);
+    maxPrefix = std::max(maxPrefix, tmpMaxPrefix);
+
+    // _uniqIdxKvs
+    tmpMaxPrefix = _getMaxPrefixInKvs(_uniqIdxKvs);
+    maxPrefix = std::max(maxPrefix, tmpMaxPrefix);
+
+    // _oplogKvs
+    tmpMaxPrefix = _getMaxPrefixInKvs(_oplogKvs);
+    maxPrefix = std::max(maxPrefix, tmpMaxPrefix);
+
+    // if maxPrefix is > _maxPrefix - we have a problem..
+    // for now set the new _maxPrefix == maxPrefix.
+    // this should be very rare, we could consider deleting the
+    // orphan prefixes in a later release.
+    if (maxPrefix > _maxPrefix) {
+        log() << "Orphan prefixes detected!!, increasing the _maxPrefix value to avoid prefix "
+                 "pollution.";
+        _maxPrefix = maxPrefix;
+    }
+}
+
 void KVDBEngine::_loadMaxPrefix() {
     // load ident to prefix map. also update _maxPrefix if there's any prefix bigger than
     // current _maxPrefix
@@ -600,7 +666,8 @@ void KVDBEngine::_loadMaxPrefix() {
     KVDBData val{};
     bool eof = false;
     while (!eof) {
-        cursor->read(key, val, eof);
+        auto st = cursor->read(key, val, eof);
+        invariantHseSt(st);
         if (eof) {
             break;
         }
@@ -629,9 +696,7 @@ void KVDBEngine::_loadMaxPrefix() {
 
     delete cursor;
 
-    // just to be extra sure. we need this if last collection is oplog -- in that case we
-    // reserve prefix+1 for oplog key tracker
-    ++_maxPrefix;
+    _checkMaxPrefix();
 }
 
 void KVDBEngine::_cleanShutdown() {
@@ -681,7 +746,7 @@ Status KVDBEngine::_createIdent(OperationContext* opCtx,
 
     LOG(1) << "HSE: recording ident to kvs : " << ident.toString();
     auto ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opCtx);
-    auto s = ru->nonTxnPut(_mainKvs, key, val);
+    auto s = ru->put(_mainKvs, key, val);
 
     {
         stdx::lock_guard<stdx::mutex> lk(_identMapMutex);
