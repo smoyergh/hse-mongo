@@ -87,7 +87,10 @@ load('jstests/aggregation/extras/utils.js');
               "buildinfo doesn't match that from buildinfo command");
 
     // Test version and version Array
-    var version = latestStartUpLog.buildinfo.version.split('-')[0];
+    // Taking only the mongo version - slice(0,3), and ignoring the hse part.
+    var fullVersion = latestStartUpLog.buildinfo.version.split('-')[0];
+    var fullVersionArray = fullVersion.split('.');
+    var version = fullVersionArray.slice(0, 3).join('.');
     var versionArray = latestStartUpLog.buildinfo.versionArray;
     var versionArrayCleaned = versionArray.slice(0, 3);
     if (versionArray[3] == -100) {
