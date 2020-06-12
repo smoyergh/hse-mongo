@@ -1,0 +1,2 @@
+# Variables defined here should line up with the mongod.service unit file
+# OPTIONS=-f /etc/mongod.conf

@@ -1,0 +1,182 @@
+#!/usr/bin/make -f
+#
+#    SPDX-License-Identifier: AGPL-3.0-only
+#
+#    Copyright (C) 2017-2020 Micron Technology, Inc.
+#
+#    This code is derived from and modifies the MongoDB project.
+#
+
+#
+# NOTE: This file is mostly identical to upstream except for hse-mongodb-test,
+#       which is based on the Fedora project's RPM spec file for MongoDB.
+#
+
+# -*- makefile -*-
+TOOLS=bsondump mongodump mongoexport mongofiles mongoimport mongooplog mongoperf mongorestore mongostat mongotop
+
+# Uncomment this to turn on verbose mode.
+export DH_VERBOSE=1
+
+
+configure: configure-stamp
+configure-stamp:
+	dh_testdir
+
+	touch configure-stamp
+
+
+build: build-stamp
+
+build-stamp: configure-stamp  
+	dh_testdir
+
+	# THE FOLLOWING LINE IS INTENTIONALLY COMMENTED. 
+	# scons 
+	#docbook-to-man debian/mongodb.sgml > mongodb.1
+	echo -n > manpages/hse-mongodb-tools.manpages
+	for binary in ${TOOLS} ; \
+	do \
+	  echo manpages/$$binary.1 >> debian/hse-mongodb-tools.manpages ; \
+	done
+
+	echo manpages/mongo.1 > debian/hse-mongodb-shell.manpages
+	echo manpages/mongod.1 > debian/hse-mongodb-server.manpages
+	echo manpages/mongos.1 > debian/hse-mongodb-mongos.manpages
+
+	touch $@
+
+clean: 
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp configure-stamp
+
+	# FIXME: scons freaks out at the presence of target files
+	# under debian/mongodb.
+	#scons -c
+
+	rm -f debian/*.manpages
+
+	rm -rf $(CURDIR)/debian/hse-mongodb
+	rm -rf $(CURDIR)/debian/hse-mongodb-shell
+	rm -rf $(CURDIR)/debian/hse-mongodb-server
+	rm -rf $(CURDIR)/debian/hse-mongodb-mongos
+	rm -rf $(CURDIR)/debian/hse-mongodb-tools
+	rm -rf $(CURDIR)/debian/hse-mongodb-test
+	rm -f config.log
+	rm -f mongo
+	rm -f mongod
+	rm -f mongoimportjson
+	rm -f mongoexport
+	rm -f mongorestore
+	rm -f mongodump
+	rm -f mongofiles
+	rm -f .sconsign.dblite
+	rm -f libmongoclient.a
+	rm -rf client/*.o
+	rm -rf tools/*.o
+	rm -rf shell/*.o
+	rm -rf .sconf_temp
+	rm -f buildscripts/*.pyc 
+	rm -f *.pyc
+	rm -f buildinfo.cpp
+	dh_clean debian/files
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_prep
+	dh_installdirs
+
+	# THE FOLLOWING LINE IS INTENTIONALLY COMMENTED.
+	# scons --prefix=$(CURDIR)/debian/mongodb/usr install
+	mkdir -p $(CURDIR)/debian/hse-mongodb-shell/usr/bin
+	mkdir -p $(CURDIR)/debian/hse-mongodb-server/usr/bin
+	mkdir -p $(CURDIR)/debian/hse-mongodb-mongos/usr/bin
+	mkdir -p $(CURDIR)/debian/hse-mongodb-tools/usr/bin
+	cp -v $(CURDIR)/bin/mongo $(CURDIR)/debian/hse-mongodb-shell/usr/bin
+	cp -v $(CURDIR)/bin/mongod $(CURDIR)/debian/hse-mongodb-server/usr/bin
+	cp -v $(CURDIR)/bin/mongos $(CURDIR)/debian/hse-mongodb-mongos/usr/bin
+
+	for binary in ${TOOLS} ; \
+	do \
+	  cp -v $(CURDIR)/bin/$$binary $(CURDIR)/debian/hse-mongodb-tools/usr/bin ; \
+	done
+
+	mkdir -p $(CURDIR)/debian/hse-mongodb-server/etc
+	cp $(CURDIR)/conf/mongod.conf $(CURDIR)/debian/hse-mongodb-server/etc/mongod.conf 
+
+	mkdir -p $(CURDIR)/debian/hse-mongodb-server/etc/default
+	cp $(CURDIR)/conf/mongod.default $(CURDIR)/debian/hse-mongodb-server/etc/default/mongod
+
+	#
+	# TEST PACKAGE
+	#
+	mkdir -p $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test
+	mkdir -p $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/buildscripts
+	mkdir -p $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/var
+
+	install -p -D -m 755 $(CURDIR)/bin/dbtest $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test
+	install -p -D -m 755 $(CURDIR)/buildscripts/resmoke.py $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test
+	install -p -D -m 444 $(CURDIR)/buildscripts/__init__.py $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/buildscripts/
+
+	cp -R $(CURDIR)/buildscripts/resmokeconfig $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/buildscripts
+	cp -R $(CURDIR)/buildscripts/resmokelib $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/buildscripts
+	cp -R $(CURDIR)/jstests $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/
+
+	# Appease a handful of tests that expect the binaries to exist in the top level directory
+	ln -s /usr/bin/mongo $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/mongo
+	ln -s /usr/bin/mongod $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/mongod
+	ln -s /usr/bin/mongos $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/mongos
+
+	# Remove executable flag from JS tests
+	for file in `find $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/jstests -type f` ; do \
+	    chmod a-x $$file ; \
+	done
+
+	# by default use system mongod, mongos and mongo binaries in resmoke.py
+	sed -i -r "s|os.curdir(, \"mongo\")|\"/usr/bin\"\1|" $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/buildscripts/resmokelib/config.py
+	sed -i -r "s|os.curdir(, \"mongod\")|\"/usr/bin\"\1|" $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/buildscripts/resmokelib/config.py
+	sed -i -r "s|os.curdir(, \"mongos\")|\"/usr/bin\"\1|" $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/buildscripts/resmokelib/config.py
+
+	# set default data prefix in resmoke.py
+	sed -i -r "s|/data/db|/usr/share/hse-mongodb-test/var|" $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/buildscripts/resmokelib/config.py
+	#
+	# END TEST PACKAGE
+	#
+
+# Build architecture-independent files here.
+binary-indep: build install
+# We have nothing to do by default.
+
+# Build architecture-dependent files here.
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs 
+	dh_installdocs
+	dh_installexamples
+#	dh_install
+#	dh_installmenu
+#	dh_installdebconf	
+#	dh_installlogrotate
+#	dh_installemacsen
+#	dh_installpam
+#	dh_installmime
+	dh_installinit -phse-mongodb-server --name=mongod
+#	dh_installinfo
+	dh_installman
+	dh_link
+	dh_strip -a --dbg-package=hse-mongodb-dbg
+	dh_compress
+	dh_fixperms
+	dh_installdeb
+# Disable missing info error related to libmpool in HSE
+#   dh_shlibdeps
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install configure

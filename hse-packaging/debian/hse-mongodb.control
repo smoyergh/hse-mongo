@@ -1,0 +1,70 @@
+#
+#    SPDX-License-Identifier: AGPL-3.0-only
+#
+#    Copyright (C) 2017-2020 Micron Technology, Inc.
+#
+#    This code is derived from and modifies the MongoDB project.
+#
+
+Source: hse-mongodb
+Section: database
+Priority: optional
+Maintainer: Micron Technology, Inc.
+Build-Depends: 
+Standards-Version: 3.8.0
+Homepage: https://github.com/hse-project/hse-mongo
+
+Package: hse-mongodb
+Conflicts: mongodb, mongodb-org
+Architecture: any
+Depends: hse-mongodb-shell, hse-mongodb-server, hse-mongodb-mongos, hse-mongodb-tools
+Description: MongoDB with Heterogeneous-memory Storage Engine (metapackage)
+ MongoDB is a popular document-oriented NoSQL database.  The MongoDB implementation is open source, and includes an extensible framework for integrating different storage engines.
+ .
+ This version includes support for the Heterogeneous-memory Storage Engine (HSE).  HSE is an embeddable key-value store designed for SSDs based on NAND flash or persistent memory.
+ .
+ This metapackage will install the mongo shell, import/export tools, other client utilities, server software, default configuration, and systemd service files.
+
+Package: hse-mongodb-shell
+Conflicts: mongodb, mongodb-clients, mongodb-shell, mongodb-org-shell
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: MongoDB shell client
+ This package contains the mongo shell.
+
+Package: hse-mongodb-server
+Conflicts: mongodb-server, mongodb-org-server
+Architecture: any
+Depends: ${shlibs:Depends}, adduser, hse, mpool, numactl
+Description: MongoDB database server with Heterogeneous-memory Storage Engine
+ MongoDB is a popular document-oriented NoSQL database.  The MongoDB implementation is open source, and includes an extensible framework for integrating different storage engines.
+ .
+ This version includes support for the Heterogeneous-memory Storage Engine (HSE).  HSE is an embeddable key-value store designed for SSDs based on NAND flash or persistent memory.
+ .
+ This package contains the MongoDB server software, default configuration files, and systemd service files.
+
+Package: hse-mongodb-mongos
+Conflicts: mongodb-clients, mongodb-server, mongodb-org-mongos
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: MongoDB sharded cluster query router
+ This package contains mongos, the MongoDB sharded cluster query router.
+
+Package: hse-mongodb-tools
+Conflicts: mongo-tools, mongodb-org-tools
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: MongoDB tools
+ This package contains standard utilities for interacting with MongoDB.
+
+Package: hse-mongodb-test
+Architecture: any
+Depends: hse-mongodb-shell, hse-mongodb-server, hse-mongodb-mongos, hse-mongodb-tools
+Description: MongoDB regression test suite
+ This package contains the regression test suite distributed with the MongoDB sources.
+
+Package: hse-mongodb-dbg
+Architecture: any
+Section: debug
+Description: MongoDB debug symbols.
+ This package contains debug symbols for MongoDB.
