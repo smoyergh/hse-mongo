@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+#
+#    SPDX-License-Identifier: AGPL-3.0-only
+#
+#    Copyright (C) 2017-2020 Micron Technology, Inc.
+#
+#    This code is derived from and modifies the MongoDB project.
+#
 
 # This program makes Debian and RPM repositories for MongoDB, by
 # downloading our tarballs of statically linked executables and
@@ -25,6 +32,13 @@
 #
 # apt-get install dpkg-dev rpm debhelper fakeroot ia32-libs createrepo git-core
 # echo "Now put the dist gnupg signing keys in ~root/.gnupg"
+
+#
+# HSE NOTE:
+#
+# This script has had numerous hacks to make it work for the HSE package build;
+# looking at the Git history is probably the best way to analyze the changes.
+#
 
 import argparse
 import errno
@@ -255,6 +269,10 @@ class Distro(object):
                 return "trusty"
             elif build_os == 'ubuntu1604':
                 return "xenial"
+            elif build_os == 'ubuntu1804':
+                return "bionic"
+            elif build_os == 'ubuntu2004':
+                return "focal"
             else:
                 raise Exception("unsupported build_os: %s" % build_os)
         elif self.n == 'debian':
@@ -283,11 +301,12 @@ class Distro(object):
         if re.search("(suse)", self.n):
             return [ "suse11", "suse12" ]
         elif re.search("(redhat|fedora|centos)", self.n):
-            return [ "rhel70", "rhel71", "rhel72", "rhel62", "rhel55" ]
+            return [ "rhel80", "rhel81", "rhel82", "rhel83", "rhel70", "rhel71", "rhel72", "rhel77", "rhel62", "rhel55",
+                     "fedora25", "fedora28", ]
         elif self.n == 'amazon':
             return [ "amazon" ]
         elif self.n == 'ubuntu':
-            return [ "ubuntu1204", "ubuntu1404", "ubuntu1604", ]
+            return [ "ubuntu1204", "ubuntu1404", "ubuntu1604", "ubuntu1804", "ubuntu2004" ]
         elif self.n == 'debian':
             return [ "debian81" ]
         else:
@@ -299,8 +318,58 @@ class Distro(object):
 
         if self.n == 'amazon':
           return 'amzn1'
+        elif build_os.startswith('fedora'):
+          return re.sub(r'^fedora(\d+).*$', r'fc\1', build_os)
         else:
           return re.sub(r'^rh(el\d).*$', r'\1', build_os)
+
+
+class HseSpec(Spec):
+    def __init__(
+        self, ver, gitspec=None, rel=None, hse_sha='nogit', hse_version=None,
+        build_number=0, rel_candidate=False, hse_mongo_sha='nogit',
+    ):
+        super(HseSpec, self).__init__(ver, gitspec=gitspec, rel=rel)
+
+        assert hse_version is not None
+
+        self.build_number = build_number
+        self.hse_mongo_sha = hse_mongo_sha
+        self.hse_sha = hse_sha
+        self.hse_version = hse_version
+        self.rel_candidate = rel_candidate
+
+    def prelease(self):
+        if self.rel_candidate:
+            release = '%s.%d' % (self.hse_version, self.build_number)
+        else:
+            release = '%s.%d.%s.%s' % (self.hse_version, self.build_number,
+                                       self.hse_sha, self.hse_mongo_sha)
+
+        return release
+
+    def pversion(self, distro):
+        if re.search("(suse|redhat|fedora|centos|amazon)", distro.name()):
+            return re.sub("-.*", "", self.version())
+
+        if re.search("^(debian|ubuntu)", distro.name()):
+            ver = re.sub("-.*", "", self.version())
+            release = self.prelease()
+
+            deb_version = "%s-%s" % (ver, release)
+
+            return deb_version
+
+        raise Exception("BUG: unsupported platform?")
+
+    def suffix(self):
+        return ""
+
+
+class HseDistro(Distro):
+    def pkgbase(self):
+        return "hse-mongodb"
+
 
 def get_args(distros, arch_choices):
 
@@ -318,6 +387,13 @@ def get_args(distros, arch_choices):
     parser.add_argument("-a", "--arches", help="Architecture to build", choices=arch_choices, default=[], required=False, action='append')
     parser.add_argument("-t", "--tarball", help="Local tarball to package", required=True, type=lambda x: is_valid_file(parser, x))
 
+    # HSE specific args
+    parser.add_argument("-B", "--build-number", help="Build number", type=int, default=0)
+    parser.add_argument("-R", "--rel-candidate", help="Hide Git information in version strings", action="store_true")
+    parser.add_argument("--hse-mongo-sha")
+    parser.add_argument("--hse-sha")
+    parser.add_argument("--hse-version")
+
     args = parser.parse_args()
 
     if len(args.distros) * len(args.arches) > 1 and args.tarball:
@@ -327,11 +403,18 @@ def get_args(distros, arch_choices):
 
 def main(argv):
 
-    distros=[Distro(distro) for distro in DISTROS]
+    # distros=[Distro(distro) for distro in DISTROS]
+    distros=[HseDistro(distro) for distro in DISTROS]
 
     args = get_args(distros, ARCH_CHOICES)
 
-    spec = Spec(args.server_version, args.metadata_gitspec, args.release_number)
+    # spec = Spec(args.server_version, args.metadata_gitspec, args.release_number)
+    spec = HseSpec(
+        args.server_version, args.metadata_gitspec, args.release_number,
+        build_number=args.build_number, rel_candidate=args.rel_candidate,
+        hse_version=args.hse_version, hse_sha=args.hse_sha,
+        hse_mongo_sha=args.hse_mongo_sha
+    )
 
     oldcwd=os.getcwd()
     srcdir=oldcwd+"/../"
@@ -417,10 +500,18 @@ def unpack_binaries_into(build_os, arch, spec, where):
     os.chdir(where)
     try:
         sysassert(["tar", "xvzf", rootdir+"/"+tarfile(build_os, arch, spec)])
-        release_dir = glob('mongodb-linux-*')[0]
+        # release_dir = glob('mongodb-linux-*')[0]
+        release_dir = glob('hse-mongodb-linux-*')[0]
         for releasefile in "bin", "GNU-AGPL-3.0", "README", "THIRD-PARTY-NOTICES", "MPL-2":
             print "moving file: %s/%s" % (release_dir, releasefile)
             os.rename("%s/%s" % (release_dir, releasefile), releasefile)
+
+        # HSE: hack for tests
+        for releasefile in ["buildscripts", "jstests"]:
+            if os.path.exists("%s/%s" % (release_dir, releasefile)):
+                print "moving file: %s/%s" % (release_dir, releasefile)
+                os.rename("%s/%s" % (release_dir, releasefile), releasefile)
+
         os.rmdir(release_dir)
     except Exception:
         exc=sys.exc_value
@@ -438,10 +529,21 @@ def make_package(distro, build_os, arch, spec, srcdir):
     # Note that the RPM packages get their man pages from the debian
     # directory, so the debian directory is needed in all cases (and
     # innocuous in the debianoids' sdirs).
-    for pkgdir in ["debian", "rpm"]:
+    for pkgdir in ["conf", "debian", "redhat"]:
         print "Copying packaging files from %s to %s" % ("%s/%s" % (srcdir, pkgdir), sdir)
         # FIXME: sh-dash-cee is bad. See if tarfile can do this.
-        sysassert(["sh", "-c", "(cd \"%s\" && git archive %s %s/ ) | (cd \"%s\" && tar xvf -)" % (srcdir, spec.metadata_gitspec(), pkgdir, sdir)])
+        # sysassert(["sh", "-c", "(cd \"%s\" && git archive %s %s/ ) | (cd \"%s\" && tar xvf -)" % (srcdir, spec.metadata_gitspec(), pkgdir, sdir)])
+
+        copysrc = os.path.join(srcdir, 'hse-packaging', pkgdir)
+        copydst = os.path.join(sdir, pkgdir)
+        shutil.copytree(copysrc, copydst)
+
+    # HSE: copy man pages from upstream
+    copysrc = os.path.join(srcdir, 'debian')
+    copydst = os.path.join(sdir, 'manpages')
+    os.makedirs(copydst)
+    sysassert(["sh", "-c", "cp -r %s/*.1 %s" % (copysrc, copydst)])
+
     # Splat the binaries under sdir.  The "build" stages of the
     # packaging infrastructure will move the files to wherever they
     # need to go.
@@ -468,24 +570,29 @@ def make_deb(distro, build_os, arch, spec, srcdir):
     suffix=spec.suffix()
     sdir=setupdir(distro, build_os, arch, spec)
     if re.search("debian", distro.name()):
-        os.unlink(sdir+"debian/mongod.upstart")
-        os.link(sdir+"debian/mongod.service", sdir+"debian/%s%s-server.mongod.service" % (distro.pkgbase(), suffix))
-        os.unlink(sdir+"debian/init.d")
+        # HSE: obsolete sysv/upstart files
+        # os.unlink(sdir+"debian/mongod.upstart")
+        os.link(sdir+"conf/mongod.service", sdir+"debian/%s%s-server.mongod.service" % (distro.pkgbase(), suffix))
+        # os.unlink(sdir+"debian/init.d")
     elif re.search("ubuntu", distro.name()):
-        os.unlink(sdir+"debian/init.d")
-        if build_os in ("ubuntu1204", "ubuntu1404", "ubuntu1410"):
-            os.link(sdir+"debian/mongod.upstart", sdir+"debian/%s%s-server.mongod.upstart" % (distro.pkgbase(), suffix))
-            os.unlink(sdir+"debian/mongod.service")
-        else:
-            os.link(sdir+"debian/mongod.service", sdir+"debian/%s%s-server.mongod.service" % (distro.pkgbase(), suffix))
-            os.unlink(sdir+"debian/mongod.upstart")
+        # HSE: obsolete sysv/upstart files
+        # os.unlink(sdir+"debian/init.d")
+        # if build_os in ("ubuntu1204", "ubuntu1404", "ubuntu1410"):
+        #     os.link(sdir+"debian/mongod.upstart", sdir+"debian/%s%s-server.mongod.upstart" % (distro.pkgbase(), suffix))
+        #     os.unlink(sdir+"debian/mongod.service")
+        # else:
+        #     os.link(sdir+"debian/mongod.service", sdir+"debian/%s%s-server.mongod.service" % (distro.pkgbase(), suffix))
+        #     os.unlink(sdir+"debian/mongod.upstart")
+        os.link(sdir+"conf/mongod.service", sdir+"debian/%s%s-server.mongod.service" % (distro.pkgbase(), suffix))
     else:
         raise Exception("unknown debianoid flavor: not debian or ubuntu?")
     # Rewrite the control and rules files
-    write_debian_changelog(sdir+"debian/changelog", spec, srcdir)
+    write_debian_changelog(distro, sdir+"debian/changelog", spec, srcdir)
     distro_arch=distro.archname(arch)
-    sysassert(["cp", "-v", srcdir+"debian/%s%s.control" % (distro.pkgbase(), suffix), sdir+"debian/control"])
-    sysassert(["cp", "-v", srcdir+"debian/%s%s.rules" % (distro.pkgbase(), suffix), sdir+"debian/rules"])
+    # sysassert(["cp", "-v", srcdir+"debian/%s%s.control" % (distro.pkgbase(), suffix), sdir+"debian/control"])
+    # sysassert(["cp", "-v", srcdir+"debian/%s%s.rules" % (distro.pkgbase(), suffix), sdir+"debian/rules"])
+    sysassert(["cp", "-v", srcdir+"hse-packaging/debian/%s%s.control" % (distro.pkgbase(), suffix), sdir+"debian/control"])
+    sysassert(["cp", "-v", srcdir+"hse-packaging/debian/%s%s.rules" % (distro.pkgbase(), suffix), sdir+"debian/rules"])
 
 
     # old non-server-package postinst will be hanging around for old versions
@@ -495,7 +602,8 @@ def make_deb(distro, build_os, arch, spec, srcdir):
 
     # copy our postinst files
     #
-    sysassert(["sh", "-c", "cp -v \"%sdebian/\"*.postinst \"%sdebian/\""%(srcdir, sdir)])
+    # sysassert(["sh", "-c", "cp -v \"%sdebian/\"*.postinst \"%sdebian/\""%(srcdir, sdir)])
+    sysassert(["sh", "-c", "cp -v \"%shse-packaging/debian/\"*.postinst \"%sdebian/\""%(srcdir, sdir)])
 
     # Do the packaging.
     oldcwd=os.getcwd()
@@ -617,12 +725,13 @@ def move_repos_into_place(src, dst):
         os.rename(oldnam, dst+".old")
 
 
-def write_debian_changelog(path, spec, srcdir):
+def write_debian_changelog(distro, path, spec, srcdir):
     oldcwd=os.getcwd()
     os.chdir(srcdir)
     preamble=""
     try:
-        s=preamble+backtick(["sh", "-c", "git archive %s debian/changelog | tar xOf -" % spec.metadata_gitspec()])
+        # s=preamble+backtick(["sh", "-c", "git archive %s debian/changelog | tar xOf -" % spec.metadata_gitspec()])
+        s=preamble+backtick(["sh", "-c", "cat debian/changelog"])
     finally:
         os.chdir(oldcwd)
     lines=s.split("\n")
@@ -630,7 +739,7 @@ def write_debian_changelog(path, spec, srcdir):
     # preamble, and so frob the version number.
     lines[0]=re.sub("^mongodb \\(.*\\)", "mongodb (%s)" % (spec.pversion(Distro("debian"))), lines[0])
     # Rewrite every changelog entry starting in mongodb<space>
-    lines=[re.sub("^mongodb ", "mongodb%s " % (spec.suffix()), l) for l in lines]
+    lines=[re.sub("^mongodb ", "%s%s " % (distro.pkgbase(), spec.suffix()), l) for l in lines]
     lines=[re.sub("^  --", " --", l) for l in lines]
     s="\n".join(lines)
     with open(path, 'w') as f:
@@ -641,12 +750,12 @@ def make_rpm(distro, build_os, arch, spec, srcdir):
     suffix=spec.suffix()
     sdir=setupdir(distro, build_os, arch, spec)
 
-    specfile = srcdir + "rpm/mongodb%s.spec" % suffix
+    specfile = sdir + "redhat/%s%s.spec" % (distro.pkgbase(), suffix)
     init_spec = specfile.replace(".spec", "-init.spec")
 
     # The Debian directory is here for the manpages so we we need to remove the service file
     # from it so that RPM packages don't end up with the Debian file.
-    os.unlink(sdir + "debian/mongod.service")
+    # os.unlink(sdir + "debian/mongod.service")
 
     # Swap out systemd files, different systemd spec files, and init scripts as needed based on
     # underlying os version. Arranged so that new distros moving forward automatically use
@@ -719,13 +828,13 @@ def make_rpm(distro, build_os, arch, spec, srcdir):
     oldcwd=os.getcwd()
     os.chdir(sdir+"/../")
     try:
-        sysassert(["tar", "-cpzf", topdir+"SOURCES/mongodb%s-%s.tar.gz" % (suffix, spec.pversion(distro)), os.path.basename(os.path.dirname(sdir))])
+        sysassert(["tar", "-cpzf", topdir+"SOURCES/%s%s-%s.tar.gz" % (distro.pkgbase(), suffix, spec.pversion(distro)), os.path.basename(os.path.dirname(sdir))])
     finally:
         os.chdir(oldcwd)
     # Do the build.
 
     flags.extend(["-D", "dynamic_version " + spec.pversion(distro), "-D", "dynamic_release " + spec.prelease(), "-D", "_topdir " + topdir])
-    sysassert(["rpmbuild", "-ba", "--target", distro_arch] + flags + ["%s/SPECS/mongodb%s.spec" % (topdir, suffix)])
+    sysassert(["rpmbuild", "-ba", "--target", distro_arch] + flags + ["%s/SPECS/%s%s.spec" % (topdir, distro.pkgbase(), suffix)])
     r=distro.repodir(arch, build_os, spec)
     ensure_dir(r)
     # FIXME: see if some combination of shutil.copy<hoohah> and glob
