@@ -1,0 +1,6 @@
+mongodb (3.4.17) unstable; urgency=low
+
+  * initial Debian packaging for hse-mongodb
+
+ -- Tom Blamer <tblamer@micron.com>  Fri, 12 Jun 2020 15:12:00 -0600
+
