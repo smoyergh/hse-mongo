@@ -251,5 +251,5 @@ fi
 %{_datadir}/%{name}-test/mongos
 
 %changelog
-* Fri Jul 12 2020 Tom Blamer <tblamer@micron.com>
+* Fri Jun 12 2020 Tom Blamer <tblamer@micron.com>
 - Revamped RPM packaging for hse-mongodb
