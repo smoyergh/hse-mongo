@@ -68,13 +68,17 @@ void KVDBStat::appendTo(BSONObjBuilder& bob) const {
     invariantHse(false);
 }
 
-void KVDBStat::enableStats(bool enable) {
+void KVDBStat::enableStatsGlobally(bool enable) {
     statsEnabled = enable;
 }
 
 // This does not reflect enable overrides
-bool KVDBStat::isStatsEnabled() {
+bool KVDBStat::isStatsEnabledGlobally() {
     return statsEnabled;
+}
+
+bool KVDBStat::isStatEnabled() const {
+    return statsEnabled || _enableOverride;
 }
 
 KVDBStat::~KVDBStat() {}
@@ -86,7 +90,7 @@ KVDBStatCounter::KVDBStatCounter(const string name) : KVDBStat(name) {
 }
 
 void KVDBStatCounter::appendTo(BSONObjBuilder& bob) const {
-    if (!(statsEnabled || _enableOverride)) {
+    if (!isStatEnabled()) {
         return;
     }
 
@@ -94,7 +98,7 @@ void KVDBStatCounter::appendTo(BSONObjBuilder& bob) const {
 }
 
 void KVDBStatCounter::add(int64_t incr) {
-    if (!(statsEnabled || _enableOverride)) {
+    if (!isStatEnabled()) {
         return;
     }
 
@@ -113,7 +117,7 @@ KVDBStatLatency::KVDBStatLatency(const string name, int32_t buckets, int64_t int
 }
 
 void KVDBStatLatency::appendTo(BSONObjBuilder& bob) const {
-    if (!(statsEnabled || _enableOverride)) {
+    if (!isStatEnabled()) {
         return;
     }
 
@@ -145,7 +149,7 @@ void KVDBStatLatency::appendTo(BSONObjBuilder& bob) const {
 }
 
 LatencyToken KVDBStatLatency::begin() const {
-    if (!(statsEnabled || _enableOverride)) {
+    if (!isStatEnabled()) {
         return std::chrono::time_point<std::chrono::high_resolution_clock>::min();
     } else {
         return chrono::high_resolution_clock::now();
@@ -153,7 +157,7 @@ LatencyToken KVDBStatLatency::begin() const {
 }
 
 void KVDBStatLatency::end(LatencyToken& bTime) {
-    if (!(statsEnabled || _enableOverride)) {
+    if (!isStatEnabled()) {
         return;
     }
 
@@ -203,7 +207,7 @@ KVDBStatAppBytes::KVDBStatAppBytes(const string name, bool enableOverride) : KVD
 }
 
 void KVDBStatAppBytes::appendTo(BSONObjBuilder& bob) const {
-    if (!(statsEnabled || _enableOverride)) {
+    if (!isStatEnabled()) {
         bob.append(_name, "DISABLED");
         return;
     }
@@ -235,7 +239,7 @@ void KVDBStatRate::init() {
 }
 
 void KVDBStatRate::appendTo(BSONObjBuilder& bob) const {
-    if (!(statsEnabled || _enableOverride)) {
+    if (!isStatEnabled()) {
         bob.append(_name, "DISABLED");
         return;
     }
@@ -281,8 +285,10 @@ void KVDBStatRate::RateThread::run() {
 
     while (!_shuttingDown.load()) {
         for (auto st : gHseStatRateList) {
-            KVDBStatRate* rateP = static_cast<KVDBStatRate*>(st);
-            rateP->calculateRate();
+            if (st->isStatEnabled()) {
+                KVDBStatRate* rateP = static_cast<KVDBStatRate*>(st);
+                rateP->calculateRate();
+            }
         }
 
         mongo::sleepmillis(PERIOD_MS);

@@ -88,8 +88,9 @@ class KVDBStat {
 public:
     KVDBStat(const string name);
     virtual void appendTo(BSONObjBuilder& bob) const;
-    static void enableStats(bool enable);
-    static bool isStatsEnabled();
+    static void enableStatsGlobally(bool enable);
+    static bool isStatsEnabledGlobally();
+    bool isStatEnabled() const;
     virtual ~KVDBStat();
 
 protected:
