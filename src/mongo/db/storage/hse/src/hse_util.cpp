@@ -52,7 +52,7 @@ mongo::Status hseToMongoStatus_slow(const Status& status, const char* prefix) {
         return mongo::Status::OK();
     }
 
-    return mongo::Status(mongo::ErrorCodes::InternalError, status.ToString());
+    return mongo::Status(mongo::ErrorCodes::InternalError, status.toString());
 }
 
 hse::Status _cursorRead(mongo::KVDBRecoveryUnit* ru,
