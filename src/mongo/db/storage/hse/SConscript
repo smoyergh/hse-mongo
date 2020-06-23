@@ -67,13 +67,12 @@ def getHseConnectorGitSha(conf, env):
     return sha.strip().decode('utf-8')
 
 def getHseVersion(conf, env):
-    hse_ver = 'DEVBRANCH'
+    hse_ver = 'NA'
     try:
-        rpm_info = subprocess.check_output(['rpm', '-qi', 'hse-devel'])
-        hse_ver = [y.split(':')[-1] for y in rpm_info.split('\n') if y.startswith('Version')][0].strip(' ')
+        ver_info = subprocess.check_output(['hse', 'version'])
+        hse_ver =  ver_info.split()[-1].strip().decode('utf-8')
     except:
         pass
-
     return hse_ver
 
 def getHseConnectorVersion(conf, env):
@@ -125,12 +124,10 @@ def gensrc(conf, env):
 namespace hse {{
 static const char* K_HSE_VERSION="{hse_version}";
 static const char* K_HSE_CONNECTOR_VERSION="{connector_version}";
-static const char* K_HSE_GIT_SHA="{hse_git_sha}";
 static const char* K_HSE_CONNECTOR_GIT_SHA="{hse_connector_git_sha}";
 }}'''.format(
             hse_version=getHseVersion(conf, env),
             connector_version=getHseConnectorVersion(conf, env),
-            hse_git_sha=getHseGitSha(conf, env),
             hse_connector_git_sha=getHseConnectorGitSha(conf, env)
         );
         f.write(contents)

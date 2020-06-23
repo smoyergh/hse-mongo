@@ -306,7 +306,6 @@ void KVDBStatRate::RateThread::shutdown() {
 // Versions
 KVDBStatVersion _hseVersion{"hseVersion", hse::K_HSE_VERSION};
 KVDBStatVersion _hseConnectorVersion{"hseConnectorVersion", hse::K_HSE_CONNECTOR_VERSION};
-KVDBStatVersion _hseGitSha{"hseGitSha", hse::K_HSE_GIT_SHA};
 KVDBStatVersion _hseConnectorGitSha{"hseConnectorGitSha", hse::K_HSE_CONNECTOR_GIT_SHA};
 
 // Counters
