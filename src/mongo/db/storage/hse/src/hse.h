@@ -75,7 +75,7 @@ public:
         return hse_err_to_errno(_err);
     }
 
-    string ToString() const {
+    string toString() const {
         stringstream ss{};
         char buf[300];
         ss << "HSE Error: " << hse_err_to_string(_err, buf, sizeof(buf), 0) << " - #"

@@ -467,21 +467,8 @@ void KVDBEngine::setJournalListener(JournalListener* jl) {
 void KVDBEngine::_open_kvdb(const string& mp, const string& db, struct hse_params* params) {
 
     auto st = _db.kvdb_open(mp.c_str(), db.c_str(), params);
-    if (st.getErrno()) {
-        /**
-         * KVDBs must be created by an application script external to
-         * mongod (as root with appropriate uid/gid). This will allow
-         * mongod to be run as a non-root user.
-         *
-         * Leaving the error handling logic intact for test programs.
-         */
-        if (st.getErrno() != ENOENT)
-            invariantHseSt(st);
-
-        st = _db.kvdb_make(mp.c_str(), db.c_str(), params);
-        invariantHseSt(st);
-
-        st = _db.kvdb_open(mp.c_str(), db.c_str(), params);
+    if (!st.ok() && st.getErrno() == ENOENT) {
+        error() << "Error: kvdb open failed - mpool/kvdb " << mp << " may not exist";
     }
 
     invariantHseSt(st);
@@ -491,11 +478,6 @@ void KVDBEngine::_open_kvs(const string& kvs, KVSHandle& h, struct hse_params* p
 
     auto st = _db.kvdb_kvs_open(kvs.c_str(), params, h);
     if (st.getErrno()) {
-        /**
-         * For EA-2, KVSes must be created by an application script,
-         * external to mongod. Leaving the error handling logic
-         * intact for the test programs.
-         */
         if (st.getErrno() != ENOENT)
             invariantHseSt(st);
 

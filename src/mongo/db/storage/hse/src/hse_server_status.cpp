@@ -71,13 +71,12 @@ BSONObj KVDBServerStatusSection::generateSection(OperationContext* txn,
 
     bob.append("versionInfo", _buildStatsBObj(gHseStatVersionList));
     bob.append("appBytes", _buildStatsBObj(gHseStatAppBytesList));
-    if (KVDBStat::isStatsEnabled()) {
+    if (KVDBStat::isStatsEnabledGlobally()) {
         bob.append("counters", _buildStatsBObj(gHseStatCounterList));
         bob.append("latencies", _buildStatsBObj(gHseStatLatencyList));
+        bob.append("rates", _buildStatsBObj(gHseStatRateList));
     }
-    // some of the rates are are always enabled since needed functionally
-    // hence always try to print.
-    bob.append("rates", _buildStatsBObj(gHseStatRateList));
+
 
     return bob.obj();
 }

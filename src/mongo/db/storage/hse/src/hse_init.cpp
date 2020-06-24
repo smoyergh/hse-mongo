@@ -71,7 +71,7 @@ public:
             new KVDBEngine(params.dbpath + "/db", params.dur, formatVersion, params.readOnly);
 
         if (kvdbGlobalOptions.getMetricsEnabled()) {
-            KVDBStat::enableStats(true);
+            KVDBStat::enableStatsGlobally(true);
         }
 
         // Intentionally leaked.
