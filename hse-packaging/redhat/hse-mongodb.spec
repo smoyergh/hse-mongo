@@ -53,7 +53,7 @@ This package contains the MongoDB server software, default configuration files, 
 Summary: MongoDB shell client
 Group: Applications/Databases
 Requires: openssl
-Conflicts: mongodb-shell, mongodb-org-shell
+Conflicts: mongodb, mongodb-org-shell
 
 %description shell
 This package contains the mongo shell.
@@ -61,7 +61,7 @@ This package contains the mongo shell.
 %package mongos
 Summary: MongoDB sharded cluster query router
 Group: Applications/Databases
-Conflicts: mongodb-mongos, mongodb-org-mongos
+Conflicts: mongodb-server, mongodb-org-mongos
 
 %description mongos
 This package contains mongos, the MongoDB sharded cluster query router.
@@ -70,7 +70,7 @@ This package contains mongos, the MongoDB sharded cluster query router.
 Summary: MongoDB tools
 Group: Applications/Databases
 Requires: openssl
-Conflicts: mongodb-tools, mongodb-org-tools
+Conflicts: mongo-tools, mongodb-org-tools
 
 %description tools
 This package contains standard utilities for interacting with MongoDB.
@@ -140,6 +140,11 @@ cp -R jstests $RPM_BUILD_ROOT/usr/share/%{name}-test/
 ln -s /usr/bin/mongo $RPM_BUILD_ROOT/usr/share/%{name}-test/mongo
 ln -s /usr/bin/mongod $RPM_BUILD_ROOT/usr/share/%{name}-test/mongod
 ln -s /usr/bin/mongos $RPM_BUILD_ROOT/usr/share/%{name}-test/mongos
+
+# Special case files need user-only read access for auth tests to work
+chmod 600 $RPM_BUILD_ROOT/usr/share/%{name}-test/jstests/libs/authTestsKey
+chmod 600 $RPM_BUILD_ROOT/usr/share/%{name}-test/jstests/libs/key1
+chmod 600 $RPM_BUILD_ROOT/usr/share/%{name}-test/jstests/libs/key2
 
 # Remove executable flag from JS tests
 for file in `find $RPM_BUILD_ROOT/usr/share/%{name}-test/jstests -type f`; do

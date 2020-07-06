@@ -239,7 +239,7 @@ def do_packages(args):
         print('Looking for tarball at %s...' % args.tarfile)
         if not os.path.exists(args.tarfile):
             print()
-            print('%s not found, building...')
+            print('%s not found, building...' % args.tarfile)
             do_tarball(args, with_tests=True)
 
     print()
