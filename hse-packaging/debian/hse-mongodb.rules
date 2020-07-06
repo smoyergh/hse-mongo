@@ -124,6 +124,11 @@ install: build
 	cp -R $(CURDIR)/buildscripts/resmokelib $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/buildscripts
 	cp -R $(CURDIR)/jstests $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/
 
+	# Special case files need user-only read access for auth tests to work
+	chmod 600 $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/jstests/libs/authTestsKey
+	chmod 600 $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/jstests/libs/key1
+	chmod 600 $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/jstests/libs/key2
+
 	# Appease a handful of tests that expect the binaries to exist in the top level directory
 	ln -s /usr/bin/mongo $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/mongo
 	ln -s /usr/bin/mongod $(CURDIR)/debian/hse-mongodb-test/usr/share/hse-mongodb-test/mongod
@@ -169,7 +174,7 @@ binary-arch: build install
 	dh_link
 	dh_strip -a --dbg-package=hse-mongodb-dbg
 	dh_compress
-	dh_fixperms
+	dh_fixperms --exclude jstests/libs
 	dh_installdeb
 # Disable missing info error related to libmpool in HSE
 #   dh_shlibdeps
