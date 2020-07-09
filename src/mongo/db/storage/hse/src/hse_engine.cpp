@@ -317,9 +317,13 @@ Status KVDBEngine::dropIdent(OperationContext* opCtx, StringData ident) {
     KVDBData pKeyToDel{prefixStr};
 
     if (KVDBIdentType::COLL == type) {
-        KVDBData dataSizeKey{KVDB_prefix + "datasize-" + ident.toString()};
-        KVDBData storageSizeKey{KVDB_prefix + "storagesize-" + ident.toString()};
-        KVDBData numRecordsKey{KVDB_prefix + "numrecords-" + ident.toString()};
+        string dataSizeKeyStr = KVDB_prefix + "datasize-" + ident.toString();
+        string storageSizeKeyStr = KVDB_prefix + "storagesize-" + ident.toString();
+        string numRecordsKeyStr = KVDB_prefix + "numrecords-" + ident.toString();
+
+        KVDBData dataSizeKey{dataSizeKeyStr};
+        KVDBData storageSizeKey{storageSizeKeyStr};
+        KVDBData numRecordsKey{numRecordsKeyStr};
 
         s = ru->nonTxnPfxDel(_mainKvs, pKeyToDel);
         if (!s.ok()) {
@@ -350,7 +354,8 @@ Status KVDBEngine::dropIdent(OperationContext* opCtx, StringData ident) {
         _oplogBlkMgr->dropAllBlocks(opCtx, prefixVal);
         _identCollectionMap.erase(ident);
     } else {  // Index
-        KVDBData indexSizeKey{KVDB_prefix + "indexsize-" + ident.toString()};
+        string indexSizeKeyStr = KVDB_prefix + "indexsize-" + ident.toString();
+        KVDBData indexSizeKey{indexSizeKeyStr};
 
         if (KVDBIdentType::STDINDEX == type) {
             s = ru->nonTxnPfxDel(_stdIdxKvs, pKeyToDel);
