@@ -61,7 +61,12 @@ def get_hse_mongo_version():
 
 
 def get_hse_sha():
-    return "nogit"  # FIXME
+    blob = subprocess.check_output("hse -Vv", shell=True).strip().decode()
+    for line in blob.splitlines():
+        if line.startswith('sha:'):
+            return line.split()[1][:7]
+
+    return "nogit"
 
 
 def get_hse_version():
@@ -69,7 +74,7 @@ def get_hse_version():
         version_str = subprocess.check_output(
             "rpm --queryformat='%{VERSION}' -q hse-devel", shell=True
         ).strip().decode()
-    except subprocess.CalledProcessError as cpe:
+    except subprocess.CalledProcessError:
         try:
             version_str = subprocess.check_output(
                 "dpkg-query --showformat '${Version}' -W hse-devel", shell=True
