@@ -59,7 +59,7 @@ Description: MongoDB tools
 
 Package: hse-mongodb-test
 Architecture: any
-Depends: hse-mongodb-shell, hse-mongodb-server, hse-mongodb-mongos, hse-mongodb-tools
+Depends: hse-mongodb-shell, hse-mongodb-server, hse-mongodb-mongos, hse-mongodb-tools, net-tools
 Description: MongoDB regression test suite
  This package contains the regression test suite distributed with the MongoDB sources.
 

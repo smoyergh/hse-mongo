@@ -95,6 +95,7 @@ install: build
 	mkdir -p $(CURDIR)/debian/hse-mongodb-mongos/usr/bin
 	mkdir -p $(CURDIR)/debian/hse-mongodb-tools/usr/bin
 	cp -v $(CURDIR)/bin/mongo $(CURDIR)/debian/hse-mongodb-shell/usr/bin
+	cp -v $(CURDIR)/bin/mongobridge $(CURDIR)/debian/hse-mongodb-shell/usr/bin
 	cp -v $(CURDIR)/bin/mongod $(CURDIR)/debian/hse-mongodb-server/usr/bin
 	cp -v $(CURDIR)/bin/mongos $(CURDIR)/debian/hse-mongodb-mongos/usr/bin
 
