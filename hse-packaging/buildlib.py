@@ -54,10 +54,17 @@ def get_hse_mongo_sha():
 
 
 def get_hse_mongo_version():
-    with open('%s/src/mongo/db/storage/hse/VERSION' % MONGO_ROOT, 'r') as fd:
-        version = fd.read().strip()
+    hse_conn_version = '0.0'
+    mongo_version_sup = '0.0.0'
 
-    return version
+    with open('%s/src/mongo/db/storage/hse/VERSION' % MONGO_ROOT, 'r') as fd:
+        for line in fd.readlines():
+            if line.startswith('HSE_CONN_VERSION'):
+                hse_conn_version=line.split('=')[-1].strip()
+            elif line.startswith('MONGO_VERSION_SUP'):
+                mongo_version_sup=line.split('=')[-1].strip()
+
+    return '{mvs}.{hcv}'.format(mvs=mongo_version_sup, hcv=hse_conn_version)
 
 
 def get_hse_sha():
@@ -70,24 +77,12 @@ def get_hse_sha():
 
 
 def get_hse_version():
-    try:
-        version_str = subprocess.check_output(
-            "rpm --queryformat='%{VERSION}' -q hse-devel", shell=True
-        ).strip().decode()
-    except subprocess.CalledProcessError:
-        try:
-            version_str = subprocess.check_output(
-                "dpkg-query --showformat '${Version}' -W hse-devel", shell=True
-            ).strip().decode()
-        except subprocess.CalledProcessError:
-            print('hse-devel is not installed')
-            sys.exit(1)
-
-    # assuming x.y.z and ignoring anything after
-    match = re.match(r'^(\d+\.\d+\.\d+)', version_str)
-    version = match.group(1)
-
-    return version
+    hse_min_version_sup = '0.0'
+    with open('%s/src/mongo/db/storage/hse/VERSION' % MONGO_ROOT, 'r') as fd:
+        for line in fd.readlines():
+            if line.startswith('HSE_MIN_VERSION_SUP'):
+                hse_min_version_sup=line.split('=')[-1].strip()
+    return hse_min_version_sup
 
 
 def get_pkg_type(distro):
