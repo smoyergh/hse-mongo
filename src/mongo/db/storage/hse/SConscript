@@ -68,11 +68,7 @@ def getHseConnectorGitSha(conf, env):
 
 def getHseVersion(conf, env):
     hse_ver = 'NA'
-    try:
-        ver_info = subprocess.check_output(['hse', 'version'])
-        hse_ver =  ver_info.split()[-1].strip().decode('utf-8')
-    except:
-        pass
+    # need to enhance this when we have a version api.
     return hse_ver
 
 def getHseConnectorVersion(conf, env):
