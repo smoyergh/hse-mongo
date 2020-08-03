@@ -344,8 +344,9 @@ hse::Status KVDBRecoveryUnit::beginOplogScan(const KVSHandle& h,
                                              const struct CompParms& compparm) {
     KvsCursor* lcursor = 0;
 
+    /* Make sure this is an unbound cursor in order to be see all commits so far. */
     try {
-        lcursor = create_cursor(h, pfx, forward, compparm, _txn);
+        lcursor = create_cursor(h, pfx, forward, compparm, nullptr);
     } catch (...) {
         return hse::Status(ENOMEM);
     }
@@ -356,6 +357,7 @@ hse::Status KVDBRecoveryUnit::beginOplogScan(const KVSHandle& h,
 }
 
 hse::Status KVDBRecoveryUnit::oplogCursorUpdate(KvsCursor* cursor) {
+    /* Make sure this is an unbound cursor in order to be see all commits so far. */
     auto st = cursor->update(nullptr);
     invariantHse(st.ok());
 

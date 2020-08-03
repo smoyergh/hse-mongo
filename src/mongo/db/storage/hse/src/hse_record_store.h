@@ -565,7 +565,7 @@ public:
 
     virtual ~KVDBRecordStoreCursor();
 
-    boost::optional<Record> next() final;
+    virtual boost::optional<Record> next();
 
     virtual boost::optional<Record> seekExact(const RecordId& id);
 
@@ -591,7 +591,7 @@ protected:
 
     virtual bool _currIsHidden(const RecordId& loc);
 
-    virtual boost::optional<Record> _curr();
+    virtual boost::optional<Record> _curr(bool use_txn);
 
     virtual KvsCursor* _getMCursor();
 
@@ -667,7 +667,13 @@ public:
     virtual ~KVDBOplogStoreCursor();
 
     // virtual
+    boost::optional<Record> next();
+
+    // virtual
     boost::optional<Record> seekExact(const RecordId& id);
+
+    // virtual
+    bool restore();
 
     // virtual
     void _reallySeek(const RecordId& id);

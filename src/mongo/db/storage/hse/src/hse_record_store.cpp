@@ -1735,7 +1735,7 @@ boost::optional<Record> KVDBRecordStoreCursor::next() {
             _reallySeek(RecordId(_lastPos.repr() - 1));
     }
 
-    return _curr();
+    return _curr(true);
 }
 
 // Do a get instead of a cursor seek/read and remember the last position
@@ -1801,7 +1801,7 @@ bool KVDBRecordStoreCursor::_currIsHidden(const RecordId& loc) {
     return false;
 }
 
-boost::optional<Record> KVDBRecordStoreCursor::_curr() {
+boost::optional<Record> KVDBRecordStoreCursor::_curr(bool use_txn) {
     __attribute__((aligned(16))) struct KVDBRecordStoreKey key;
     hse::Status st;
 
@@ -1832,7 +1832,7 @@ boost::optional<Record> KVDBRecordStoreCursor::_curr() {
         // The value is "large", so we switch to the get interface to read its contents
         KRSK_CLEAR(key);
         _krskSetPrefixFromKey(key, elKey);
-        found = _getKey(_opctx, this->_compparms, &key, _colKvs, _largeKvs, loc, _largeVal, true);
+        found = _getKey(_opctx, this->_compparms, &key, _colKvs, _largeKvs, loc, _largeVal, use_txn);
         invariantHse(found);
         elVal = _largeVal;
     }
@@ -1962,6 +1962,23 @@ void KVDBCappedRecordStoreCursor::_packKey(struct KVDBRecordStoreKey* key,
 // Begin Implementation of KVDBOplogStoreCursor
 //
 
+// Note that oplog store cursors behave differently from other record store cursors.
+// In particular, their view isn't identical to that of a transaction in its opctx.
+// They must be able to see all records persisted < _oplogReadUntil.
+// 1) Oplog cursors are unbound cursors that can see all records persisted till the
+//    point in time when they were created or last updated.
+// 2) All read operations in the context of an oplog cursor must be unbound.
+//    A transaction in the same opctx may not be able to see keys that the cursor should.
+// 3) Forward cursors are subject to visibility rules such that they can read records
+//    (keys are oplog timestamps) that are known to have been committed and persisted
+//    with no holes in between. Read _oplogReadUntil *before* updating a cursor's view.
+// 4) From 3), an oplog store cursor can't see a transaction's own in flight mutations.
+// 5) Note that WT uses oplog cursors bound to the active transaction in its recovery unit.
+//    To ensure that it can see all commits in its cursor read snapshot, it throws a
+//    WCE if there is an active txn and it's not the only thread writing (if it is the
+//    only thread writing, it can be assured its snapshot isn't missing commits from other
+//    writing threads).
+// In our implementation, the cursor runs unbound and is decoupled from an opctx's transaction.
 KVDBOplogStoreCursor::KVDBOplogStoreCursor(OperationContext* opctx,
                                            KVDB& db,
                                            KVSHandle& colKvs,
@@ -1973,14 +1990,27 @@ KVDBOplogStoreCursor::KVDBOplogStoreCursor(OperationContext* opctx,
                                            const struct CompParms& compparms)
     : KVDBCappedRecordStoreCursor(
           opctx, db, colKvs, largeKvs, prefix, forward, cappedVisMgr, compparms),
+      _readUntilForOplog(RecordId()),
       _opBlkMgr{opBlkMgr} {
-    if (_forward)
-        _readUntilForOplog = RecordId(_cappedVisMgr.getPersistBoundary());
-
     _hseOplogCursorCreateCounter.add();
 }
 
 KVDBOplogStoreCursor::~KVDBOplogStoreCursor() {}
+
+bool KVDBOplogStoreCursor::restore() {
+    // The cursor (should one exist) needs to be updated to the latest read snapshot.
+    _needUpdate = true;
+
+    // An oplog cursor must be able to see everything committed so far. Use an unbound get.
+    // There may already be an active txn in this recovery unit. Do not bind to it.
+    // Check whether the key we seeked to last is still present.
+    if (_lastPos.isNormal()) {
+        if (!seekExact(_lastPos))
+            return false;
+    }
+
+    return true;
+}
 
 boost::optional<Record> KVDBOplogStoreCursor::seekExact(const RecordId& id) {
     __attribute__((aligned(16))) struct KVDBRecordStoreKey key;
@@ -1992,6 +2022,8 @@ boost::optional<Record> KVDBOplogStoreCursor::seekExact(const RecordId& id) {
     bool found = false;
     unsigned int offset;
 
+    // An oplog cursor must be able to see everything committed so far. Use an unbound get.
+    // There may already be an active txn in this recovery unit. Do not bind to it.
     found = _getKey(_opctx, this->_compparms, &key, _colKvs, _largeKvs, id, _seekVal, false);
     if (!found)
         return {};
@@ -2026,6 +2058,35 @@ void KVDBOplogStoreCursor::_reallySeek(const RecordId& id) {
     _needSeek = false;
 }
 
+boost::optional<Record> KVDBOplogStoreCursor::next() {
+    if (_eof)
+        return {};
+
+    // [HSE_REVISIT] Note that oplog cursor creation is deferred until next().
+    // This may mean that an optime returned by seekExact (unbound get) is no
+    // longer present in the newly created cursor read snapshot. Later optimes
+    // may also have been deleted and we could end up reading past them. We
+    // shouldn't be deferring oplog cursor creation to next() and should use
+    // the same unbound cursor for all seekExact and next() operations.
+    // At the moment, that causes an OOM failure in HSE cursor create.
+    // Alternatively, we could seek to _lastPos here, confirm _lastPos still exists
+    // in the cursor snapshot before returning the next record.
+    _getMCursor();
+    if (_needSeek) {
+        if (_forward)
+            _reallySeek(RecordId(_lastPos.repr() + 1));
+        else
+            _reallySeek(RecordId(_lastPos.repr() - 1));
+    }
+
+    // Note that this cursor may use the get interface to read large values.
+    // An oplog cursor must be able to see everything committed so far.
+    // It must set use_txn to false and use unbound gets in order for it to be able to
+    // see all the values committed so far in time. There may already be an active txn
+    // in this recovery unit. Do not bind to it. We don't know what the txn can see.
+    return _curr(false);
+}
+
 KvsCursor* KVDBOplogStoreCursor::_getMCursor() {
     KVDBRecoveryUnit* ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(_opctx);
     hse::Status st;
@@ -2033,6 +2094,9 @@ KvsCursor* KVDBOplogStoreCursor::_getMCursor() {
     if (!_cursorValid) {
         KVDBData compatKey{(uint8_t*)&_prefixValBE, sizeof(_prefixValBE)};
         _updateReadUntil();
+
+        // We must update _oplogReadUntil before we create or update a cursor.
+        // An oplog cursor must be unbound in order to see everything committed so far.
         st = ru->beginOplogScan(_colKvs, compatKey, _forward, &_mCursor, this->_compparms);
         invariantHseSt(st);
         _cursorValid = true;
@@ -2040,6 +2104,9 @@ KvsCursor* KVDBOplogStoreCursor::_getMCursor() {
             (_forward && (_lastPos != RecordId())) || (!_forward && (_lastPos != RecordId::max()));
     } else if (_needUpdate) {
         _updateReadUntil();
+
+        // We must update _oplogReadUntil before we create or update a cursor.
+        // An oplog cursor must be unbound in order to see everything committed so far.
         st = ru->oplogCursorUpdate(_mCursor);
         invariantHseSt(st);
     }
@@ -2074,9 +2141,10 @@ void KVDBOplogStoreCursor::_updateReadUntil() {
     // committed or aborted) or whose durability state is unknown (i.e. not
     // known to have been persisted even if it has committed) cannot be read.
 
-    // Query the oldest record whose persist state is unknown.  A new KVDB txn will begin
-    // in ru during this cursor create/update, which can see all records
-    // persisted thus far.
+    // Query the oldest record whose persist state is unknown.
+    // This function must only be called before either creating or
+    // updating an unbound cursor. That ensures the newly created or updated
+    // unbound cursor can see everything persisted so far in time.
     _readUntilForOplog = RecordId(_cappedVisMgr.getPersistBoundary());
 }
 
