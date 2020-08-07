@@ -7,11 +7,11 @@
 #    This code is derived from and modifies the MongoDB project.
 #
 
+import argparse
 import os
 import shutil
 import subprocess
 import tarfile
-from argparse import ArgumentParser
 from getpass import getuser
 
 import buildlib
@@ -57,17 +57,18 @@ def parse_args():
         MONGO_ROOT, 'hse-mongodb-linux-x86_64-%s.tgz' % VERSION
     )
 
-    parser = ArgumentParser()
+    parser = argparse.ArgumentParser()
 
     grp = parser.add_argument_group('actions')
     grp = grp.add_mutually_exclusive_group()
     grp.add_argument('--packages', action='store_true',
-                     help='Build packages (default action)')
+                     help='Build binary tarball plus packages (default '
+                          'action)')
     grp.add_argument('--tarball', action='store_true',
-                     help='Build binary tarball')
+                     help='Build binary tarball only')
     grp.add_argument('--tarball-with-tests', action='store_true',
-                     help='Build binary tarball including JavaScript '
-                          'regression suite')
+                     help='Build binary tarball only, but also include the '
+                          'JavaScript test suites')
 
     grp = parser.add_argument_group('options')
     grp.add_argument('--build-number', '-b', type=int)
@@ -89,12 +90,16 @@ def parse_args():
     grp.add_argument('--verbose', '-v', action='store_true',
                      help='Verbose build output')
 
+    # Hidden option to skip scons run and tarball generation, if possible.
+    grp.add_argument('--script-test', action='store_true',
+                     help=argparse.SUPPRESS)
+
     args = parser.parse_args()
 
     return args
 
 
-def do_tarball(args, with_tests=False):
+def do_scons_and_tarball(args, with_tests=False):
     # init build options
     devtoolset_ok = buildlib.check_devtoolset_ok()
     ssl_ok = buildlib.check_ssl_ok()
@@ -232,15 +237,15 @@ def do_packages(args):
     except FileNotFoundError:
         pass
 
-    if args.clean:
-        do_tarball(args, with_tests=True)
-    else:
+    if args.script_test:
         print()
         print('Looking for tarball at %s...' % args.tarfile)
         if not os.path.exists(args.tarfile):
             print()
             print('%s not found, building...' % args.tarfile)
-            do_tarball(args, with_tests=True)
+            do_scons_and_tarball(args, with_tests=True)
+    else:
+        do_scons_and_tarball(args, with_tests=True)
 
     print()
     print('Building packages for %s...' % distro)
@@ -286,9 +291,9 @@ def main():
     args = parse_args()
 
     if args.tarball:
-        do_tarball(args)
+        do_scons_and_tarball(args)
     elif args.tarball_with_tests:
-        do_tarball(args, with_tests=True)
+        do_scons_and_tarball(args, with_tests=True)
     else:
         do_packages(args)
 
