@@ -51,18 +51,18 @@
 
 using namespace std;
 
+using hse::KVDB_prefix;
 using hse::KVDBData;
 using hse::KVDBRecordStoreKey;
-using hse::KVDB_prefix;
 
-using hse::VALUE_META_THRESHOLD_LEN;
-using hse::VALUE_META_SIZE;
-using hse::DEFAULT_PFX_LEN;
+using hse::_cursorRead;
 using hse::_getNumChunks;
 using hse::_getValueLength;
 using hse::_getValueOffset;
-using hse::_cursorRead;
 using hse::arrayToHexStr;
+using hse::DEFAULT_PFX_LEN;
+using hse::VALUE_META_SIZE;
+using hse::VALUE_META_THRESHOLD_LEN;
 
 using hse_stat::_hseAppBytesReadCounter;
 using hse_stat::_hseAppBytesWrittenCounter;
@@ -70,9 +70,9 @@ using hse_stat::_hseOplogCursorCreateCounter;
 using hse_stat::_hseOplogCursorReadRate;
 
 using mongo::BSONElement;
-using mongo::ErrorCodes;
-using mongo::BSONType;
 using mongo::BSONObjBuilder;
+using mongo::BSONType;
+using mongo::ErrorCodes;
 
 // Collection configuration namespace
 namespace collconf {
@@ -1832,7 +1832,8 @@ boost::optional<Record> KVDBRecordStoreCursor::_curr(bool use_txn) {
         // The value is "large", so we switch to the get interface to read its contents
         KRSK_CLEAR(key);
         _krskSetPrefixFromKey(key, elKey);
-        found = _getKey(_opctx, this->_compparms, &key, _colKvs, _largeKvs, loc, _largeVal, use_txn);
+        found =
+            _getKey(_opctx, this->_compparms, &key, _colKvs, _largeKvs, loc, _largeVal, use_txn);
         invariantHse(found);
         elVal = _largeVal;
     }

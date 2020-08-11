@@ -39,10 +39,10 @@
 
 #include "hse_util.h"
 
-using hse::KVDB;
 using hse::ClientTxn;
-using hse::KVDBData;
 using hse::CompParms;
+using hse::KVDB;
+using hse::KVDBData;
 
 using namespace std;
 
