@@ -36,7 +36,6 @@
 #include <atomic>
 #include <functional>
 #include <memory>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -58,16 +57,16 @@
 #include "hse_recovery_unit.h"
 #include "hse_util.h"
 
-using hse::KVDB;
-using hse::KVDBRecordStoreKey;
-using hse::KVDBNotImplementedError;
-using hse::Status;
 using hse::CompParms;
 using hse::DEFAULT_PFX_LEN;
+using hse::KVDB;
+using hse::KVDBNotImplementedError;
+using hse::KVDBRecordStoreKey;
 using hse::OPLOG_PFX_LEN;
-using mongo::StringData;
+using hse::Status;
 using mongo::BSONObj;
 using mongo::BSONObjBuilder;
+using mongo::StringData;
 
 namespace collconf {
 
@@ -565,7 +564,7 @@ public:
 
     virtual ~KVDBRecordStoreCursor();
 
-    boost::optional<Record> next() final;
+    virtual boost::optional<Record> next();
 
     virtual boost::optional<Record> seekExact(const RecordId& id);
 
@@ -591,7 +590,7 @@ protected:
 
     virtual bool _currIsHidden(const RecordId& loc);
 
-    virtual boost::optional<Record> _curr();
+    virtual boost::optional<Record> _curr(bool use_txn);
 
     virtual KvsCursor* _getMCursor();
 
@@ -667,7 +666,13 @@ public:
     virtual ~KVDBOplogStoreCursor();
 
     // virtual
+    boost::optional<Record> next();
+
+    // virtual
     boost::optional<Record> seekExact(const RecordId& id);
+
+    // virtual
+    bool restore();
 
     // virtual
     void _reallySeek(const RecordId& id);
