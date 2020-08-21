@@ -85,6 +85,17 @@ def get_hse_version():
     return hse_min_version_sup
 
 
+def get_mongo_version():
+    mongo_version_sup = '0.0.0'
+
+    with open('%s/src/mongo/db/storage/hse/VERSION' % MONGO_ROOT, 'r') as fd:
+        for line in fd.readlines():
+            if line.startswith('MONGO_VERSION_SUP'):
+                mongo_version_sup=line.split('=')[-1].strip()
+
+    return mongo_version_sup
+
+
 def get_pkg_type(distro):
     # borrowed from make_pkg in buildscripts/packager.py
     if re.search("^(debian|ubuntu)", distro):
