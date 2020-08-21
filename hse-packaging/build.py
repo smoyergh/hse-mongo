@@ -20,6 +20,7 @@ import buildlib
 DEVTOOLSET_ROOT = buildlib.DEVTOOLSET_ROOT
 MONGO_ROOT = buildlib.MONGO_ROOT
 VERSION = buildlib.get_hse_mongo_version()
+MONGO_VERSION = buildlib.get_mongo_version()
 
 DISTSRC_TARGETS = [
     'GNU-AGPL-3.0',
@@ -125,6 +126,8 @@ def do_scons_and_tarball(args, with_tests=False):
         targets = SCONS_TARGETS + ['dbtest']
     else:
         targets = SCONS_TARGETS
+
+    scons_flags += ['MONGO_VERSION=%s' % MONGO_VERSION]
 
     if args.verbose:
         scons_flags += ['VERBOSE=1']
