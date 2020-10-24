@@ -160,6 +160,8 @@ Status KvsCursor::update(ClientTxn* lnkd_txn) {
     unsigned long long sleepTime = 0;
 
     HSE_KVDB_OPSPEC_INIT(&opspec);
+    if (!_forward)
+	    opspec.kop_flags |= HSE_KVDB_KOP_FLAG_REVERSE;
 
     _lnkd_txn = lnkd_txn;
     if (lnkd_txn) {
