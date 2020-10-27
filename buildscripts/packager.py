@@ -301,7 +301,7 @@ class Distro(object):
         if re.search("(suse)", self.n):
             return [ "suse11", "suse12" ]
         elif re.search("(redhat|fedora|centos)", self.n):
-            return [ "rhel80", "rhel81", "rhel82", "rhel83", "rhel70", "rhel71", "rhel72", "rhel77", "rhel62", "rhel55",
+            return [ "rhel80", "rhel81", "rhel82", "rhel83", "rhel70", "rhel71", "rhel72", "rhel77", "rhel79", "rhel62", "rhel55",
                      "fedora25", "fedora28", ]
         elif self.n == 'amazon':
             return [ "amazon" ]
