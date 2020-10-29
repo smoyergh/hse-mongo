@@ -73,10 +73,6 @@ public:
 
     virtual ~KvsCursor();
 
-    virtual ClientTxn* get_txn() {
-        return _lnkd_txn;
-    }
-
     virtual Status update(ClientTxn* lnkd_txn = 0);
 
     virtual Status seek(const KVDBData& key, const KVDBData* kmax, KVDBData* posKey);
@@ -88,10 +84,8 @@ public:
     virtual Status restore();
 
 protected:
+    void _kvs_cursor_create(ClientTxn* lnkd_txn);
     int _read_kvs();
-    bool _kvs_is_next() {
-        return true;
-    }
     bool _is_eof() {
         return _kvs_eof;
     }
@@ -99,18 +93,22 @@ protected:
     struct hse_kvs* _kvs;  // not owned
     KVDBData _pfx;
     bool _forward{true};
-    ClientTxn* _lnkd_txn;  // not owned
-    std::mutex _mutex;
-    bool _is_ready;
 
     struct hse_kvs_cursor* _cursor;
     int _start;
     int _end;
     int _curr;
 
-    bool _kvs_stale;
+    // Last read key. If null, this cursor was just created.
     const void* _kvs_key;
     size_t _kvs_klen;
+
+    // If last operation was a seek, this will store the key we landed on.
+    // Used when recreating a cursor in update.
+    // Using a separate variable avoids the issue with a stale key in _kvs_key if
+    // _kvs_key is overloaded for this use as well.
+    const void* _kvs_seek_key;
+    size_t _kvs_seek_klen;
 
     const void* _kvs_val;
     // Because we are in the context of a cursor if the value is multi chunks,
@@ -152,8 +150,5 @@ protected:
     // headers. If compression is off, it is the same as _total_len.
 
     struct CompParms _compparms;
-
-    bool _eof;
-    int _next_ret;
 };
 }
