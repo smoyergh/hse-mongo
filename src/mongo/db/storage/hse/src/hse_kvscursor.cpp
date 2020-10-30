@@ -190,13 +190,14 @@ Status KvsCursor::update(ClientTxn* lnkd_txn) {
     st = Status{::hse_kvs_cursor_seek(
         _cursor, 0, seekKey.data(), seekKey.len(), &_kvs_seek_key, &_kvs_seek_klen)};
     if (st.ok() && lastOpWasRead) {
-        // Last op was a read, if seek didn't land on the key we had read, it was deleted. Don't skip.
+        // Last op was a read, if seek didn't land on the key we had read, it was deleted. Don't
+        // skip.
         if (seekKey.len() == _kvs_seek_klen &&
             0 == memcmp(seekKey.data(), _kvs_seek_key, _kvs_seek_klen)) {
             bool eof;
 
             _read_kvs(eof);
-	}
+        }
     }
 
     return st;
