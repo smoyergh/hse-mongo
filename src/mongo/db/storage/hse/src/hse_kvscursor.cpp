@@ -74,9 +74,6 @@ KvsCursor* create_cursor(KVSHandle kvs,
     return new KvsCursor(kvs, prefix, forward, lnkd_txn, compparms);
 }
 
-//
-// Forward-only cursor class
-//
 void KvsCursor::_kvs_cursor_create(ClientTxn* lnkd_txn) {
     struct hse_kvdb_opspec opspec;
     int retries = 0;
@@ -141,7 +138,6 @@ KvsCursor::KvsCursor(KVSHandle handle,
       _kvs_seek_klen(0),
       _kvs_val(0),
       _kvs_vlen(0),
-      _kvs_eof(false),
       _kvs_num_chunks(0),
       _offset(0),
       _total_len(0),
@@ -180,7 +176,7 @@ Status KvsCursor::update(ClientTxn* lnkd_txn) {
 
     // Recreating cursor and seeking to last point. Copy out key before destroying the cursor.
     // Skip a key after seek if the last op was a read.
-    bool skipme = !_kvs_seek_key && _kvs_key;
+    bool lastOpWasRead = !_kvs_seek_key && _kvs_key;
     const void* skey = _kvs_seek_key ?: _kvs_key;
     size_t sklen = _kvs_seek_klen ?: _kvs_klen;
     auto seekKey = KVDBData((const uint8_t*)skey, (int)sklen, true);
@@ -191,14 +187,16 @@ Status KvsCursor::update(ClientTxn* lnkd_txn) {
     _hseKvsCursorDestroyLatency.end(lt);
 
     _kvs_cursor_create(lnkd_txn);
-    _kvs_eof = false;  // Let the next cursor read find out.
     st = Status{::hse_kvs_cursor_seek(
         _cursor, 0, seekKey.data(), seekKey.len(), &_kvs_seek_key, &_kvs_seek_klen)};
-    if (st.ok() && skipme) {
-        // Last op was a read, if we don't find the key we read, it was deleted. Don't skip.
+    if (st.ok() && lastOpWasRead) {
+        // Last op was a read, if seek didn't land on the key we had read, it was deleted. Don't skip.
         if (seekKey.len() == _kvs_seek_klen &&
-            0 == memcmp(seekKey.data(), _kvs_seek_key, _kvs_seek_klen))
-            _read_kvs();
+            0 == memcmp(seekKey.data(), _kvs_seek_key, _kvs_seek_klen)) {
+            bool eof;
+
+            _read_kvs(eof);
+	}
     }
 
     return st;
@@ -220,11 +218,10 @@ Status KvsCursor::seek(const KVDBData& key, const KVDBData* kmax, KVDBData* pos)
 Status KvsCursor::read(KVDBData& key, KVDBData& val, bool& eof) {
     // We have guaranteed that the only possible error value returned is ECANCELED, which
     // we will return eagerly even if the "next" value might be from the connector itself.
-    int ret = _read_kvs();
+    int ret = _read_kvs(eof);
     if (ret)
         return ret;
 
-    eof = _is_eof();
     if (!eof) {
         key = KVDBData((const uint8_t*)_kvs_key, (int)_kvs_klen);
         val = KVDBData((const uint8_t*)_kvs_val, (int)_kvs_vlen);
@@ -234,8 +231,9 @@ Status KvsCursor::read(KVDBData& key, KVDBData& val, bool& eof) {
     return 0;
 }
 
-int KvsCursor::_read_kvs() {
+int KvsCursor::_read_kvs(bool& eof) {
     Status st{};
+    bool _eof;
 
     _kvs_seek_key = 0;
     _kvs_seek_klen = 0;
@@ -243,10 +241,11 @@ int KvsCursor::_read_kvs() {
     _hseKvsCursorReadCounter.add();
     auto lt = _hseKvsCursorReadLatency.begin();
     st = Status{
-        ::hse_kvs_cursor_read(_cursor, 0, &_kvs_key, &_kvs_klen, &_kvs_val, &_kvs_vlen, &_kvs_eof)};
+        ::hse_kvs_cursor_read(_cursor, 0, &_kvs_key, &_kvs_klen, &_kvs_val, &_kvs_vlen, &_eof)};
     _hseKvsCursorReadLatency.end(lt);
 
-    if (st.ok() && !_kvs_eof) {
+    eof = _eof;
+    if (st.ok() && !_eof) {
         unsigned int off_comp;
 
         computeFraming((const uint8_t*)_kvs_val,

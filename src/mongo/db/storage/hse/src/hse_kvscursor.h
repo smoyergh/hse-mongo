@@ -85,10 +85,7 @@ public:
 
 protected:
     void _kvs_cursor_create(ClientTxn* lnkd_txn);
-    int _read_kvs();
-    bool _is_eof() {
-        return _kvs_eof;
-    }
+    int _read_kvs(bool& eof);
 
     struct hse_kvs* _kvs;  // not owned
     KVDBData _pfx;
