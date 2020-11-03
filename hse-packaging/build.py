@@ -144,7 +144,7 @@ def do_scons_and_tarball(args, with_tests=False):
 
     # clean
     if args.clean:
-        cmd = "rm -rf %s" % os.path.join(MONGO_ROOT, 'build')
+        cmd = "rm -rf %s" % os.path.join(MONGO_ROOT, 'build/*')
 
         print(cmd)
         subprocess.check_call(cmd, cwd=MONGO_ROOT, shell=True)

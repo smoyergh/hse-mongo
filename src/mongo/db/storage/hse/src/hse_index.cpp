@@ -293,7 +293,7 @@ void KVDBIdxCursorBase::_ensureCursor() {
 
 void KVDBIdxBase::loadCounter() {
     bool found = false;
-    KVDBData key{_indexSizeKey};
+    KVDBData key{_indexSizeKeyKvs};
     KVDBData val{};
     val.createOwned(sizeof(int64_t));
 
@@ -310,7 +310,7 @@ void KVDBIdxBase::loadCounter() {
 void KVDBIdxBase::updateCounter() {
     uint64_t bigCtr = endian::nativeToBig(_indexSize.load());
     string valString = std::string(reinterpret_cast<const char*>(&bigCtr), sizeof(bigCtr));
-    KVDBData key{_indexSizeKey};
+    KVDBData key{_indexSizeKeyKvs};
     KVDBData val = KVDBData{valString};
 
     auto st = _db.kvs_put(_idxKvs, key, val);
@@ -318,7 +318,7 @@ void KVDBIdxBase::updateCounter() {
 }
 
 void KVDBIdxBase::incrementCounter(KVDBRecoveryUnit* ru, int size) {
-    ru->incrementCounter(_indexSizeKey, &_indexSize, size);
+    ru->incrementCounter(_indexSizeKeyID, &_indexSize, size);
 }
 
 void KVDBIdxCursorBase::_destroyMCursor() {
@@ -630,8 +630,11 @@ KVDBIdxBase::KVDBIdxBase(KVDB& db,
       _ident(ident),
       _order(order),
       _numFields(numFields),
-      _indexSizeKey(indexKey) {
+      _indexSizeKeyKvs(indexKey) {
     int indexFormatVersion = 0;  // default
+
+    _indexSizeKeyID = KVDBCounterMapUniqID.fetch_add(1);
+
     if (config.hasField("index_format_version")) {
         indexFormatVersion = config.getField("index_format_version").numberInt();
     }

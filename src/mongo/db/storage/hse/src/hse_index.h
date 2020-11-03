@@ -245,8 +245,13 @@ protected:
     const Ordering _order;
     KeyString::Version _keyStringVersion;
     int _numFields;
+    const std::string _indexSizeKeyKvs;
+    unsigned long _indexSizeKeyID;
+
+    char _pad[128];
+
     std::atomic<long long> _indexSize;
-    const std::string _indexSizeKey;
+    char _indexSizePad[128 - sizeof(_indexSize)];
 };
 
 class KVDBUniqIdx : public KVDBIdxBase {

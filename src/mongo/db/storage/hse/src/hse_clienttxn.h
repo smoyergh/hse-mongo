@@ -52,15 +52,26 @@ namespace hse {
 
 class TxnCache {
 public:
-    ~TxnCache();
+    ~TxnCache() {
+        if (_kvdb)
+            release();
+    }
 
-    void set_kvdb(hse_kvdb* kvdb);
+    void set_kvdb(hse_kvdb* kvdb) {
+        _kvdb = kvdb;
+    }
 
-    void release();
+    void release() {
+        _kvdb = NULL;
+    }
 
-    hse_kvdb_txn* alloc();
+    hse_kvdb_txn* alloc() {
+        return ::hse_kvdb_txn_alloc(_kvdb);
+    }
 
-    void free(hse_kvdb_txn* txn);
+    void free(hse_kvdb_txn* txn) {
+        ::hse_kvdb_txn_free(_kvdb, txn);
+    }
 
 private:
     hse_kvdb* _kvdb{0};
@@ -70,15 +81,26 @@ extern TxnCache* g_txn_cache;
 
 class ClientTxn {
 public:
-    ClientTxn(struct hse_kvdb* kvdb);
+    ClientTxn(struct hse_kvdb* kvdb) : _kvdb(kvdb), _txn(0) {
+        _txn = g_txn_cache->alloc();
+    }
 
-    virtual ~ClientTxn();
+    virtual ~ClientTxn() {
+        if (_txn)
+            g_txn_cache->free(_txn);
+    }
 
-    Status begin();
+    Status begin() {
+        return Status(::hse_kvdb_txn_begin(_kvdb, _txn));
+    }
 
-    Status commit();
+    Status commit() {
+        return Status(::hse_kvdb_txn_commit(_kvdb, _txn));
+    }
 
-    Status abort();
+    Status abort() {
+        return Status(::hse_kvdb_txn_abort(_kvdb, _txn));
+    }
 
     struct hse_kvdb_txn* get_kvdb_txn() {
         return _txn;

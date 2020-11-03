@@ -45,6 +45,8 @@
 #include "hse_util.h"
 #include "hse_versions.h"
 
+#include <syscall.h>
+
 using namespace std;
 using namespace std::chrono;
 
@@ -59,10 +61,16 @@ vector<KVDBStat*> gHseStatLatencyList;
 vector<KVDBStat*> gHseStatAppBytesList;
 vector<KVDBStat*> gHseStatRateList;
 
+// Current time as maintained by the stat rate counter thread, updated once per second.
+// May lag the actual time due to scheduling, but will never go backward.
+std::chrono::time_point<std::chrono::steady_clock> gHseStatTime;
+
 bool KVDBStat::statsEnabled = false;
 
 // begin KVDBStat
-KVDBStat::KVDBStat(const string name) : _name(name) {}
+KVDBStat::KVDBStat(const string name) : _name(name) {
+    _enabled = statsEnabled || _enableOverride;
+}
 
 void KVDBStat::appendTo(BSONObjBuilder& bob) const {
     invariantHse(false);
@@ -70,15 +78,20 @@ void KVDBStat::appendTo(BSONObjBuilder& bob) const {
 
 void KVDBStat::enableStatsGlobally(bool enable) {
     statsEnabled = enable;
+
+    for (auto st : gHseStatCounterList)
+        st->_enabled = statsEnabled || st->_enableOverride;
+    for (auto st : gHseStatLatencyList)
+        st->_enabled = statsEnabled || st->_enableOverride;
+    for (auto st : gHseStatAppBytesList)
+        st->_enabled = statsEnabled || st->_enableOverride;
+    for (auto st : gHseStatRateList)
+        st->_enabled = statsEnabled || st->_enableOverride;
 }
 
 // This does not reflect enable overrides
 bool KVDBStat::isStatsEnabledGlobally() {
     return statsEnabled;
-}
-
-bool KVDBStat::isStatEnabled() const {
-    return statsEnabled || _enableOverride;
 }
 
 KVDBStat::~KVDBStat() {}
@@ -90,19 +103,28 @@ KVDBStatCounter::KVDBStatCounter(const string name) : KVDBStat(name) {
 }
 
 void KVDBStatCounter::appendTo(BSONObjBuilder& bob) const {
+    int64_t accum = 0;
+    unsigned int i;
+
     if (!isStatEnabled()) {
         return;
     }
 
-    bob.append(_name, _count.load(memory_order::memory_order_relaxed));
+    for (i = 0; i < sizeof(_bktv) / sizeof(_bktv[0]); ++i)
+        accum += _bktv[i]._count.load(memory_order::memory_order_relaxed);
+
+    bob.append(_name, accum);
 }
 
-void KVDBStatCounter::add(int64_t incr) {
-    if (!isStatEnabled()) {
-        return;
-    }
+void KVDBStatCounter::add_impl(int64_t incr) {
+    unsigned int cpuid, nodeid;
 
-    _count.fetch_add(incr, memory_order::memory_order_relaxed);
+    if (syscall(SYS_getcpu, &cpuid, &nodeid))
+        cpuid = 0;
+
+    cpuid %= (sizeof(_bktv) / sizeof(_bktv[0]));
+
+    _bktv[cpuid]._count.fetch_add(incr, memory_order::memory_order_relaxed);
 }
 
 KVDBStatCounter::~KVDBStatCounter() {}
@@ -148,19 +170,7 @@ void KVDBStatLatency::appendTo(BSONObjBuilder& bob) const {
     bob.append(_name, lBob.obj());
 }
 
-LatencyToken KVDBStatLatency::begin() const {
-    if (!isStatEnabled()) {
-        return std::chrono::time_point<std::chrono::high_resolution_clock>::min();
-    } else {
-        return chrono::high_resolution_clock::now();
-    }
-}
-
-void KVDBStatLatency::end(LatencyToken& bTime) {
-    if (!isStatEnabled()) {
-        return;
-    }
-
+void KVDBStatLatency::end_impl(LatencyToken bTime) {
     auto eTime = chrono::high_resolution_clock::now();
     int64_t latency = (std::chrono::duration_cast<std::chrono::nanoseconds>(eTime - bTime)).count();
 
@@ -202,6 +212,7 @@ KVDBStatVersion::~KVDBStatVersion() {}
 
 // begin KVDBStatAppBytes
 KVDBStatAppBytes::KVDBStatAppBytes(const string name, bool enableOverride) : KVDBStat(name) {
+    _enabled = statsEnabled || enableOverride;
     _enableOverride = enableOverride;
     gHseStatAppBytesList.push_back(this);
 }
@@ -212,11 +223,24 @@ void KVDBStatAppBytes::appendTo(BSONObjBuilder& bob) const {
         return;
     }
 
-    bob.append(_name, _count.load(memory_order::memory_order_relaxed));
+    int64_t accum = 0;
+    unsigned int i;
+
+    for (i = 0; i < sizeof(_bktv) / sizeof(_bktv[0]); ++i)
+        accum += _bktv[i]._count.load(memory_order::memory_order_relaxed);
+
+    bob.append(_name, accum);
 }
 
 void KVDBStatAppBytes::add(int64_t incr) {
-    _count.fetch_add(incr, memory_order::memory_order_relaxed);
+    unsigned int cpuid, nodeid;
+
+    if (syscall(SYS_getcpu, &cpuid, &nodeid))
+        cpuid = 0;
+
+    cpuid %= (sizeof(_bktv) / sizeof(_bktv[0]));
+
+    _bktv[cpuid]._count.fetch_add(incr, memory_order::memory_order_relaxed);
 }
 
 KVDBStatAppBytes::~KVDBStatAppBytes() {}
@@ -226,6 +250,7 @@ KVDBStatAppBytes::~KVDBStatAppBytes() {}
 std::unique_ptr<KVDBStatRate::RateThread> KVDBStatRate::_rateThread{};
 
 KVDBStatRate::KVDBStatRate(const string name, bool enableOverride) : KVDBStat(name) {
+    _enabled = statsEnabled || enableOverride;
     _enableOverride = enableOverride;
     _lastUpdatedMs = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
     gHseStatRateList.push_back(this);
@@ -284,6 +309,8 @@ void KVDBStatRate::RateThread::run() {
     mongo::Client::initThread(name().c_str());
 
     while (!_shuttingDown.load()) {
+        gHseStatTime = chrono::steady_clock::now();
+
         for (auto st : gHseStatRateList) {
             if (st->isStatEnabled()) {
                 KVDBStatRate* rateP = static_cast<KVDBStatRate*>(st);
@@ -291,7 +318,7 @@ void KVDBStatRate::RateThread::run() {
             }
         }
 
-        mongo::sleepmillis(PERIOD_MS);
+        mongo::sleepmillis(1000);
     }
     mongo::log() << "stopping " << name() << " thread";
 }

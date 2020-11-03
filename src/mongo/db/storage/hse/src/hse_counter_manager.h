@@ -60,23 +60,24 @@ public:
     void registerIndex(KVDBIdxBase* idx);
     void deregisterIndex(KVDBIdxBase* idx);
 
-    void incrementNumUpdates();
+    void syncPeriodic();
     void sync();
     void sync_for_rename(std::string& ident);
 
 private:
     void _syncAllCounters();
-    void _syncCountersIfNeeded();
 
     // HSE_REVISIT Implement a crash safe semantic
     bool _crashSafe = false;
+    std::chrono::time_point<std::chrono::steady_clock> _updatetime;
 
-    std::atomic<bool> _syncing{false};
-    std::mutex _setLock;
     std::set<KVDBRecordStore*> _recordStores;
     std::set<KVDBIdxBase*> _indexes;
 
-    std::atomic<long long> _updates{0};  // approx. number of updates since last sync
-    static const int _kSyncEvery = 10000;
+    char _pad[128];
+
+    std::atomic<bool> _syncing{false};
+
+    std::mutex _setLock;
 };
 }

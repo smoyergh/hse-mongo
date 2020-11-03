@@ -33,6 +33,8 @@
  */
 #define MONGO_LOG_DEFAULT_COMPONENT ::mongo::logger::LogComponent::kStorage
 
+#include <chrono>
+
 #include "mongo/platform/basic.h"
 #include "mongo/platform/endian.h"
 #include "mongo/util/log.h"
@@ -41,6 +43,7 @@
 #include "hse_index.h"
 #include "hse_record_store.h"
 #include "hse_util.h"
+#include "hse_stats.h"
 
 using hse::KVDBData;
 using hse::KVDB;
@@ -49,7 +52,7 @@ using namespace std;
 
 namespace mongo {
 KVDBCounterManager::KVDBCounterManager(bool crashSafe)
-    : _crashSafe(crashSafe), _syncing(false), _updates(0) {}
+    : _crashSafe(crashSafe), _syncing(false) {}
 
 
 void KVDBCounterManager::registerRecordStore(KVDBRecordStore* rs) {
@@ -82,38 +85,26 @@ void KVDBCounterManager::_syncAllCounters(void) {
     }
 }
 
-void KVDBCounterManager::_syncCountersIfNeeded(void) {
+void KVDBCounterManager::syncPeriodic(void) {
+    auto now = hse_stat::gHseStatTime;
     bool expected = false;
 
-    auto changed = _syncing.compare_exchange_weak(expected, true);
-    if (!changed) {
+    if (now < _updatetime || _syncing.load())
         return;
-    }
 
-    // This is the only thread that will be syncing the counters to kvdb
-    _updates.store(0);
+    if (!_syncing.compare_exchange_weak(expected, true))
+        return;
+
+    /* Sync counters at most once every ten seconds...
+     */
+    _updatetime = now + chrono::seconds(10);
     _syncAllCounters();
+
     _syncing.store(false);
-}
-
-void KVDBCounterManager::incrementNumUpdates(void) {
-    auto old = _updates.fetch_add(1, std::memory_order::memory_order_relaxed);
-
-    if (old + 1 >= _kSyncEvery) {
-        _syncCountersIfNeeded();
-    }
 }
 
 void KVDBCounterManager::sync(void) {
-    bool expected = false;
-
-    // Wait for any currently running sync operation to finish
-    while (!_syncing.compare_exchange_weak(expected, true))
-        ;
-
-    _updates.store(0);
     _syncAllCounters();
-    _syncing.store(false);
 }
 
 void KVDBCounterManager::sync_for_rename(std::string& ident) {
