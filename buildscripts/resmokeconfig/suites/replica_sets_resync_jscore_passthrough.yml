@@ -82,7 +82,7 @@ executor:
         readMode: commands
     hooks:
     - class: BackgroundInitialSync
-      use_resync: True
+      use_resync: False
       n: *run_hook_interval
     - class: CleanEveryN
       n: *run_hook_interval
