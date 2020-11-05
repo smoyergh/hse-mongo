@@ -57,7 +57,7 @@ namespace hse_stat {
 
 using mongo::BSONObjBuilder;
 
-using LatencyToken = chrono::time_point<std::chrono::high_resolution_clock>;
+using LatencyToken = std::chrono::time_point<std::chrono::steady_clock>;
 
 
 class HistogramBucket {
@@ -104,13 +104,6 @@ protected:
     string _name;
 };
 
-/* A per-cpu stat counter occupies two cache lines to eliminate
- * false-sharing due to adjacent cacheline prefetch.
- */
-struct alignas(128) KVDBStatBkt {
-    atomic<int64_t> _count;
-};
-
 class KVDBStatCounter : public KVDBStat {
 public:
     KVDBStatCounter(const string name);
@@ -125,7 +118,7 @@ public:
 private:
     void add_impl(int64_t incr);
 
-    KVDBStatBkt _bktv[4];
+    atomic<int64_t> *_counterv;
 };
 
 class KVDBStatLatency final : public KVDBStat {
@@ -136,14 +129,14 @@ public:
     virtual void appendTo(BSONObjBuilder& bob) const override;
 
     LatencyToken begin() const {
-        if (!isStatEnabled())
-            return chrono::time_point<chrono::high_resolution_clock>::min();
+        if (MONGO_likely( !isStatEnabled() ))
+            return chrono::time_point<chrono::steady_clock>(chrono::nanoseconds(0));
 
-        return chrono::high_resolution_clock::now();
+        return chrono::steady_clock::now();
     }
 
     void end(LatencyToken bTime) {
-        if (bTime > chrono::time_point<chrono::high_resolution_clock>::min())
+        if (bTime != chrono::time_point<chrono::steady_clock>(chrono::nanoseconds(0)) )
             end_impl(bTime);
     }
 
@@ -152,7 +145,7 @@ private:
 
     int32_t _buckets{1000};
     int64_t _interval{100000000};  // 1 ms
-    int64_t _minLatency{0};
+    int64_t _minLatency{INT64_MAX};
     int64_t _maxLatency{0};
     vector<HistogramBucket> _histogram;
     atomic<int32_t> _histogramOverflow{0};
@@ -177,7 +170,7 @@ public:
     void add(int64_t incr);
 
 private:
-    KVDBStatBkt _bktv[16];
+    atomic<int64_t> *_counterv;
 };
 
 class KVDBStatRate final : public KVDBStat {
@@ -205,7 +198,7 @@ public:
 private:
     atomic<int64_t> _rate{0};
     atomic<uint64_t> _count{0};
-    uint64_t _lastUpdatedMs{0};
+    std::chrono::time_point<std::chrono::steady_clock> _lastUpdated;
     static std::unique_ptr<RateThread> _rateThread;
 };
 

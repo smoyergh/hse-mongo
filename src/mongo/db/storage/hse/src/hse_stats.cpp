@@ -67,6 +67,27 @@ std::chrono::time_point<std::chrono::steady_clock> gHseStatTime;
 
 bool KVDBStat::statsEnabled = false;
 
+/* The countersv[] array provides COUNTER_GROUPS_MAX per-cpu atomic counters for each
+ * counter of type KVDBStatCounter and KVDBStatAppBytes.
+ *
+ * The countersv[] array comprises COUNTER_GROUPS_MAX contiguous chunks of counters,
+ * where each chunk contains COUNTERS_PER_GROUP atomic counters.  Each chunk is
+ * sufficiently large to eliminate false-sharing due to adjacent cacheline prefetch.
+ * It needs to be at least as large as the number of defined KVDBStatCounter and
+ * KVDBStatAppBytes counters, and for efficiency should be a power of two.
+ *
+ * Each KVDBStat constructor increments countersc to obtain a unique offset into
+ * countersv[], and then may access any atomic counter in any group by that same
+ * offset into the group, where typically the CPU ID is used to determine which
+ * group to access.
+ */
+#define COUNTERS_PER_GROUP  (16)
+#define COUNTER_GROUPS_MAX  (16)
+
+atomic<int64_t> countersc;
+alignas(128) atomic<int64_t> countersv[COUNTERS_PER_GROUP * COUNTER_GROUPS_MAX];
+
+
 // begin KVDBStat
 KVDBStat::KVDBStat(const string name) : _name(name) {
     _enabled = statsEnabled || _enableOverride;
@@ -100,6 +121,9 @@ KVDBStat::~KVDBStat() {}
 // begin KVDBStatCounter
 KVDBStatCounter::KVDBStatCounter(const string name) : KVDBStat(name) {
     gHseStatCounterList.push_back(this);
+
+    invariantHse(countersc.load() < COUNTERS_PER_GROUP);
+    _counterv = countersv + countersc.fetch_add(1);
 }
 
 void KVDBStatCounter::appendTo(BSONObjBuilder& bob) const {
@@ -110,8 +134,8 @@ void KVDBStatCounter::appendTo(BSONObjBuilder& bob) const {
         return;
     }
 
-    for (i = 0; i < sizeof(_bktv) / sizeof(_bktv[0]); ++i)
-        accum += _bktv[i]._count.load(memory_order::memory_order_relaxed);
+    for (i = 0; i < COUNTER_GROUPS_MAX; ++i)
+        accum += _counterv[i * COUNTERS_PER_GROUP].load(memory_order::memory_order_relaxed);
 
     bob.append(_name, accum);
 }
@@ -120,11 +144,11 @@ void KVDBStatCounter::add_impl(int64_t incr) {
     unsigned int cpuid, nodeid;
 
     if (syscall(SYS_getcpu, &cpuid, &nodeid))
-        cpuid = 0;
+        cpuid = nodeid = 0;
 
-    cpuid %= (sizeof(_bktv) / sizeof(_bktv[0]));
+    cpuid = cpuid % (COUNTER_GROUPS_MAX / 2) + (nodeid % 2) * (COUNTER_GROUPS_MAX / 2);
 
-    _bktv[cpuid]._count.fetch_add(incr, memory_order::memory_order_relaxed);
+    _counterv[cpuid].fetch_add(incr, memory_order::memory_order_relaxed);
 }
 
 KVDBStatCounter::~KVDBStatCounter() {}
@@ -171,8 +195,8 @@ void KVDBStatLatency::appendTo(BSONObjBuilder& bob) const {
 }
 
 void KVDBStatLatency::end_impl(LatencyToken bTime) {
-    auto eTime = chrono::high_resolution_clock::now();
-    int64_t latency = (std::chrono::duration_cast<std::chrono::nanoseconds>(eTime - bTime)).count();
+    auto eTime = chrono::steady_clock::now();
+    int64_t latency = (chrono::duration_cast<chrono::nanoseconds>(eTime - bTime)).count();
 
     // HSE_REVISIT - need faster approach?
     int32_t bucket = latency / _interval;
@@ -186,7 +210,7 @@ void KVDBStatLatency::end_impl(LatencyToken bTime) {
     }
 
     // update min and max (not atomic)
-    if (_minLatency == 0 || latency < _minLatency) {
+    if (latency < _minLatency) {
         _minLatency = latency;
     }
 
@@ -215,6 +239,9 @@ KVDBStatAppBytes::KVDBStatAppBytes(const string name, bool enableOverride) : KVD
     _enabled = statsEnabled || enableOverride;
     _enableOverride = enableOverride;
     gHseStatAppBytesList.push_back(this);
+
+    invariantHse(countersc.load() < COUNTERS_PER_GROUP);
+    _counterv = countersv + countersc.fetch_add(1);
 }
 
 void KVDBStatAppBytes::appendTo(BSONObjBuilder& bob) const {
@@ -226,8 +253,8 @@ void KVDBStatAppBytes::appendTo(BSONObjBuilder& bob) const {
     int64_t accum = 0;
     unsigned int i;
 
-    for (i = 0; i < sizeof(_bktv) / sizeof(_bktv[0]); ++i)
-        accum += _bktv[i]._count.load(memory_order::memory_order_relaxed);
+    for (i = 0; i < COUNTER_GROUPS_MAX; ++i)
+        accum += _counterv[i * COUNTERS_PER_GROUP].load(memory_order::memory_order_relaxed);
 
     bob.append(_name, accum);
 }
@@ -236,11 +263,11 @@ void KVDBStatAppBytes::add(int64_t incr) {
     unsigned int cpuid, nodeid;
 
     if (syscall(SYS_getcpu, &cpuid, &nodeid))
-        cpuid = 0;
+        cpuid = nodeid = 0;
 
-    cpuid %= (sizeof(_bktv) / sizeof(_bktv[0]));
+    cpuid = cpuid % (COUNTER_GROUPS_MAX / 2) + (nodeid % 2) * (COUNTER_GROUPS_MAX / 2);
 
-    _bktv[cpuid]._count.fetch_add(incr, memory_order::memory_order_relaxed);
+    _counterv[cpuid].fetch_add(incr, memory_order::memory_order_relaxed);
 }
 
 KVDBStatAppBytes::~KVDBStatAppBytes() {}
@@ -252,7 +279,7 @@ std::unique_ptr<KVDBStatRate::RateThread> KVDBStatRate::_rateThread{};
 KVDBStatRate::KVDBStatRate(const string name, bool enableOverride) : KVDBStat(name) {
     _enabled = statsEnabled || enableOverride;
     _enableOverride = enableOverride;
-    _lastUpdatedMs = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+    _lastUpdated = steady_clock::now();
     gHseStatRateList.push_back(this);
 }
 
@@ -277,12 +304,14 @@ void KVDBStatRate::update(uint64_t incr) {
 }
 
 void KVDBStatRate::calculateRate() {
-    uint64_t nowMs = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-    uint64_t rate =
-        (_count.load(memory_order::memory_order_relaxed) * 1000) / (nowMs - _lastUpdatedMs);
-    _count.store(0, memory_order::memory_order_relaxed);
+    auto dt = chrono::duration_cast<chrono::milliseconds>(gHseStatTime - _lastUpdated);
+
+    uint64_t count = _count.load(memory_order::memory_order_relaxed);
+    uint64_t rate = (count * 1000) / dt.count();
+
+    _count.fetch_sub(count, memory_order::memory_order_relaxed);
     _rate.store(rate, memory_order::memory_order_relaxed);
-    _lastUpdatedMs = nowMs;
+    _lastUpdated = gHseStatTime;
 }
 
 int64_t KVDBStatRate::getRate() {
