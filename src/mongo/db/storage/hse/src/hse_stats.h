@@ -60,7 +60,7 @@ using mongo::BSONObjBuilder;
 using LatencyToken = std::chrono::time_point<std::chrono::steady_clock>;
 
 
-class HistogramBucket {
+class alignas(64) HistogramBucket {
 public:
     HistogramBucket() : total{0}, hits{0} {};
 
@@ -123,7 +123,7 @@ private:
 
 class KVDBStatLatency final : public KVDBStat {
 public:
-    KVDBStatLatency(const string name, int32_t buckets = 1000, int64_t interval = 1000000000);
+    KVDBStatLatency(const string name, int32_t buckets = 128, int64_t interval = 1000);
     virtual ~KVDBStatLatency();
 
     virtual void appendTo(BSONObjBuilder& bob) const override;
@@ -143,12 +143,11 @@ public:
 private:
     void end_impl(LatencyToken token);
 
-    int32_t _buckets{1000};
-    int64_t _interval{100000000};  // 1 ms
+    int32_t _buckets{128};
+    int64_t _interval{1000};  // 1000 ns
     int64_t _minLatency{INT64_MAX};
     int64_t _maxLatency{0};
     vector<HistogramBucket> _histogram;
-    atomic<int32_t> _histogramOverflow{0};
 };
 
 class KVDBStatVersion final : public KVDBStat {

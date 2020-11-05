@@ -79,7 +79,9 @@ bool KVDBStat::statsEnabled = false;
  * Each KVDBStat constructor increments countersc to obtain a unique offset into
  * countersv[], and then may access any atomic counter in any group by that same
  * offset into the group, where typically the CPU ID is used to determine which
- * group to access.
+ * group to access.  In practice, we split the array into two equal parts and
+ * use the low bit of the NUMA node ID to select the part and hence eliminate
+ * or reduce cacheline thrashing between NUMA nodes.
  */
 #define COUNTERS_PER_GROUP  (16)
 #define COUNTER_GROUPS_MAX  (16)
@@ -146,9 +148,9 @@ void KVDBStatCounter::add_impl(int64_t incr) {
     if (syscall(SYS_getcpu, &cpuid, &nodeid))
         cpuid = nodeid = 0;
 
-    cpuid = cpuid % (COUNTER_GROUPS_MAX / 2) + (nodeid % 2) * (COUNTER_GROUPS_MAX / 2);
+    cpuid = cpuid % (COUNTER_GROUPS_MAX / 2) + (nodeid & 1u) * (COUNTER_GROUPS_MAX / 2);
 
-    _counterv[cpuid].fetch_add(incr, memory_order::memory_order_relaxed);
+    _counterv[cpuid * COUNTERS_PER_GROUP].fetch_add(incr, memory_order::memory_order_relaxed);
 }
 
 KVDBStatCounter::~KVDBStatCounter() {}
@@ -159,7 +161,11 @@ KVDBStatLatency::KVDBStatLatency(const string name, int32_t buckets, int64_t int
     : KVDBStat(name), _buckets{buckets}, _interval{interval} {
     gHseStatLatencyList.push_back(this);
 
-    _histogram.resize(_buckets);
+    /* Need an even number of buckets in order to simplify bucket interleaving,
+     * plus one for the latencies that fall outside the histogram bounds.
+     */
+    _buckets = (_buckets + 1) & ~1u;
+    _histogram.resize(_buckets + 1);
 }
 
 void KVDBStatLatency::appendTo(BSONObjBuilder& bob) const {
@@ -170,26 +176,32 @@ void KVDBStatLatency::appendTo(BSONObjBuilder& bob) const {
     BSONObjBuilder lBob;
     lBob.append("buckets", _buckets);
     lBob.append("interval", _interval);
-    lBob.append("histogramsOverflow", _histogramOverflow.load(memory_order::memory_order_relaxed));
-    lBob.append("minLatency", _minLatency);
+    lBob.append("histogramsOverflow",
+                _histogram[_buckets].hits.load(memory_order::memory_order_relaxed));
+    lBob.append("minLatency", (_minLatency == INT64_MAX) ? 0 : _minLatency);
     lBob.append("maxLatency", _maxLatency);
 
-    BSONArrayBuilder hitsArrBob;
-    BSONArrayBuilder avArrBob;
+    BSONArrayBuilder hitsArrBob{_buckets};
+    BSONArrayBuilder avArrBob{_buckets};
 
-    for (auto& hi : _histogram) {
-        int64_t hits = hi.hits.load(memory_order::memory_order_relaxed);
-        int64_t total = hi.total.load(memory_order::memory_order_relaxed);
+    for (int i = 0; i < _buckets; i += 2) {
+        int64_t hits = _histogram[i].hits.load(memory_order::memory_order_relaxed);
+        int64_t total = _histogram[i].total.load(memory_order::memory_order_relaxed);
+
         hitsArrBob.append(hits);
-        if (hits) {
-            avArrBob.append(total / hits);
-        } else {
-            avArrBob.append(0);
-        }
+        avArrBob.append(hits ? (total / hits) : 0);
+    }
+
+    for (int i = 1; i < _buckets; i += 2) {
+        int64_t hits = _histogram[i].hits.load(memory_order::memory_order_relaxed);
+        int64_t total = _histogram[i].total.load(memory_order::memory_order_relaxed);
+
+        hitsArrBob.append(hits);
+        avArrBob.append(hits ? (total / hits) : 0);
     }
 
     lBob.append("hits", hitsArrBob.arr());
-    lBob.append("av", avArrBob.arr());
+    lBob.append("avglat", avArrBob.arr());
 
     bob.append(_name, lBob.obj());
 }
@@ -201,13 +213,26 @@ void KVDBStatLatency::end_impl(LatencyToken bTime) {
     // HSE_REVISIT - need faster approach?
     int32_t bucket = latency / _interval;
 
-    if (bucket > (_buckets - 1)) {
-        _histogramOverflow.fetch_add(1, memory_order::memory_order_relaxed);
-    } else {
-        HistogramBucket& bRef = _histogram[bucket];
-        bRef.hits.fetch_add(1, memory_order::memory_order_relaxed);
-        bRef.total.fetch_add(latency, memory_order::memory_order_relaxed);
+    if (bucket >= _buckets) {
+        _histogram[_buckets].hits.fetch_add(1, memory_order::memory_order_relaxed);
+        return;
     }
+
+    /* Latency measurements tend to clump together in adjacent "hot" buckets,
+     * so we interleave the buckets to eliminate false-sharing between them.
+     * For example, given 16 buckets (from 0 to 15) we address them linearly
+     * in memory as follows:  0 8 1 9 2 10 3 11 4 12 5 13 6 14 7 15 (16)
+     * where latencies that fall outside the maximum bucket interval range
+     * accumulate in the last bucket (bucket 16 in this example).
+     */
+    if (bucket < _buckets / 2)
+        bucket = bucket * 2;
+    else
+        bucket = bucket - (_buckets / 2) + 1;
+
+    HistogramBucket& bRef = _histogram[bucket];
+    bRef.hits.fetch_add(1, memory_order::memory_order_relaxed);
+    bRef.total.fetch_add(latency, memory_order::memory_order_relaxed);
 
     // update min and max (not atomic)
     if (latency < _minLatency) {
@@ -265,9 +290,9 @@ void KVDBStatAppBytes::add(int64_t incr) {
     if (syscall(SYS_getcpu, &cpuid, &nodeid))
         cpuid = nodeid = 0;
 
-    cpuid = cpuid % (COUNTER_GROUPS_MAX / 2) + (nodeid % 2) * (COUNTER_GROUPS_MAX / 2);
+    cpuid = cpuid % (COUNTER_GROUPS_MAX / 2) + (nodeid & 1u) * (COUNTER_GROUPS_MAX / 2);
 
-    _counterv[cpuid].fetch_add(incr, memory_order::memory_order_relaxed);
+    _counterv[cpuid * COUNTERS_PER_GROUP].fetch_add(incr, memory_order::memory_order_relaxed);
 }
 
 KVDBStatAppBytes::~KVDBStatAppBytes() {}
@@ -366,31 +391,31 @@ KVDBStatVersion _hseConnectorGitSha{"hseConnectorGitSha", hse::K_HSE_CONNECTOR_G
 
 // Counters
 KVDBStatCounter _hseKvsGetCounter{"hseKvsGet"};
-KVDBStatCounter _hseKvsCursorCreateCounter{"hseKvsCursorCreate"};
-KVDBStatCounter _hseKvsCursorReadCounter{"hseKvsCursorRead"};
-KVDBStatCounter _hseKvsCursorUpdateCounter{"hseKvsCursorUpdate"};
-KVDBStatCounter _hseKvsCursorDestroyCounter{"hseKvsCursorDestroy"};
 KVDBStatCounter _hseKvsPutCounter{"hseKvsPut"};
-KVDBStatCounter _hseKvsProbeCounter{"hseKvsProbe"};
-KVDBStatCounter _hseKvdbSyncCounter{"hseKvdbSync"};
 KVDBStatCounter _hseKvsDeleteCounter{"hseKvsDelete"};
 KVDBStatCounter _hseKvsPrefixDeleteCounter{"hseKvsPrefixDelete"};
+KVDBStatCounter _hseKvsProbeCounter{"hseKvsProbe"};
+KVDBStatCounter _hseKvdbSyncCounter{"hseKvdbSync"};
+KVDBStatCounter _hseKvsCursorCreateCounter{"hseKvsCursorCreate"};
+KVDBStatCounter _hseKvsCursorDestroyCounter{"hseKvsCursorDestroy"};
+KVDBStatCounter _hseKvsCursorReadCounter{"hseKvsCursorRead"};
+KVDBStatCounter _hseKvsCursorUpdateCounter{"hseKvsCursorUpdate"};
 KVDBStatCounter _hseOplogCursorCreateCounter{"hseOplogCursorCreate"};
 
 // Latencies
 
 // histogram parameters based on sysbench small db run
 
-KVDBStatLatency _hseKvsGetLatency{"hseKvsGet", 15, 2000};
-KVDBStatLatency _hseKvsCursorCreateLatency{"hseKvsCursorCreate", 15, 2000};
-KVDBStatLatency _hseKvsCursorReadLatency{"hseKvsCursorRead", 15, 2000};
-KVDBStatLatency _hseKvsCursorUpdateLatency{"hseKvsCurbsorUpdate", 15, 2000};
-KVDBStatLatency _hseKvsCursorDestroyLatency{"hseKvsCursorDestroy", 15, 2000};
-KVDBStatLatency _hseKvsPutLatency{"hseKvsPut", 15, 6000000};
-KVDBStatLatency _hseKvsProbeLatency{"hseKvsProbe", 15, 2000};
-KVDBStatLatency _hseKvdbSyncLatency{"hseKvdbSync", 15, 100000000};
-KVDBStatLatency _hseKvsDeleteLatency{"hseKvsDelete", 15, 100000};
-KVDBStatLatency _hseKvsPrefixDeleteLatency{"hseKvsPrefixDelete", 15, 100000};
+KVDBStatLatency _hseKvsGetLatency{"hseKvsGet", 32, 1000};
+KVDBStatLatency _hseKvsPutLatency{"hseKvsPut", 32, 1000};
+KVDBStatLatency _hseKvsDeleteLatency{"hseKvsDelete", 16, 1000};
+KVDBStatLatency _hseKvsPrefixDeleteLatency{"hseKvsPrefixDelete", 16, 100 * 1000};
+KVDBStatLatency _hseKvsProbeLatency{"hseKvsProbe", 32, 1000};
+KVDBStatLatency _hseKvdbSyncLatency{"hseKvdbSync", 32, 2 * 1000 * 1000};
+KVDBStatLatency _hseKvsCursorCreateLatency{"hseKvsCursorCreate", 32, 1000};
+KVDBStatLatency _hseKvsCursorDestroyLatency{"hseKvsCursorDestroy", 32, 1000};
+KVDBStatLatency _hseKvsCursorReadLatency{"hseKvsCursorRead", 32, 1000};
+KVDBStatLatency _hseKvsCursorUpdateLatency{"hseKvsCursorUpdate", 32, 1000};
 
 // App bytes counters
 KVDBStatAppBytes _hseAppBytesReadCounter{"hseAppBytesRead"};
