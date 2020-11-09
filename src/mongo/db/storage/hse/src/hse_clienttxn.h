@@ -50,44 +50,16 @@ struct hse_kvdb_txn;
 // KVDB interface
 namespace hse {
 
-class TxnCache {
-public:
-    ~TxnCache() {
-        if (_kvdb)
-            release();
-    }
-
-    void set_kvdb(hse_kvdb* kvdb) {
-        _kvdb = kvdb;
-    }
-
-    void release() {
-        _kvdb = NULL;
-    }
-
-    hse_kvdb_txn* alloc() {
-        return ::hse_kvdb_txn_alloc(_kvdb);
-    }
-
-    void free(hse_kvdb_txn* txn) {
-        ::hse_kvdb_txn_free(_kvdb, txn);
-    }
-
-private:
-    hse_kvdb* _kvdb{0};
-};
-
-extern TxnCache* g_txn_cache;
-
 class ClientTxn {
 public:
-    ClientTxn(struct hse_kvdb* kvdb) : _kvdb(kvdb), _txn(0) {
-        _txn = g_txn_cache->alloc();
+    ClientTxn(struct hse_kvdb* kvdb) : _kvdb(kvdb) {
+        _txn = ::hse_kvdb_txn_alloc(_kvdb);
+        if (!_txn)
+            throw;
     }
 
     virtual ~ClientTxn() {
-        if (_txn)
-            g_txn_cache->free(_txn);
+        ::hse_kvdb_txn_free(_kvdb, _txn);
     }
 
     Status begin() {
@@ -107,7 +79,6 @@ public:
     }
 
 private:
-    static TxnCache _txn_cache;
     struct hse_kvdb* _kvdb;
     struct hse_kvdb_txn* _txn;
 };

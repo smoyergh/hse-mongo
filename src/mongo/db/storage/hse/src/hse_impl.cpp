@@ -86,7 +86,6 @@ Status KVDBImpl::kvdb_make(const char* mp_name, const char* kvdb_name, struct hs
 
 Status KVDBImpl::kvdb_open(const char* mp_name, const char* kvdb_name, struct hse_params* params) {
     auto st = ::hse_kvdb_open(mp_name, params, &_handle);
-    g_txn_cache->set_kvdb(_handle);
     return Status(st);
 }
 
@@ -122,7 +121,6 @@ Status KVDBImpl::kvdb_kvs_drop(const char* kvs_name) {
 }
 
 Status KVDBImpl::kvdb_close() {
-    g_txn_cache->release();
     int ret = ::hse_kvdb_close(_handle);
     _handle = nullptr;
     return Status(ret);

@@ -384,12 +384,15 @@ hse::Status KVDBRecoveryUnit::oplogCursorSeek(KvsCursor* cursor,
     return cursor->seek(key, kmax, pos);
 }
 
-void KVDBRecoveryUnit::incrementCounter(unsigned int counterKey,
+void KVDBRecoveryUnit::incrementCounter(unsigned long counterKey,
                                         std::atomic<long long>* counter,
                                         long long delta) {
     if (delta == 0) {
         return;
     }
+
+    if (_deltaCounters.bucket_count() < 8)
+        _deltaCounters.rehash(8);
 
     auto pair = _deltaCounters.find(counterKey);
     if (pair == _deltaCounters.end()) {
@@ -399,11 +402,11 @@ void KVDBRecoveryUnit::incrementCounter(unsigned int counterKey,
     }
 }
 
-void KVDBRecoveryUnit::resetCounter(unsigned int counterKey, std::atomic<long long>* counter) {
+void KVDBRecoveryUnit::resetCounter(unsigned long counterKey, std::atomic<long long>* counter) {
     counter->store(0);
 }
 
-long long KVDBRecoveryUnit::getDeltaCounter(unsigned int counterKey) {
+long long KVDBRecoveryUnit::getDeltaCounter(unsigned long counterKey) {
     auto counter = _deltaCounters.find(counterKey);
     if (counter == _deltaCounters.end()) {
         return 0;

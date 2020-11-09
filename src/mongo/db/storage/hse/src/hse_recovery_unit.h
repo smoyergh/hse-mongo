@@ -178,12 +178,12 @@ public:
         return checked_cast<KVDBRecoveryUnit*>(opCtx->recoveryUnit());
     }
 
-    void incrementCounter(unsigned int counterKey,
+    void incrementCounter(unsigned long counterKey,
                           std::atomic<long long>* counter,
                           long long delta);
-    void resetCounter(unsigned int counterKey, std::atomic<long long>* counter);
+    void resetCounter(unsigned long counterKey, std::atomic<long long>* counter);
 
-    long long getDeltaCounter(unsigned int counterKey);
+    long long getDeltaCounter(unsigned long counterKey);
 
     bool ActiveClientTxn() {
         return (_txn != nullptr);
@@ -201,6 +201,9 @@ private:
     ClientTxn* _txn;
     ClientTxn* _txn_cached;
 
+    /* _txn_mem is used for placement new of _txn to eliminate
+     * a memory allocation and improve locality of reference.
+     */
     alignas(ClientTxn) unsigned char _txn_mem[sizeof(ClientTxn)];
 
     KVDBCounterManager& _counterManager;

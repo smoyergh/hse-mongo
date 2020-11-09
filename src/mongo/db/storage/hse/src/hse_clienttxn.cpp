@@ -37,12 +37,3 @@
 #include "mongo/util/log.h"
 
 #include "hse_clienttxn.h"
-
-// KVDB interface
-namespace hse {
-
-TxnCache _txn_cache;
-
-TxnCache* g_txn_cache = &_txn_cache;
-
-}
