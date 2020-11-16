@@ -74,9 +74,9 @@ KVDBRecoveryUnit::KVDBRecoveryUnit(KVDB& kvdb,
 
 KVDBRecoveryUnit::~KVDBRecoveryUnit() {
     if (_txn_cached) {
-        _txn_cached->~ClientTxn();
+        _txn_cached->~ClientTxn();  // See placement new in _ensureTxn()
     } else if (_txn) {
-        _txn->~ClientTxn();
+        _txn->~ClientTxn();  // See placement new in _ensureTxn()
     }
 }
 

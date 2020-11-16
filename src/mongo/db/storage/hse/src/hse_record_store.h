@@ -298,6 +298,11 @@ protected:
 
     std::string _ident;
 
+    /* The following strings are the kvs key names for the similarly named counters
+     * that share the same prefix (the text leading up to "KeyKvs").  The similarly
+     * named fields ending with "KeyID" are used as proxies for said keys in the
+     * recovery unit's delta counters map (long vs string for hash map efficiency).
+     */
     const std::string _dataSizeKeyKvs;
     const std::string _storageSizeKeyKvs;
     const std::string _numRecordsKeyKvs;
