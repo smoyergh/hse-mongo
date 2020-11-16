@@ -53,14 +53,12 @@ namespace mongo {
 std::atomic<unsigned long> KVDBCounterMapUniqID;
 
 namespace {
-    // SnapshotIds need to be globally unique, as they are used in a WorkingSetMember
-    // to determine if documents changed.  nextSnapShotID is a very heavily updated
-    // atomic and hence lives all alone in its own cache line.
-    static union alignas(128) {
-        AtomicUInt64 nextSnapshotId{1};
-    };
+// SnapshotIds need to be globally unique, as they are used in a WorkingSetMember
+// to determine if documents changed.  nextSnapShotID is a very heavily updated
+// atomic and hence lives all alone in its own cache line.
+static union alignas(128) { AtomicUInt64 nextSnapshotId{1}; };
 
-    thread_local unique_ptr<uint8_t[]> tlsReadBuf{new uint8_t[HSE_KVS_VLEN_MAX]};
+thread_local unique_ptr<uint8_t[]> tlsReadBuf{new uint8_t[HSE_KVS_VLEN_MAX]};
 }
 
 /* Start  KVDBRecoveryUnit */
@@ -124,7 +122,7 @@ void KVDBRecoveryUnit::commitUnitOfWork() {
     }
 
     // deactivate
-    _deltaCounters.clear(); // Can we move this up into the _deltaCounters block?
+    _deltaCounters.clear();  // Can we move this up into the _deltaCounters block?
 }
 
 void KVDBRecoveryUnit::abortUnitOfWork() {

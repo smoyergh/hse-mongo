@@ -118,7 +118,7 @@ public:
 private:
     void add_impl(int64_t incr);
 
-    atomic<int64_t> *_counterv;
+    atomic<int64_t>* _counterv;
 };
 
 class KVDBStatLatency final : public KVDBStat {
@@ -129,14 +129,14 @@ public:
     virtual void appendTo(BSONObjBuilder& bob) const override;
 
     LatencyToken begin() const {
-        if (MONGO_likely( !isStatEnabled() ))
+        if (MONGO_likely(!isStatEnabled()))
             return chrono::time_point<chrono::steady_clock>(chrono::nanoseconds(0));
 
         return chrono::steady_clock::now();
     }
 
     void end(LatencyToken bTime) {
-        if (bTime != chrono::time_point<chrono::steady_clock>(chrono::nanoseconds(0)) )
+        if (bTime != chrono::time_point<chrono::steady_clock>(chrono::nanoseconds(0)))
             end_impl(bTime);
     }
 
@@ -169,7 +169,7 @@ public:
     void add(int64_t incr);
 
 private:
-    atomic<int64_t> *_counterv;
+    atomic<int64_t>* _counterv;
 };
 
 class KVDBStatRate final : public KVDBStat {
@@ -254,18 +254,18 @@ extern KVDBStatRate _hseOplogCursorReadRate;
 /* Use the rollup macro to reduce contention on highly contended KVDB
  * stat counters.
  */
-#define KVDBStatCounterRollup(_stat, _bytes, _rollup)                   \
-do {                                                                    \
-    static thread_local uint64_t calls;                                 \
-    static thread_local int64_t accum;                                  \
-                                                                        \
-    accum += (_bytes);                                                  \
-                                                                        \
-    if (calls++ % (_rollup) == 0) {                                     \
-        _stat.add(accum);                                               \
-        accum = 0;                                                      \
-    }                                                                   \
-} while (0)
+#define KVDBStatCounterRollup(_stat, _bytes, _rollup) \
+    do {                                              \
+        static thread_local uint64_t calls;           \
+        static thread_local int64_t accum;            \
+                                                      \
+        accum += (_bytes);                            \
+                                                      \
+        if (calls++ % (_rollup) == 0) {               \
+            _stat.add(accum);                         \
+            accum = 0;                                \
+        }                                             \
+    } while (0)
 
 // End Stats declarations
 

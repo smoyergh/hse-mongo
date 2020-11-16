@@ -34,6 +34,7 @@
 #pragma once
 
 #include "hse.h"
+#include "hse_util.h"
 
 #include <deque>
 #include <mutex>
@@ -54,8 +55,8 @@ class ClientTxn {
 public:
     ClientTxn(struct hse_kvdb* kvdb) : _kvdb(kvdb) {
         _txn = ::hse_kvdb_txn_alloc(_kvdb);
-        if (!_txn)
-            throw;
+
+        invariantHse(_txn);
     }
 
     virtual ~ClientTxn() {

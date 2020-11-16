@@ -762,5 +762,4 @@ private:
 };
 
 extern std::atomic<unsigned long> gHseRSUniqKeyID;
-
 }

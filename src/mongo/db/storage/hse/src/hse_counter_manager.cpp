@@ -42,8 +42,8 @@
 #include "hse_counter_manager.h"
 #include "hse_index.h"
 #include "hse_record_store.h"
-#include "hse_util.h"
 #include "hse_stats.h"
+#include "hse_util.h"
 
 using hse::KVDBData;
 using hse::KVDB;
@@ -51,8 +51,7 @@ using hse::KVDB;
 using namespace std;
 
 namespace mongo {
-KVDBCounterManager::KVDBCounterManager(bool crashSafe)
-    : _crashSafe(crashSafe), _syncing(false) {}
+KVDBCounterManager::KVDBCounterManager(bool crashSafe) : _crashSafe(crashSafe), _syncing(false) {}
 
 
 void KVDBCounterManager::registerRecordStore(KVDBRecordStore* rs) {

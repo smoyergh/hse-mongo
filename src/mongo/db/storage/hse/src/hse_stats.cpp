@@ -83,8 +83,8 @@ bool KVDBStat::statsEnabled = false;
  * use the low bit of the NUMA node ID to select the part and hence eliminate
  * or reduce cacheline thrashing between NUMA nodes.
  */
-#define COUNTERS_PER_GROUP  (16)
-#define COUNTER_GROUPS_MAX  (16)
+#define COUNTERS_PER_GROUP (16)
+#define COUNTER_GROUPS_MAX (16)
 
 atomic<int64_t> countersc;
 alignas(128) atomic<int64_t> countersv[COUNTERS_PER_GROUP * COUNTER_GROUPS_MAX];
