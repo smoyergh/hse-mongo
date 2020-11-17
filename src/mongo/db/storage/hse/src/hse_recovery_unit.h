@@ -67,16 +67,17 @@ using namespace std;
 
 namespace mongo {
 
-static const unsigned int MGETCO_DEFAULT_READSIZE = 4000;  // 1 page - malloc overhead
-
 struct KVDBCounter {
     std::atomic<long long>* _value;
     long long _delta;
+
     KVDBCounter() : KVDBCounter(nullptr, 0) {}
     KVDBCounter(std::atomic<long long>* value, long long delta) : _value(value), _delta(delta) {}
 };
 
-typedef std::unordered_map<std::string, KVDBCounter> KVDBCounterMap;
+typedef std::unordered_map<unsigned long, KVDBCounter> KVDBCounterMap;
+
+extern std::atomic<unsigned long> KVDBCounterMapUniqID;
 
 
 class KVDBRecoveryUnit : public RecoveryUnit {
@@ -177,12 +178,12 @@ public:
         return checked_cast<KVDBRecoveryUnit*>(opCtx->recoveryUnit());
     }
 
-    void incrementCounter(const string counterKey,
+    void incrementCounter(unsigned long counterKey,
                           std::atomic<long long>* counter,
                           long long delta);
-    void resetCounter(const string counterKey, std::atomic<long long>* counter);
+    void resetCounter(unsigned long counterKey, std::atomic<long long>* counter);
 
-    long long getDeltaCounter(const string counterKey);
+    long long getDeltaCounter(unsigned long counterKey);
 
     bool ActiveClientTxn() {
         return (_txn != nullptr);
@@ -196,15 +197,21 @@ private:
     KVDB& _kvdb;  // db handle
 
     uint64_t _snapId;  // read snapshot ID
-    typedef OwnedPointerVector<Change> Changes;
-    Changes _changes;
 
     ClientTxn* _txn;
+    ClientTxn* _txn_cached;
+
+    /* _txn_mem is used for placement new of _txn to eliminate
+     * a memory allocation and improve locality of reference.
+     */
+    alignas(ClientTxn) unsigned char _txn_mem[sizeof(ClientTxn)];
 
     KVDBCounterManager& _counterManager;
     KVDBDurabilityManager& _durabilityManager;
 
     KVDBCounterMap _deltaCounters;
-    long _updates = 0;  // used to determine if any updates between samples
+
+    typedef OwnedPointerVector<Change> Changes;
+    Changes _changes;
 };
 }

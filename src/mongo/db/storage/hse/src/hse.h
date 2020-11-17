@@ -72,7 +72,7 @@ public:
     }
 
     int getErrno() const {
-        return hse_err_to_errno(_err);
+        return _err ? hse_err_to_errno(_err) : 0;
     }
 
     string toString() const {

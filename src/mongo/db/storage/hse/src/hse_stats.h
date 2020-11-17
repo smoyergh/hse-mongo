@@ -57,10 +57,10 @@ namespace hse_stat {
 
 using mongo::BSONObjBuilder;
 
-using LatencyToken = chrono::time_point<std::chrono::high_resolution_clock>;
+using LatencyToken = std::chrono::time_point<std::chrono::steady_clock>;
 
 
-class HistogramBucket {
+class alignas(64) HistogramBucket {
 public:
     HistogramBucket() : total{0}, hits{0} {};
 
@@ -90,13 +90,18 @@ public:
     virtual void appendTo(BSONObjBuilder& bob) const;
     static void enableStatsGlobally(bool enable);
     static bool isStatsEnabledGlobally();
-    bool isStatEnabled() const;
+
+    bool isStatEnabled() const {
+        return _enabled;
+    }
+
     virtual ~KVDBStat();
 
 protected:
-    string _name;
     static bool statsEnabled;     // for global behaviour.
+    bool _enabled;                // cached (statsEnabled || _enableOverride)
     bool _enableOverride{false};  // override global behaviour
+    string _name;
 };
 
 class KVDBStatCounter : public KVDBStat {
@@ -104,28 +109,43 @@ public:
     KVDBStatCounter(const string name);
     virtual void appendTo(BSONObjBuilder& bob) const override;
     virtual ~KVDBStatCounter();
-    void add(int64_t incr = 1);
+
+    void add(int64_t incr = 1) {
+        if (isStatEnabled())
+            add_impl(incr);
+    }
 
 private:
-    atomic<int64_t> _count{0};
+    void add_impl(int64_t incr);
+
+    atomic<int64_t>* _counterv;
 };
 
 class KVDBStatLatency final : public KVDBStat {
 public:
-    KVDBStatLatency(const string name, int32_t buckets = 1000, int64_t interval = 1000000000);
-    virtual void appendTo(BSONObjBuilder& bob) const override;
-
-    // HSE_REVISIT:  consider passing as ref
-    LatencyToken begin() const;
-    void end(LatencyToken& token);
-
+    KVDBStatLatency(const string name, int32_t buckets = 128, int64_t interval = 1000);
     virtual ~KVDBStatLatency();
 
+    virtual void appendTo(BSONObjBuilder& bob) const override;
+
+    LatencyToken begin() const {
+        if (MONGO_likely(!isStatEnabled()))
+            return chrono::time_point<chrono::steady_clock>(chrono::nanoseconds(0));
+
+        return chrono::steady_clock::now();
+    }
+
+    void end(LatencyToken bTime) {
+        if (bTime != chrono::time_point<chrono::steady_clock>(chrono::nanoseconds(0)))
+            end_impl(bTime);
+    }
+
 private:
-    int32_t _buckets{1000};
-    int64_t _interval{100000000};  // 1 ms
-    atomic<int32_t> _histogramOverflow{0};
-    int64_t _minLatency{0};
+    void end_impl(LatencyToken token);
+
+    int32_t _buckets{128};
+    int64_t _interval{1000};  // 1000 ns
+    int64_t _minLatency{INT64_MAX};
     int64_t _maxLatency{0};
     vector<HistogramBucket> _histogram;
 };
@@ -149,7 +169,7 @@ public:
     void add(int64_t incr);
 
 private:
-    atomic<int64_t> _count{0};
+    atomic<int64_t>* _counterv;
 };
 
 class KVDBStatRate final : public KVDBStat {
@@ -172,13 +192,12 @@ public:
 
     private:
         std::atomic<bool> _shuttingDown{false};
-        const uint32_t PERIOD_MS{500};
     };
 
 private:
     atomic<int64_t> _rate{0};
     atomic<uint64_t> _count{0};
-    uint64_t _lastUpdatedMs{0};
+    std::chrono::time_point<std::chrono::steady_clock> _lastUpdated;
     static std::unique_ptr<RateThread> _rateThread;
 };
 
@@ -190,6 +209,8 @@ extern vector<KVDBStat*> gHseStatCounterList;
 extern vector<KVDBStat*> gHseStatLatencyList;
 extern vector<KVDBStat*> gHseStatAppBytesList;
 extern vector<KVDBStat*> gHseStatRateList;
+
+extern std::chrono::time_point<std::chrono::steady_clock> gHseStatTime;
 
 // Start Stats extern declarations
 // Versions
@@ -229,6 +250,22 @@ extern KVDBStatAppBytes _hseAppBytesWrittenCounter;
 
 // Rate stats
 extern KVDBStatRate _hseOplogCursorReadRate;
+
+/* Use the rollup macro to reduce contention on highly contended KVDB
+ * stat counters.
+ */
+#define KVDBStatCounterRollup(_stat, _bytes, _rollup) \
+    do {                                              \
+        static thread_local uint64_t calls;           \
+        static thread_local int64_t accum;            \
+                                                      \
+        accum += (_bytes);                            \
+                                                      \
+        if (calls++ % (_rollup) == 0) {               \
+            _stat.add(accum);                         \
+            accum = 0;                                \
+        }                                             \
+    } while (0)
 
 // End Stats declarations
 

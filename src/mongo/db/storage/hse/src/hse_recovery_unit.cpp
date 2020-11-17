@@ -50,10 +50,14 @@ using hse::VALUE_META_SIZE;
 
 namespace mongo {
 
+std::atomic<unsigned long> KVDBCounterMapUniqID;
+
 namespace {
-// SnapshotIds need to be globally unique, as they are used in a WorkingSetMember to
-// determine if documents changed.
-AtomicUInt64 nextSnapshotId{1};
+// SnapshotIds need to be globally unique, as they are used in a WorkingSetMember
+// to determine if documents changed.  nextSnapShotID is a very heavily updated
+// atomic and hence lives all alone in its own cache line.
+static union alignas(128) { AtomicUInt64 nextSnapshotId{1}; };
+
 thread_local unique_ptr<uint8_t[]> tlsReadBuf{new uint8_t[HSE_KVS_VLEN_MAX]};
 }
 
@@ -64,15 +68,15 @@ KVDBRecoveryUnit::KVDBRecoveryUnit(KVDB& kvdb,
     : _kvdb(kvdb),
       _snapId(nextSnapshotId.fetchAndAdd(1)),
       _txn(nullptr),
+      _txn_cached(nullptr),
       _counterManager(counterManager),
       _durabilityManager(durabilityManager) {}
 
 KVDBRecoveryUnit::~KVDBRecoveryUnit() {
-    if (_txn) {
-        hse::Status st = _txn->abort();
-        invariantHse(st.ok());
-        delete _txn;
-        _txn = nullptr;
+    if (_txn_cached) {
+        _txn_cached->~ClientTxn();  // See placement new in _ensureTxn()
+    } else if (_txn) {
+        _txn->~ClientTxn();  // See placement new in _ensureTxn()
     }
 }
 
@@ -82,44 +86,51 @@ void KVDBRecoveryUnit::beginUnitOfWork(OperationContext* opCtx) {
 }
 
 void KVDBRecoveryUnit::commitUnitOfWork() {
-    Status mst = Status::OK();
-    hse::Status kst = 0;
-
     if (_txn) {
-        kst = _txn->commit();
-        invariantHseSt(kst);
-        delete _txn;
+        hse::Status st(_txn->commit());
+        invariantHseSt(st);
+
+        _txn_cached = _txn;
         _txn = nullptr;
 
+        // TODO: Can we move this into _ensure_txn() or beginUnitOfWork() ???
+        // If so it would roughly halve the contention on this global atomic...
+        // Also, seems like it could be relaxed, no?
         _snapId = nextSnapshotId.fetchAndAdd(1);
     }
 
     // Sync the counters
-    for (auto pair : _deltaCounters) {
-        auto& counter = pair.second;
-        counter._value->fetch_add(counter._delta, std::memory_order::memory_order_relaxed);
-        _counterManager.incrementNumUpdates();
+    if (!_deltaCounters.empty()) {
+        for (auto& pair : _deltaCounters) {
+            auto& counter = pair.second;
+            counter._value->fetch_add(counter._delta, memory_order::memory_order_relaxed);
+        }
+
+        _counterManager.syncPeriodic();
     }
 
     // commit all changes
-    try {
-        for (const auto& change : _changes) {
-            change->commit();
+    if (!_changes.empty()) {
+        try {
+            for (const auto& change : _changes) {
+                change->commit();
+            }
+            _changes.clear();
+        } catch (...) {
+            invariantHse(false);  // abort
         }
-        _changes.clear();
-    } catch (...) {
-        invariantHse(false);  // abort
     }
 
     // deactivate
-    _deltaCounters.clear();
+    _deltaCounters.clear();  // Can we move this up into the _deltaCounters block?
 }
 
 void KVDBRecoveryUnit::abortUnitOfWork() {
     if (_txn) {
-        hse::Status st = _txn->abort();
-        invariantHse(st.ok());
-        delete _txn;
+        hse::Status st(_txn->abort());
+        invariantHseSt(st);
+
+        _txn_cached = _txn;
         _txn = nullptr;
 
         _snapId = nextSnapshotId.fetchAndAdd(1);
@@ -146,11 +157,11 @@ bool KVDBRecoveryUnit::waitUntilDurable() {
 }
 
 void KVDBRecoveryUnit::abandonSnapshot() {
-    // abort the txn
     if (_txn) {
-        hse::Status st = _txn->abort();
+        hse::Status st(_txn->abort());
         invariantHseSt(st);
-        delete _txn;
+
+        _txn_cached = _txn;
         _txn = nullptr;
 
         _snapId = nextSnapshotId.fetchAndAdd(1);
@@ -371,12 +382,15 @@ hse::Status KVDBRecoveryUnit::oplogCursorSeek(KvsCursor* cursor,
     return cursor->seek(key, kmax, pos);
 }
 
-void KVDBRecoveryUnit::incrementCounter(const string counterKey,
+void KVDBRecoveryUnit::incrementCounter(unsigned long counterKey,
                                         std::atomic<long long>* counter,
                                         long long delta) {
     if (delta == 0) {
         return;
     }
+
+    if (_deltaCounters.bucket_count() < 8)
+        _deltaCounters.rehash(8);
 
     auto pair = _deltaCounters.find(counterKey);
     if (pair == _deltaCounters.end()) {
@@ -384,14 +398,13 @@ void KVDBRecoveryUnit::incrementCounter(const string counterKey,
     } else {
         pair->second._delta += delta;
     }
-    ++_updates;
 }
 
-void KVDBRecoveryUnit::resetCounter(const string counterKey, std::atomic<long long>* counter) {
+void KVDBRecoveryUnit::resetCounter(unsigned long counterKey, std::atomic<long long>* counter) {
     counter->store(0);
 }
 
-long long KVDBRecoveryUnit::getDeltaCounter(const string counterKey) {
+long long KVDBRecoveryUnit::getDeltaCounter(unsigned long counterKey) {
     auto counter = _deltaCounters.find(counterKey);
     if (counter == _deltaCounters.end()) {
         return 0;
@@ -413,12 +426,17 @@ void KVDBRecoveryUnit::_ensureTxn() {
     if (!_txn) {
         hse::Status st{};
 
-        try {
-            _txn = new ClientTxn(_kvdb.kvdb_handle());
-        } catch (...) {
-            st = hse::Status{1};
+        if (_txn_cached) {
+            _txn = _txn_cached;
+            _txn_cached = nullptr;
+        } else {
+            try {
+                _txn = new (_txn_mem) ClientTxn(_kvdb.kvdb_handle());
+            } catch (...) {
+                st = hse::Status{1};
+            }
+            invariantHseSt(st);
         }
-        invariantHseSt(st);
 
         // start a transaction.
         st = _txn->begin();

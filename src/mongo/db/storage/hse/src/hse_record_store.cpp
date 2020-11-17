@@ -345,14 +345,18 @@ KVDBRecordStore::KVDBRecordStore(OperationContext* ctx,
       _durabilityManager(durabilityManager),
       _counterManager(counterManager),
       _ident(id.toString()),
-      _dataSizeKey(KVDB_prefix + "datasize-" + _ident),
-      _storageSizeKey(KVDB_prefix + "storagesize-" + _ident),
-      _numRecordsKey(KVDB_prefix + "numrecords-" + _ident),
+      _dataSizeKeyKvs(KVDB_prefix + "datasize-" + _ident),
+      _storageSizeKeyKvs(KVDB_prefix + "storagesize-" + _ident),
+      _numRecordsKeyKvs(KVDB_prefix + "numrecords-" + _ident),
       _compparms(compparms) {
 
     _prefixValBE = htobe32(_prefixVal);
 
     LOG(1) << "opening collection " << ns;
+
+    _dataSizeKeyID = KVDBCounterMapUniqID.fetch_add(1);
+    _storageSizeKeyID = KVDBCounterMapUniqID.fetch_add(1);
+    _numRecordsKeyID = KVDBCounterMapUniqID.fetch_add(1);
 
     // When Mongodb rename a collection, it creates a second RecordStore (with a new namespace and
     // same
@@ -380,10 +384,6 @@ KVDBRecordStore::~KVDBRecordStore() {
     _counterManager.deregisterRecordStore(this);
 
     _shuttingDown = true;
-
-    // if (_uncompressed_bytes.load())
-    //    log() << "uncompressed " << _uncompressed_bytes.load() << " compressed "
-    //          << _compressed_bytes.load();
 }
 
 // KVDBRecordStore - Metadata Methods
@@ -406,9 +406,9 @@ void KVDBRecordStore::_readAndDecodeCounter(const std::string& keyString,
 }
 
 void KVDBRecordStore::loadCounters() {
-    _readAndDecodeCounter(_numRecordsKey, _numRecords);
-    _readAndDecodeCounter(_dataSizeKey, _dataSize);
-    _readAndDecodeCounter(_storageSizeKey, _storageSize);
+    _readAndDecodeCounter(_numRecordsKeyKvs, _numRecords);
+    _readAndDecodeCounter(_dataSizeKeyKvs, _dataSize);
+    _readAndDecodeCounter(_storageSizeKeyKvs, _storageSize);
 }
 
 
@@ -424,9 +424,9 @@ void KVDBRecordStore::_encodeAndWriteCounter(const std::string& keyString,
 }
 
 void KVDBRecordStore::updateCounters() {
-    _encodeAndWriteCounter(_numRecordsKey, _numRecords);
-    _encodeAndWriteCounter(_dataSizeKey, _dataSize);
-    _encodeAndWriteCounter(_storageSizeKey, _storageSize);
+    _encodeAndWriteCounter(_numRecordsKeyKvs, _numRecords);
+    _encodeAndWriteCounter(_dataSizeKeyKvs, _dataSize);
+    _encodeAndWriteCounter(_storageSizeKeyKvs, _storageSize);
 }
 
 const char* KVDBRecordStore::name() const {
@@ -437,14 +437,14 @@ long long KVDBRecordStore::dataSize(OperationContext* opctx) const {
     KVDBRecoveryUnit* ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opctx);
 
     return _dataSize.load(std::memory_order::memory_order_relaxed) +
-        ru->getDeltaCounter(_dataSizeKey);
+        ru->getDeltaCounter(_dataSizeKeyID);
 }
 
 long long KVDBRecordStore::numRecords(OperationContext* opctx) const {
     KVDBRecoveryUnit* ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opctx);
 
     return _numRecords.load(std::memory_order::memory_order_relaxed) +
-        ru->getDeltaCounter(_numRecordsKey);
+        ru->getDeltaCounter(_numRecordsKeyID);
 }
 
 int64_t KVDBRecordStore::storageSize(OperationContext* opctx,
@@ -709,7 +709,6 @@ hse::Status KVDBRecordStore::_baseUpdateRecord(OperationContext* opctx,
     // HSE_REVISIT - updateRecord currently treated as a whole app write for accounting.
     _hseAppBytesWrittenCounter.add(len);
 
-
     return st;
 }
 
@@ -834,7 +833,7 @@ void KVDBRecordStore::updateStatsAfterRepair(OperationContext* opctx,
 void KVDBRecordStore::_changeNumRecords(OperationContext* opctx, int64_t amount) {
     KVDBRecoveryUnit* ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opctx);
 
-    ru->incrementCounter(_numRecordsKey, &_numRecords, amount);
+    ru->incrementCounter(_numRecordsKeyID, &_numRecords, amount);
 }
 
 void KVDBRecordStore::_increaseDataStorageSizes(OperationContext* opctx,
@@ -842,21 +841,21 @@ void KVDBRecordStore::_increaseDataStorageSizes(OperationContext* opctx,
                                                 int64_t samount) {
     KVDBRecoveryUnit* ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opctx);
 
-    ru->incrementCounter(_dataSizeKey, &_dataSize, damount);
-    ru->incrementCounter(_storageSizeKey, &_storageSize, samount);
+    ru->incrementCounter(_dataSizeKeyID, &_dataSize, damount);
+    ru->incrementCounter(_storageSizeKeyID, &_storageSize, samount);
 }
 
 void KVDBRecordStore::_resetNumRecords(OperationContext* opctx) {
     KVDBRecoveryUnit* ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opctx);
 
-    ru->resetCounter(_numRecordsKey, &_numRecords);
+    ru->resetCounter(_numRecordsKeyID, &_numRecords);
 }
 
 void KVDBRecordStore::_resetDataStorageSizes(OperationContext* opctx) {
     KVDBRecoveryUnit* ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opctx);
 
-    ru->resetCounter(_dataSizeKey, &_dataSize);
-    ru->resetCounter(_storageSizeKey, &_storageSize);
+    ru->resetCounter(_dataSizeKeyID, &_dataSize);
+    ru->resetCounter(_storageSizeKeyID, &_storageSize);
 }
 
 // In the case the value is compressed and is larger than one chunck:
@@ -888,8 +887,6 @@ hse::Status KVDBRecordStore::_putKey(OperationContext* opctx,
 
         // Compress the value.
         hse::compressdata(this->_compparms, data_unc, len_unc, comp);
-        _uncompressed_bytes += len_unc;
-        _compressed_bytes += comp.len();
 
         // Substitute the uncompressed data with the compressed data.
         data = comp.data();
@@ -1110,8 +1107,8 @@ Status KVDBCappedRecordStore::cappedDeleteAsNeeded(OperationContext* opctx,
     KVDBRecoveryUnit* ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opctx);
 
     *removed = 0;
-    dataSizeDelta = ru->getDeltaCounter(_dataSizeKey);
-    numRecordsDelta = ru->getDeltaCounter(_numRecordsKey);
+    dataSizeDelta = ru->getDeltaCounter(_dataSizeKeyID);
+    numRecordsDelta = ru->getDeltaCounter(_numRecordsKeyID);
 
     if (!_needDelete(dataSizeDelta, numRecordsDelta))
         return Status::OK();
@@ -1169,8 +1166,8 @@ Status KVDBCappedRecordStore::_baseCappedDeleteAsNeeded(OperationContext* opctx,
     OperationContext::RecoveryUnitState const realRUstate = opctx->setRecoveryUnit(
         realRecoveryUnit->newKVDBRecoveryUnit(), OperationContext::kNotInUnitOfWork);
 
-    int64_t dataSize = _dataSize.load() + realRecoveryUnit->getDeltaCounter(_dataSizeKey);
-    int64_t numRecords = _numRecords.load() + realRecoveryUnit->getDeltaCounter(_numRecordsKey);
+    int64_t dataSize = _dataSize.load() + realRecoveryUnit->getDeltaCounter(_dataSizeKeyID);
+    int64_t numRecords = _numRecords.load() + realRecoveryUnit->getDeltaCounter(_numRecordsKeyID);
 
     int64_t sizeOverCap = (dataSize > _cappedMaxSize) ? dataSize - _cappedMaxSize : 0;
     int64_t sizeSaved = 0, sizeSavedComp = 0;
@@ -1764,7 +1761,7 @@ boost::optional<Record> KVDBRecordStoreCursor::seekExact(const RecordId& id) {
     _lastPos = id;
     _needSeek = true;
 
-    _hseAppBytesReadCounter.add(dataLen);
+    KVDBStatCounterRollup(_hseAppBytesReadCounter, dataLen, 8);
 
     return {{id, {(const char*)_seekVal.data() + offset, static_cast<int>(dataLen)}}};
 }

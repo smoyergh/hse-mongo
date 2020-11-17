@@ -297,16 +297,19 @@ protected:
     KVDBCounterManager& _counterManager;  // not owned
 
     std::string _ident;
-    AtomicInt64 _nextIdNum;
-    std::atomic<long long> _dataSize;
-    std::atomic<long long> _storageSize{0};
-    std::atomic<long long> _numRecords;
-    std::atomic<unsigned long long> _uncompressed_bytes{0};
-    std::atomic<unsigned long long> _compressed_bytes{0};
 
-    const std::string _dataSizeKey;
-    const std::string _storageSizeKey;
-    const std::string _numRecordsKey;
+    /* The following strings are the kvs key names for the similarly named counters
+     * that share the same prefix (the text leading up to "KeyKvs").  The similarly
+     * named fields ending with "KeyID" are used as proxies for said keys in the
+     * recovery unit's delta counters map (long vs string for hash map efficiency).
+     */
+    const std::string _dataSizeKeyKvs;
+    const std::string _storageSizeKeyKvs;
+    const std::string _numRecordsKeyKvs;
+
+    unsigned long _dataSizeKeyID;
+    unsigned long _storageSizeKeyID;
+    unsigned long _numRecordsKeyID;
 
     void _encodeAndWriteCounter(const std::string& keyString, std::atomic<long long>& counter);
     void _readAndDecodeCounter(const std::string& keyString, std::atomic<long long>& counter);
@@ -336,6 +339,20 @@ protected:
     bool _overTaken{false};
 
     struct CompParms _compparms;
+
+    char _pad[128];
+
+    AtomicInt64 _nextIdNum;
+    char _nextIdNumPad[128 - sizeof(_nextIdNum)];
+
+    std::atomic<long long> _dataSize;
+    char _dataSizePad[128 - sizeof(_dataSize)];
+
+    std::atomic<long long> _storageSize{0};
+    char _storageSizePad[128 - sizeof(_storageSize)];
+
+    std::atomic<long long> _numRecords;
+    char _numRecordsPad[128 - sizeof(_numRecords)];
 };
 
 
@@ -748,4 +765,6 @@ private:
 
     mutable stdx::condition_variable _opsBecameVisibleCV;
 };
+
+extern std::atomic<unsigned long> gHseRSUniqKeyID;
 }

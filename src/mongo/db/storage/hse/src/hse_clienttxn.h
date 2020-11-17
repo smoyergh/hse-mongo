@@ -34,6 +34,7 @@
 #pragma once
 
 #include "hse.h"
+#include "hse_util.h"
 
 #include <deque>
 #include <mutex>
@@ -50,42 +51,35 @@ struct hse_kvdb_txn;
 // KVDB interface
 namespace hse {
 
-class TxnCache {
-public:
-    ~TxnCache();
-
-    void set_kvdb(hse_kvdb* kvdb);
-
-    void release();
-
-    hse_kvdb_txn* alloc();
-
-    void free(hse_kvdb_txn* txn);
-
-private:
-    hse_kvdb* _kvdb{0};
-};
-
-extern TxnCache* g_txn_cache;
-
 class ClientTxn {
 public:
-    ClientTxn(struct hse_kvdb* kvdb);
+    ClientTxn(struct hse_kvdb* kvdb) : _kvdb(kvdb) {
+        _txn = ::hse_kvdb_txn_alloc(_kvdb);
 
-    virtual ~ClientTxn();
+        invariantHse(_txn);
+    }
 
-    Status begin();
+    virtual ~ClientTxn() {
+        ::hse_kvdb_txn_free(_kvdb, _txn);
+    }
 
-    Status commit();
+    Status begin() {
+        return Status(::hse_kvdb_txn_begin(_kvdb, _txn));
+    }
 
-    Status abort();
+    Status commit() {
+        return Status(::hse_kvdb_txn_commit(_kvdb, _txn));
+    }
+
+    Status abort() {
+        return Status(::hse_kvdb_txn_abort(_kvdb, _txn));
+    }
 
     struct hse_kvdb_txn* get_kvdb_txn() {
         return _txn;
     }
 
 private:
-    static TxnCache _txn_cache;
     struct hse_kvdb* _kvdb;
     struct hse_kvdb_txn* _txn;
 };
