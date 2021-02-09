@@ -1,7 +1,7 @@
 /**
  *    SPDX-License-Identifier: AGPL-3.0-only
  *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *    Copyright (C) 2017-2021 Micron Technology, Inc.
  *
  *    This code is derived from and modifies the mongo-rocks project.
  *
@@ -88,7 +88,9 @@ void KVDBRecoveryUnit::beginUnitOfWork(OperationContext* opCtx) {
 void KVDBRecoveryUnit::commitUnitOfWork() {
     if (_txn) {
         hse::Status st(_txn->commit());
-        invariantHseSt(st);
+
+        if (!st.ok())
+            throw WriteConflictException();
 
         _txn_cached = _txn;
         _txn = nullptr;
