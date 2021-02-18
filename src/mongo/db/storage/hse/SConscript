@@ -135,7 +135,7 @@ def configure(conf, env):
 configure(None, env)
 
 HSE_LIBARRAY = [
-    'hse_kvdb',
+    'hse-1',
     'mpool',
 ]
 
