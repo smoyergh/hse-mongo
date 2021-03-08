@@ -71,7 +71,7 @@ DEST_TO_CONFIG = {
     "hse_mpool_name_prefix": "hseMpoolNamePrefix",
     "hse_coll_compr": "hseCollectionCompression",
     "continue_on_crash": "continueOnCrash",
-    "hse_executable": "hse",
+    "hse_executable": "hse1",
     "mpool_executable": "mpool",
     "volume_group": "vg",
 }

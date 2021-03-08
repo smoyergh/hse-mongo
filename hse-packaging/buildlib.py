@@ -68,7 +68,7 @@ def get_hse_mongo_version():
 
 
 def get_hse_sha():
-    blob = subprocess.check_output("hse -Vv", shell=True).strip().decode()
+    blob = subprocess.check_output("hse1 -Vv", shell=True).strip().decode()
     for line in blob.splitlines():
         if line.startswith('sha:'):
             return line.split()[1][:7]

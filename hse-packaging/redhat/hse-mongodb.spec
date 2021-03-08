@@ -36,7 +36,6 @@ This metapackage will install the mongo shell, import/export tools, other client
 %package server
 Summary: MongoDB database server with Heterogeneous-memory Storage Engine
 Group: Applications/Databases
-Requires: hse
 Requires: mpool
 Requires: numactl
 Requires: openssl

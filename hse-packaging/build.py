@@ -57,6 +57,12 @@ def parse_args():
     default_tarfile = os.path.join(
         MONGO_ROOT, 'hse-mongodb-linux-x86_64-%s.tgz' % VERSION
     )
+    default_hse_header = os.path.join(
+        '/opt/hse-1', 'include', 'hse-1'
+    )
+    default_hse_lib = os.path.join(
+        '/opt/hse-1', 'lib64'
+    )
 
     parser = argparse.ArgumentParser()
 
@@ -73,6 +79,12 @@ def parse_args():
 
     grp = parser.add_argument_group('options')
     grp.add_argument('--build-number', '-b', type=int)
+    grp.add_argument('--hse-header-path', '-I', default=default_hse_header,
+                     help='Path of Header files from HSE installation '
+                          '(default: %s)' % default_hse_header)
+    grp.add_argument('--hse-lib-path', '-L', default=default_hse_lib,
+                     help='Path of Dynamic Library from HSE installation '
+                          '(default: %s)' % default_hse_lib)
     grp.add_argument('--clean', '-c', action='store_true',
                      help='Clean all build targets before running')
     grp.add_argument('--distro', '-d',
@@ -110,6 +122,8 @@ def do_scons_and_tarball(args, with_tests=False):
         '--disable-warnings-as-errors',
         '--dbg=off',
         '--opt=on',
+        'CPPPATH=%s' % args.hse_header_path,
+        'LIBPATH=%s' % args.hse_lib_path,
     ]
 
     if ssl_ok:
