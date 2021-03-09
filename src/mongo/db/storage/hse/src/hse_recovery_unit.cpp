@@ -74,7 +74,7 @@ KVDBRecoveryUnit::KVDBRecoveryUnit(KVDB& kvdb,
 
 KVDBRecoveryUnit::~KVDBRecoveryUnit() {
     if (!_kvdb.kvdb_handle()) {
-	// kvdb is closed, it has already freed the cached txn. Nothing to do.
+        // kvdb is closed, it has already freed the cached txn. Nothing to do.
         return;
     }
 
