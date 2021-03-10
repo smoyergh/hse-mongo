@@ -73,6 +73,11 @@ KVDBRecoveryUnit::KVDBRecoveryUnit(KVDB& kvdb,
       _durabilityManager(durabilityManager) {}
 
 KVDBRecoveryUnit::~KVDBRecoveryUnit() {
+    if (!_kvdb.kvdb_handle()) {
+        // kvdb is closed, it has already freed the cached txn. Nothing to do.
+        return;
+    }
+
     if (_txn_cached) {
         _txn_cached->~ClientTxn();  // See placement new in _ensureTxn()
     } else if (_txn) {
