@@ -35,7 +35,7 @@ Description: MongoDB shell client
 Package: hse-mongodb-server
 Conflicts: mongodb-server, mongodb-org-server
 Architecture: any
-Depends: ${shlibs:Depends}, adduser, mpool, numactl
+Depends: ${shlibs:Depends}, adduser, numactl
 Description: MongoDB database server with Heterogeneous-memory Storage Engine
  MongoDB is a popular document-oriented NoSQL database.  The MongoDB implementation is open source, and includes an extensible framework for integrating different storage engines.
  .

@@ -136,7 +136,6 @@ configure(None, env)
 
 HSE_LIBARRAY = [
     'hse-1',
-    'mpool',
 ]
 
 
