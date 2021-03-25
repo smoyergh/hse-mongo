@@ -80,12 +80,12 @@ Status fini() {
 }
 
 // KVDB Implementation
-Status KVDBImpl::kvdb_make(const char* mp_name, const char* kvdb_name, struct hse_params* params) {
-    return Status(::hse_kvdb_make(mp_name, params));
+Status KVDBImpl::kvdb_make(const char* kvdb_name, struct hse_params* params) {
+    return Status(::hse_kvdb_make(kvdb_name, params));
 }
 
-Status KVDBImpl::kvdb_open(const char* mp_name, const char* kvdb_name, struct hse_params* params) {
-    auto st = ::hse_kvdb_open(mp_name, params, &_handle);
+Status KVDBImpl::kvdb_open(const char* kvdb_name, struct hse_params* params) {
+    auto st = ::hse_kvdb_open(kvdb_name, params, &_handle);
     return Status(st);
 }
 

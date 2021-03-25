@@ -57,7 +57,7 @@ KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
 
     int err{0};
     while (true) {
-        st = _db.kvdb_make(_mpoolName.c_str(), _kvdbName.c_str(), _params);
+        st = _db.kvdb_make(_kvdbName.c_str(), _params);
 
         err = st.getErrno();
         if (EAGAIN != err) {
@@ -71,7 +71,7 @@ KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
 
     ASSERT_EQUALS(0, err);
 
-    st = _db.kvdb_open(_mpoolName.c_str(), _kvdbName.c_str(), _params);
+    st = _db.kvdb_open(_kvdbName.c_str(), _params);
     ASSERT_EQUALS(0, st.getErrno());
 
     _dbClosed = false;
@@ -83,7 +83,7 @@ void KVDBTestSuiteFixture::reset() {
         hse::Status st = hse::init();
         ASSERT_EQUALS(0, st.getErrno());
 
-        st = _db.kvdb_open(_mpoolName.c_str(), _kvdbName.c_str(), _params);
+        st = _db.kvdb_open(_kvdbName.c_str(), _params);
         ASSERT_EQUALS(0, st.getErrno());
 
         _dbClosed = false;
@@ -113,7 +113,7 @@ void KVDBTestSuiteFixture::reset() {
     st = _db.kvdb_close();
     ASSERT_EQUALS(0, st.getErrno());
 
-    st = _db.kvdb_open(_mpoolName.c_str(), _kvdbName.c_str(), _params);
+    st = _db.kvdb_open(_kvdbName.c_str(), _params);
     ASSERT_EQUALS(0, st.getErrno());
 }
 
@@ -122,7 +122,7 @@ KVDBTestSuiteFixture::~KVDBTestSuiteFixture() {
         hse::Status st = hse::init();
         ASSERT_EQUALS(0, st.getErrno());
 
-        st = _db.kvdb_open(_mpoolName.c_str(), _kvdbName.c_str(), _params);
+        st = _db.kvdb_open(_kvdbName.c_str(), _params);
         ASSERT_EQUALS(0, st.getErrno());
 
         _dbClosed = false;

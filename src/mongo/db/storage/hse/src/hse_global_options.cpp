@@ -44,7 +44,7 @@
 
 namespace mongo {
 
-const std::string KVDBGlobalOptions::kDefaultMpoolName = "mp1";
+const std::string KVDBGlobalOptions::kDefaultKvdbName = "kvdb1";
 const int KVDBGlobalOptions::kDefaultForceLag = 0;
 const std::string KVDBGlobalOptions::kDefaultConfigPathStr = "";
 const std::string KVDBGlobalOptions::kDefaultParamsStr = "";
@@ -61,7 +61,8 @@ KVDBGlobalOptions kvdbGlobalOptions;
 namespace {
 const std::string modName{"hse"};
 
-const std::string mpoolNameOptStr = modName + "MpoolName";
+/* HSE_REVISIT: Change this to KvdbName */
+const std::string kvdbNameOptStr = modName + "MpoolName";
 
 const std::string forceLagOptStr = modName + "ForceLag";
 
@@ -71,7 +72,8 @@ const std::string paramsOptStr = modName + "Params";
 
 const std::string cfgStrPrefix = ("storage." + modName) + ".";
 
-const std::string mpoolNameCfgStr = cfgStrPrefix + "mpoolName";
+/* HSE_REVISIT: Change this to kvdbName */
+const std::string kvdbNameCfgStr = cfgStrPrefix + "mpoolName";
 
 const std::string forceLagCfgStr = cfgStrPrefix + "forceLag";
 
@@ -97,8 +99,8 @@ Status KVDBGlobalOptions::add(moe::OptionSection* options) {
 
     kvdbOptions
         .addOptionChaining(
-            mpoolNameCfgStr, mpoolNameOptStr, moe::String, "name of the mpool containing the kvdb")
-        .setDefault(moe::Value(kDefaultMpoolName));
+            kvdbNameCfgStr, kvdbNameOptStr, moe::String, "name of the kvdb")
+        .setDefault(moe::Value(kDefaultKvdbName));
     kvdbOptions
         .addOptionChaining(forceLagCfgStr, forceLagOptStr, moe::Int, "force x seconds of lag")
         .hidden()
@@ -136,9 +138,9 @@ Status KVDBGlobalOptions::add(moe::OptionSection* options) {
 
 Status KVDBGlobalOptions::store(const moe::Environment& params,
                                 const std::vector<std::string>& args) {
-    if (params.count(mpoolNameCfgStr)) {
-        kvdbGlobalOptions._mpoolName = params[mpoolNameCfgStr].as<std::string>();
-        log() << "Mpool Name: " << kvdbGlobalOptions._mpoolName;
+    if (params.count(kvdbNameCfgStr)) {
+        kvdbGlobalOptions._kvdbName = params[kvdbNameCfgStr].as<std::string>();
+        log() << "KVDB Name: " << kvdbGlobalOptions._kvdbName;
     }
 
     if (params.count(forceLagCfgStr)) {
@@ -177,8 +179,8 @@ Status KVDBGlobalOptions::store(const moe::Environment& params,
     return Status::OK();
 }
 
-std::string KVDBGlobalOptions::getMpoolName() const {
-    return _mpoolName;
+std::string KVDBGlobalOptions::getKvdbName() const {
+    return _kvdbName;
 }
 
 bool KVDBGlobalOptions::getCrashSafeCounters() const {

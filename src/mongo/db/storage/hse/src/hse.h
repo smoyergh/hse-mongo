@@ -324,12 +324,10 @@ class KVDB {
 public:
     KVDB() {}
 
-    virtual Status kvdb_make(const char* mp_name,
-                             const char* kvdb_name,
+    virtual Status kvdb_make(const char* kvdb_name,
                              struct hse_params* params) = 0;
 
-    virtual Status kvdb_open(const char* mp_name,
-                             const char* kvdb_name,
+    virtual Status kvdb_open(const char* kvdb_name,
                              struct hse_params* params) = 0;
 
     virtual Status kvdb_kvs_open(const char* kvs_name,

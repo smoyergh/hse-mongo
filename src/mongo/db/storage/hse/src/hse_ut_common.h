@@ -58,8 +58,7 @@ public:
     void reset();
 
 private:
-    string _kvdbName{"mp1"};
-    string _mpoolName{"mp1"};
+    string _kvdbName{"kvdb1"};
 
     struct hse_params* _params{nullptr};
 

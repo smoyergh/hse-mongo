@@ -48,9 +48,9 @@ Status fini();
 // KVDB Implementation
 class KVDBImpl : public KVDB {
 public:
-    virtual Status kvdb_make(const char* mp_name, const char* kvdb_name, struct hse_params* params);
+    virtual Status kvdb_make(const char* kvdb_name, struct hse_params* params);
 
-    virtual Status kvdb_open(const char* mp_name, const char* kvdb_name, struct hse_params* params);
+    virtual Status kvdb_open(const char* kvdb_name, struct hse_params* params);
 
     virtual Status kvdb_kvs_open(const char* kvs_name,
                                  struct hse_params* params,

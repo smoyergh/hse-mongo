@@ -43,7 +43,7 @@ namespace moe = mongo::optionenvironment;
 class KVDBGlobalOptions {
 public:
     KVDBGlobalOptions()
-        : _mpoolName{kDefaultMpoolName},
+        : _kvdbName{kDefaultKvdbName},
           _forceLag{kDefaultForceLag},
           _configPathStr{kDefaultConfigPathStr},
           _paramsStr{kDefaultParamsStr},
@@ -54,8 +54,6 @@ public:
 
     Status add(moe::OptionSection* options);
     Status store(const moe::Environment& params, const std::vector<std::string>& args);
-
-    std::string getMpoolName() const;
 
     std::string getKvdbName() const;
 
@@ -72,7 +70,6 @@ public:
     int getForceLag() const;
 
 private:
-    static const std::string kDefaultMpoolName;
     static const std::string kDefaultKvdbName;
     static const int kDefaultForceLag;
     static const std::string kDefaultConfigPathStr;
@@ -82,7 +79,7 @@ private:
     static const std::string kDefaultCollectionCompressionMinBytesStr;
     static const bool kDefaultEnableMetrics;
 
-    std::string _mpoolName;
+    std::string _kvdbName;
     int _forceLag;
     std::string _configPathStr;
     std::string _paramsStr;

@@ -51,8 +51,8 @@ import sys
 
 from subprocess import Popen, PIPE
 
-_MPOOLBIN = '/usr/bin/mpool'
-_MPOOL_NAME = 'mp1'
+_HSEBIN = '/opt/hse-1/bin/hse1'
+_KVDB_NAME = 'kvdb1'
 _DEVICE_LIST = []
 
 def check_for_tests(pwd, tests):
@@ -72,41 +72,70 @@ def _run_cmd(cmdargs, logfile):
     logfile.flush()
     return exit_code
 
-def run_test(pwd, test):
-    logfile = open('%s/%s.out' % (pwd, test), 'w')
+def test_setup(pwd):
+    fname = '%s/setup.out' % (pwd)
+    logfile = open(fname, 'w')
     devlist_str = ' '.join(_DEVICE_LIST)
-
-    cmdargs = [ '%s destroy %s' % (_MPOOLBIN, _MPOOL_NAME), '>>', '%s/%s.out' % (pwd, test), '2>&1']
-    _run_cmd(cmdargs, logfile)
 
     harness_vg = 'harness_vg'
     harness_lv = 'harness_lv'
 
-    cmdargs = [ 'vgremove -y %s' % (harness_vg), '>>', '%s/%s.out' % (pwd, test), '2>&1']
+    cmdargs = [ 'vgremove -y %s' % (harness_vg), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
     for dev in _DEVICE_LIST:
-        cmdargs = [ 'pvcreate %s' % (dev), '>>', '%s/%s.out' % (pwd, test), '2>&1']
+        cmdargs = [ 'pvcreate %s' % (dev), '>>', fname, '2>&1']
         _run_cmd(cmdargs, logfile)
-    cmdargs = [ 'vgcreate %s %s' % (harness_vg, devlist_str), '>>', '%s/%s.out' % (pwd, test), '2>&1']
+    cmdargs = [ 'vgcreate %s %s' % (harness_vg, devlist_str), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
-    cmdargs = [ 'lvcreate -y -l 100%FREE --stripes {} --name {} {}'.format(len(_DEVICE_LIST), harness_lv, harness_vg), '>>', '%s/%s.out' % (pwd, test), '2>&1']
+    cmdargs = [ 'lvcreate -y -l 100%FREE --stripes {} --name {} {}'.format(len(_DEVICE_LIST), harness_lv, harness_vg), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
+
+    cmdargs = [ 'mkfs -t ext4 -F /dev/%s/%s' % (harness_vg, harness_lv), '>>', fname, '2>&1']
+    _run_cmd(cmdargs, logfile)
+
+    cmdargs = [ 'mkdir -p %s/%s && mount -onoatime /dev/%s/%s %s/%s' % (pwd, _KVDB_NAME, harness_vg, harness_lv, pwd, _KVDB_NAME), '>>', fname, '2>&1']
+    _run_cmd(cmdargs, logfile)
+
+    os.environ["HSE_STORAGE_PATH"] = '%s/%s' % (pwd, _KVDB_NAME)
+    os.environ["HSE_REST_SOCK_PATH"] = '%s/%s' % (pwd, _KVDB_NAME)
+
+    logfile.close()
+
+def test_teardown(pwd):
+    fname = '%s/teardown.out' % (pwd)
+    logfile = open(fname, 'w')
+
+    harness_vg = 'harness_vg'
+
+    cmdargs = [ 'umount %s/%s && rmdir %s/%s' % (pwd, _KVDB_NAME, pwd, _KVDB_NAME), '>>', fname, '2>&1']
+    _run_cmd(cmdargs, logfile)
+
+    cmdargs = [ 'vgremove -y %s' % (harness_vg), '>>', fname, '2>&1']
+    _run_cmd(cmdargs, logfile)
+
+    logfile.close()
+
+def run_test(pwd, test):
+    fname = '%s/%s.out' %(pwd, test)
+    logfile = open(fname, 'w')
 
     exit_code = 0
 
-    cmdargs = [ '%s  create %s /dev/%s/%s' % (_MPOOLBIN, _MPOOL_NAME, harness_vg, harness_lv), '>>', '%s/%s.out' % (pwd, test), '2>&1']
-    exit_code = _run_cmd(cmdargs, logfile)
-    if exit_code != 0:
-        return exit_code
-    cmdargs = ['%s/%s' % (pwd, test), '>>', '%s/%s.out' % (pwd, test), '2>&1']
+    cmdargs = [ '%s kvdb create %s' % (_HSEBIN, _KVDB_NAME), '>>', fname, '2>&1']
     exit_code = _run_cmd(cmdargs, logfile)
     if exit_code != 0:
         return exit_code
 
+    cmdargs = ['%s/%s' % (pwd, test), '>>', fname, '2>&1']
+    exit_code = _run_cmd(cmdargs, logfile)
+
+    cmdargs = [ 'rm -f %s/%s/.lockfile && %s kvdb destroy %s' % (pwd, _KVDB_NAME, _HSEBIN, _KVDB_NAME), '>>', fname, '2>&1']
+    _run_cmd(cmdargs, logfile)
+
     logfile.close()
+
     return exit_code
-    
 
 def parse_output(pwd, test):
     outfilename = '%s/%s.out' % (pwd, test)
@@ -129,7 +158,7 @@ def parse_output(pwd, test):
 
 
 if __name__ == '__main__':
-    usage = "Usage: hse_test_harness build_number mpool_bin_path mpool_name device1 device2 ..."
+    usage = "Usage: hse_test_harness build_number hse_bin_path kvdb_name device1 device2 ..."
 
     if len(sys.argv) < 4:
         print("Error:  incorrect number of arguments!", file=sys.stderr)
@@ -137,8 +166,8 @@ if __name__ == '__main__':
         sys.exit(1)
 
     build_number = sys.argv[1]
-    _MPOOLBIN = sys.argv[2]
-    _MPOOL_NAME = sys.argv[3]
+    _HSEBIN = sys.argv[2]
+    _KVDB_NAME = sys.argv[3]
     _DEVICE_LIST = sys.argv[4:]
 
     pwd = os.getcwd()
@@ -155,6 +184,9 @@ if __name__ == '__main__':
     results = dict()
 
     exit_status = 0
+
+    test_setup(pwd)
+
     for t in tests:
         exit_status += int(run_test(pwd, t))
         results[t] = parse_output(pwd, t)
@@ -165,4 +197,8 @@ if __name__ == '__main__':
     print("Results:")
     pprint.pprint(results)
     print(exit_status)
+
+    if exit_status == 0:
+        test_teardown(pwd)
+
     sys.exit(exit_status)

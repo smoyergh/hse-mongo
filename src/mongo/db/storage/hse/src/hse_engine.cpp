@@ -467,11 +467,11 @@ void KVDBEngine::setJournalListener(JournalListener* jl) {
     _durabilityManager->setJournalListener(jl);
 }
 
-void KVDBEngine::_open_kvdb(const string& mp, const string& db, struct hse_params* params) {
+void KVDBEngine::_open_kvdb(const string& db, struct hse_params* params) {
 
-    auto st = _db.kvdb_open(mp.c_str(), db.c_str(), params);
+    auto st = _db.kvdb_open(db.c_str(), params);
     if (!st.ok() && st.getErrno() == ENOENT) {
-        error() << "Error: kvdb open failed - mpool/kvdb " << mp << " may not exist";
+        error() << "Error: kvdb open failed - kvdb " << db << " may not exist";
     }
 
     invariantHseSt(st);
@@ -553,7 +553,7 @@ void KVDBEngine::_setupDb() {
     auto st = hse::init();
     invariantHseSt(st);
 
-    const string mpoolName = kvdbGlobalOptions.getMpoolName();
+    const string kvdbName = kvdbGlobalOptions.getKvdbName();
 
     struct hse_params* params{nullptr};
 
@@ -562,8 +562,7 @@ void KVDBEngine::_setupDb() {
 
     _set_hse_params(params);
 
-    // kvdb name and mpool name are the same for now as per the HSE API.
-    _open_kvdb(mpoolName, mpoolName, params);
+    _open_kvdb(kvdbName, params);
 
     _open_kvs(kMainKvsName, _mainKvs, params);
     _open_kvs(kLargeKvsName, _largeKvs, params);
