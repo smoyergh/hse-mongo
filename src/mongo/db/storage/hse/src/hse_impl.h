@@ -77,6 +77,8 @@ public:
                            const KVDBData& key,
                            const KVDBData& val);
 
+    virtual Status kvs_sub_txn_put(KVSHandle handle, const KVDBData& key, const KVDBData& val);
+
     virtual Status kvs_put(KVSHandle handle, const KVDBData& key, const KVDBData& val);
 
     virtual Status kvs_get(
@@ -89,6 +91,8 @@ public:
 
     virtual Status kvs_delete(KVSHandle handle, ClientTxn* txn, const KVDBData& key);
 
+    virtual Status kvs_sub_txn_delete(KVSHandle handle, const KVDBData& key);
+
     virtual Status kvs_prefix_probe(KVSHandle handle,
                                     ClientTxn* txn,
                                     const KVDBData& prefix,
@@ -100,6 +104,8 @@ public:
         KVSHandle handle, ClientTxn* txn, const KVDBData& key, KVDBData& val, bool& found);
 
     virtual Status kvs_prefix_delete(KVSHandle handle, ClientTxn* txn, const KVDBData& prefix);
+
+    virtual Status kvs_sub_txn_prefix_delete(KVSHandle handle, const KVDBData& prefix);
 
     virtual Status kvs_iter_delete(KVSHandle handle, ClientTxn* txn, const KVDBData& prefix);
 

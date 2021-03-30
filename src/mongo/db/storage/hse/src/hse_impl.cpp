@@ -359,4 +359,56 @@ Status KVDBImpl::kvdb_params_from_file(struct hse_params* params, const string& 
 Status KVDBImpl::kvdb_params_set(struct hse_params* params, const string& key, const string& val) {
     return Status(::hse_params_set(params, key.c_str(), val.c_str()));
 };
+
+// The sub_txn ops below are used in lieu of not-txnal ops where snapshot isolation is not
+// required. This is so since we use only transaction enabled KVSes now.
+Status KVDBImpl::kvs_sub_txn_put(KVSHandle handle, const KVDBData& key, const KVDBData& val) {
+    struct hse_kvs* kvs = (struct hse_kvs*)handle;
+    struct hse_kvdb_opspec opspec;
+    Status ret{};
+
+    SUB_TXN_OP_RETRY_LOOP_BEGIN {
+        _hseKvsPutCounter.add();
+        auto lt = _hseKvsPutLatency.begin();
+        ret = Status{::hse_kvs_put(kvs, &opspec, key.data(), key.len(), val.data(), val.len())};
+        _hseKvsPutLatency.end(lt);
+    }
+    SUB_TXN_OP_RETRY_LOOP_END(ret)
+
+    return ret;
+}
+
+Status KVDBImpl::kvs_sub_txn_delete(KVSHandle handle, const KVDBData& key) {
+    struct hse_kvs* kvs = (struct hse_kvs*)handle;
+    struct hse_kvdb_opspec opspec;
+    Status ret{};
+
+    SUB_TXN_OP_RETRY_LOOP_BEGIN {
+        _hseKvsDeleteCounter.add();
+        auto lt = _hseKvsDeleteLatency.begin();
+        ret = Status{::hse_kvs_delete(kvs, &opspec, key.data(), key.len())};
+        _hseKvsDeleteLatency.end(lt);
+    }
+    SUB_TXN_OP_RETRY_LOOP_END(ret)
+
+    return ret;
+}
+
+
+Status KVDBImpl::kvs_sub_txn_prefix_delete(KVSHandle handle, const KVDBData& prefix) {
+    struct hse_kvs* kvs = (struct hse_kvs*)handle;
+    struct hse_kvdb_opspec opspec;
+    Status ret{};
+
+    SUB_TXN_OP_RETRY_LOOP_BEGIN {
+        _hseKvsPrefixDeleteCounter.add();
+        auto lt = _hseKvsPrefixDeleteLatency.begin();
+        ret = Status{::hse_kvs_prefix_delete(kvs, &opspec, prefix.data(), prefix.len(), nullptr)};
+        _hseKvsPrefixDeleteLatency.end(lt);
+    }
+    SUB_TXN_OP_RETRY_LOOP_END(ret)
+
+
+    return ret;
+}
 }

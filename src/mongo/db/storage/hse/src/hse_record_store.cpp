@@ -419,7 +419,7 @@ void KVDBRecordStore::_encodeAndWriteCounter(const std::string& keyString,
     KVDBData key{keyString};
     KVDBData val = KVDBData{valString};
 
-    auto st = _db.kvs_put(_colKvs, key, val);
+    auto st = _db.kvs_sub_txn_put(_colKvs, key, val);
     invariantHseSt(st);
 }
 

@@ -78,6 +78,10 @@ public:
         invariantHseSt(
             _db.kvdb_params_set(_params, paramName, std::to_string(hse::DEFAULT_PFX_LEN)));
 
+        // always open kvses in transactional mode.
+        invariantHseSt(
+            _db.kvdb_params_set(_params, string("kvs.transactions_enable"), string("1")));
+
         hse::Status hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 

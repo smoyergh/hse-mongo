@@ -303,10 +303,8 @@ Status KVDBEngine::dropIdent(OperationContext* opCtx, StringData ident) {
     string delKeyStr = kMetadataPrefix + ident.toString();
     KVDBData keyToDel{delKeyStr};
 
-    auto ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opCtx);
-
     // delete metadata
-    auto s = ru->nonTxnDel(_mainKvs, keyToDel);
+    auto s = _db.kvs_sub_txn_delete(_mainKvs, keyToDel);
     if (!s.ok()) {
         return hseToMongoStatus(s);
     }
@@ -325,26 +323,26 @@ Status KVDBEngine::dropIdent(OperationContext* opCtx, StringData ident) {
         KVDBData storageSizeKey{storageSizeKeyStr};
         KVDBData numRecordsKey{numRecordsKeyStr};
 
-        s = ru->nonTxnPfxDel(_mainKvs, pKeyToDel);
+        s = _db.kvs_sub_txn_prefix_delete(_mainKvs, pKeyToDel);
         if (!s.ok()) {
             return hseToMongoStatus(s);
         }
-        s = ru->nonTxnPfxDel(_largeKvs, pKeyToDel);
-        if (!s.ok()) {
-            return hseToMongoStatus(s);
-        }
-
-        s = ru->nonTxnDel(_mainKvs, dataSizeKey);
+        s = _db.kvs_sub_txn_prefix_delete(_largeKvs, pKeyToDel);
         if (!s.ok()) {
             return hseToMongoStatus(s);
         }
 
-        s = ru->nonTxnDel(_mainKvs, storageSizeKey);
+        s = _db.kvs_sub_txn_delete(_mainKvs, dataSizeKey);
         if (!s.ok()) {
             return hseToMongoStatus(s);
         }
 
-        s = ru->nonTxnDel(_mainKvs, numRecordsKey);
+        s = _db.kvs_sub_txn_delete(_mainKvs, storageSizeKey);
+        if (!s.ok()) {
+            return hseToMongoStatus(s);
+        }
+
+        s = _db.kvs_sub_txn_delete(_mainKvs, numRecordsKey);
         if (!s.ok()) {
             return hseToMongoStatus(s);
         }
@@ -358,23 +356,23 @@ Status KVDBEngine::dropIdent(OperationContext* opCtx, StringData ident) {
         KVDBData indexSizeKey{indexSizeKeyStr};
 
         if (KVDBIdentType::STDINDEX == type) {
-            s = ru->nonTxnPfxDel(_stdIdxKvs, pKeyToDel);
+            s = _db.kvs_sub_txn_prefix_delete(_stdIdxKvs, pKeyToDel);
             if (!s.ok()) {
                 return hseToMongoStatus(s);
             }
 
-            s = ru->nonTxnDel(_stdIdxKvs, indexSizeKey);
+            s = _db.kvs_sub_txn_delete(_stdIdxKvs, indexSizeKey);
             if (!s.ok()) {
                 return hseToMongoStatus(s);
             }
         } else {
             invariantHse(type == KVDBIdentType::UNIQINDEX);
-            s = ru->nonTxnPfxDel(_uniqIdxKvs, pKeyToDel);
+            s = _db.kvs_sub_txn_prefix_delete(_uniqIdxKvs, pKeyToDel);
             if (!s.ok()) {
                 return hseToMongoStatus(s);
             }
 
-            s = ru->nonTxnDel(_uniqIdxKvs, indexSizeKey);
+            s = _db.kvs_sub_txn_delete(_uniqIdxKvs, indexSizeKey);
             if (!s.ok()) {
                 return hseToMongoStatus(s);
             }
@@ -546,6 +544,9 @@ void KVDBEngine::_set_hse_params(struct hse_params* params) {
     // applies to std idx
     paramName = string("kvs.") + kStdIdxKvsName + string(".sfx_len");
     invariantHseSt(_db.kvdb_params_set(params, paramName, std::to_string(STDIDX_SFX_LEN)));
+
+    // always open kvses in transactional mode.
+    invariantHseSt(_db.kvdb_params_set(params, string("kvs.transactions_enable"), string("1")));
 }
 
 void KVDBEngine::_setupDb() {

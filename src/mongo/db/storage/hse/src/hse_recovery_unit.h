@@ -148,10 +148,6 @@ public:
                           hse_kvs_pfx_probe_cnt& found);
     hse::Status prefixDelete(const KVSHandle& h, const KVDBData& prefix);
     hse::Status iterDelete(const KVSHandle& h, const KVDBData& prefix);
-    hse::Status nonTxnPut(const KVSHandle& h, const KVDBData& key, const KVDBData& val);
-    hse::Status nonTxnDel(const KVSHandle& h, const KVDBData& key);
-    hse::Status nonTxnPfxDel(const KVSHandle& h, const KVDBData& prefix);
-    hse::Status nonTxnIterDelete(const KVSHandle& h, const KVDBData& prefix);
     hse::Status beginScan(const KVSHandle& h,
                           KVDBData prefix,
                           bool forward,

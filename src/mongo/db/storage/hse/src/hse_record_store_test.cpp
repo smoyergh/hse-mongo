@@ -151,22 +151,26 @@ public:
             _db.kvdb_params_set(_params, paramName, std::to_string(hse::DEFAULT_PFX_LEN));
         invariantHseSt(hseSt);
 
+        // always open kvses in transactional mode.
+        hseSt = _db.kvdb_params_set(_params, string("kvs.transactions_enable"), string("1"));
+        invariantHseSt(hseSt);
+
         hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_colKvsName.c_str(), nullptr, _colKvs);
+        hseSt = _db.kvdb_kvs_open(_colKvsName.c_str(), _params, _colKvs);
         invariantHseSt(hseSt);
 
         hseSt = _db.kvdb_kvs_make(_idxKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_idxKvsName.c_str(), nullptr, _idxKvs);
+        hseSt = _db.kvdb_kvs_open(_idxKvsName.c_str(), _params, _idxKvs);
         invariantHseSt(hseSt);
 
         hseSt = _db.kvdb_kvs_make(_largeKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_largeKvsName.c_str(), nullptr, _largeKvs);
+        hseSt = _db.kvdb_kvs_open(_largeKvsName.c_str(), _params, _largeKvs);
         invariantHseSt(hseSt);
 
         paramName = string("kvs.") + _oplogKvsName + string(".pfx_len");
@@ -180,13 +184,13 @@ public:
         hseSt = _db.kvdb_kvs_make(_oplogKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_oplogKvsName.c_str(), nullptr, _oplogKvs);
+        hseSt = _db.kvdb_kvs_open(_oplogKvsName.c_str(), _params, _oplogKvs);
         invariantHseSt(hseSt);
 
         hseSt = _db.kvdb_kvs_make(_oplogLargeKvsName.c_str(), _params);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_oplogLargeKvsName.c_str(), nullptr, _oplogLargeKvs);
+        hseSt = _db.kvdb_kvs_open(_oplogLargeKvsName.c_str(), _params, _oplogLargeKvs);
         invariantHseSt(hseSt);
 
         hse_params_destroy(_params);

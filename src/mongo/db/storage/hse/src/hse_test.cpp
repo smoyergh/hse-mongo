@@ -233,6 +233,11 @@ protected:
             hse::Status st =
                 _db.kvdb_params_set(_params[i], paramName, std::to_string(hse::DEFAULT_PFX_LEN));
             ASSERT_EQUALS(0, st.getErrno());
+
+            // always open kvses in transactional mode.
+            st = _db.kvdb_params_set(_params[i], string("kvs.transactions_enable"), string("1"));
+            ASSERT_EQUALS(0, st.getErrno());
+
             st = _db.kvdb_kvs_make(_kvsNames[i], _params[i]);
             ASSERT_EQUALS(0, st.getErrno());
             st = _db.kvdb_kvs_open(_kvsNames[i], _params[i], _kvsHandles[i]);
@@ -285,7 +290,7 @@ TEST_F(KVDBREGTEST, KvdbPutGetDelTest) {
 
     for (auto& item : keyVals) {
 
-        st = _db.kvs_put(_kvsHandles[0], 0, item.first, item.second);
+        st = _db.kvs_sub_txn_put(_kvsHandles[0], item.first, item.second);
 
         ASSERT_EQUALS(0, st.getErrno());
     }
@@ -315,7 +320,7 @@ TEST_F(KVDBREGTEST, KvdbPutGetDelTest) {
         const KVDBData& key = item.first;
 
         if (cnt % 2) {
-            st = _db.kvs_delete(_kvsHandles[0], 0, key);
+            st = _db.kvs_sub_txn_delete(_kvsHandles[0], key);
         }
         ASSERT_EQUALS(0, st.getErrno());
 
@@ -366,7 +371,7 @@ TEST_F(KVDBREGTEST, KvdbForwardFullScanTest) {
 
     for (map<KVDBData, KVDBData>::iterator iter = keyVals.begin(); iter != keyVals.end(); iter++) {
 
-        st = _db.kvs_put(_kvsHandles[0], 0, iter->first, iter->second);
+        st = _db.kvs_sub_txn_put(_kvsHandles[0], iter->first, iter->second);
         ASSERT_EQUALS(0, st.getErrno());
     }
 
@@ -430,7 +435,7 @@ TEST_F(KVDBREGTEST, KvdbPrefixForwardScanTest) {
 
     for (map<KVDBData, KVDBData>::iterator iter = keyVals.begin(); iter != keyVals.end(); iter++) {
 
-        st = _db.kvs_put(_kvsHandles[0], 0, iter->first, iter->second);
+        st = _db.kvs_sub_txn_put(_kvsHandles[0], iter->first, iter->second);
         ASSERT_EQUALS(0, st.getErrno());
     }
 
@@ -516,7 +521,7 @@ TEST_F(KVDBREGTEST, KvdbNormalCursorSeekTest) {
     KVDBData rVal7 = keyVals[rKey7];
 
     for (map<KVDBData, KVDBData>::iterator iter = keyVals.begin(); iter != keyVals.end(); iter++) {
-        st = _db.kvs_put(_kvsHandles[0], 0, iter->first, iter->second);
+        st = _db.kvs_sub_txn_put(_kvsHandles[0], iter->first, iter->second);
         ASSERT_EQUALS(0, st.getErrno());
     }
 
@@ -602,7 +607,7 @@ TEST_F(KVDBREGTEST, KvdbPrefixCursorSeekTest) {
     KVDBData rVal33 = keyVals[rKey33];
 
     for (map<KVDBData, KVDBData>::iterator iter = keyVals.begin(); iter != keyVals.end(); iter++) {
-        st = _db.kvs_put(_kvsHandles[0], 0, iter->first, iter->second);
+        st = _db.kvs_sub_txn_put(_kvsHandles[0], iter->first, iter->second);
         ASSERT_EQUALS(0, st.getErrno());
     }
 
@@ -668,7 +673,7 @@ TEST_F(KVDBREGTEST, KvdbReverseFullScanTest) {
 
     for (map<KVDBData, KVDBData>::iterator iter = keyVals.begin(); iter != keyVals.end(); iter++) {
 
-        st = _db.kvs_put(_kvsHandles[0], 0, iter->first, iter->second);
+        st = _db.kvs_sub_txn_put(_kvsHandles[0], iter->first, iter->second);
         ASSERT_EQUALS(0, st.getErrno());
     }
 
@@ -731,7 +736,7 @@ TEST_F(KVDBREGTEST, KvdbPrefixReverseScanTest) {
 
     for (map<KVDBData, KVDBData>::iterator iter = keyVals.begin(); iter != keyVals.end(); iter++) {
 
-        st = _db.kvs_put(_kvsHandles[0], 0, iter->first, iter->second);
+        st = _db.kvs_sub_txn_put(_kvsHandles[0], iter->first, iter->second);
         ASSERT_EQUALS(0, st.getErrno());
     }
 
@@ -812,7 +817,7 @@ TEST_F(KVDBREGTEST, KvdbReverseCursorSeekTest) {
     KVDBData rVal2 = keyVals[rKey2];
 
     for (map<KVDBData, KVDBData>::iterator iter = keyVals.begin(); iter != keyVals.end(); iter++) {
-        st = _db.kvs_put(_kvsHandles[0], 0, iter->first, iter->second);
+        st = _db.kvs_sub_txn_put(_kvsHandles[0], iter->first, iter->second);
         ASSERT_EQUALS(0, st.getErrno());
     }
 
@@ -901,7 +906,7 @@ TEST_F(KVDBREGTEST, KvdbPrefixReverseCursorSeekTest) {
 
     for (map<KVDBData, KVDBData>::iterator iter = keyVals.begin(); iter != keyVals.end(); iter++) {
 
-        st = _db.kvs_put(_kvsHandles[0], 0, iter->first, iter->second);
+        st = _db.kvs_sub_txn_put(_kvsHandles[0], iter->first, iter->second);
         ASSERT_EQUALS(0, st.getErrno());
     }
 
@@ -1026,10 +1031,10 @@ TEST_F(KVDBREGTEST, KvdbUpdateNoTxnTest) {
 
 
     // put 2 vals
-    auto st = _db.kvs_put(_kvsHandles[0], 0, key1, val1);
+    auto st = _db.kvs_sub_txn_put(_kvsHandles[0], key1, val1);
     ASSERT_EQUALS(0, st.getErrno());
 
-    st = _db.kvs_put(_kvsHandles[0], 0, key2, val2);
+    st = _db.kvs_sub_txn_put(_kvsHandles[0], key2, val2);
     ASSERT_EQUALS(0, st.getErrno());
 
     // create cursor
@@ -1059,7 +1064,7 @@ TEST_F(KVDBREGTEST, KvdbUpdateNoTxnTest) {
     ASSERT_EQUALS(0, st.getErrno());
 
     // put third val
-    st = _db.kvs_put(_kvsHandles[0], 0, key3, val3);
+    st = _db.kvs_sub_txn_put(_kvsHandles[0], key3, val3);
     ASSERT_EQUALS(0, st.getErrno());
 
     // update
@@ -1109,10 +1114,10 @@ TEST_F(KVDBREGTEST, KvdbUpdateTxnTest) {
     // First test no txn
 
     // put 2 vals
-    auto st = _db.kvs_put(_kvsHandles[0], 0, key1, val1);
+    auto st = _db.kvs_sub_txn_put(_kvsHandles[0], key1, val1);
     ASSERT_EQUALS(0, st.getErrno());
 
-    st = _db.kvs_put(_kvsHandles[0], 0, key2, val2);
+    st = _db.kvs_sub_txn_put(_kvsHandles[0], key2, val2);
     ASSERT_EQUALS(0, st.getErrno());
 
 
@@ -1204,13 +1209,13 @@ TEST_F(KVDBREGTEST, KvdbDeleteKeyCursorTest) {
     KVDBData val3{(const uint8_t*)"v3", strlen("v3") + 1};
 
     // put 3 vals
-    auto st = _db.kvs_put(_kvsHandles[0], 0, key1, val1);
+    auto st = _db.kvs_sub_txn_put(_kvsHandles[0], key1, val1);
     ASSERT_EQUALS(0, st.getErrno());
 
-    st = _db.kvs_put(_kvsHandles[0], 0, key2, val2);
+    st = _db.kvs_sub_txn_put(_kvsHandles[0], key2, val2);
     ASSERT_EQUALS(0, st.getErrno());
 
-    st = _db.kvs_put(_kvsHandles[0], 0, key3, val3);
+    st = _db.kvs_sub_txn_put(_kvsHandles[0], key3, val3);
     ASSERT_EQUALS(0, st.getErrno());
 
 
@@ -1250,7 +1255,7 @@ TEST_F(KVDBREGTEST, KvdbDeleteKeyCursorTest) {
     delete cursor;
 
     // do a delete
-    st = _db.kvs_delete(_kvsHandles[0], 0, key3);
+    st = _db.kvs_sub_txn_delete(_kvsHandles[0], key3);
     ASSERT_EQUALS(0, st.getErrno());
 
     // Recreate the cursor and iterate
@@ -1289,13 +1294,13 @@ TEST_F(KVDBREGTEST, KvdbDeleteTxnCursorTest) {
     KVDBData val3{(const uint8_t*)"v3", strlen("v3") + 1};
 
     // put 3 vals
-    auto st = _db.kvs_put(_kvsHandles[0], 0, key1, val1);
+    auto st = _db.kvs_sub_txn_put(_kvsHandles[0], key1, val1);
     ASSERT_EQUALS(0, st.getErrno());
 
-    st = _db.kvs_put(_kvsHandles[0], 0, key2, val2);
+    st = _db.kvs_sub_txn_put(_kvsHandles[0], key2, val2);
     ASSERT_EQUALS(0, st.getErrno());
 
-    st = _db.kvs_put(_kvsHandles[0], 0, key3, val3);
+    st = _db.kvs_sub_txn_put(_kvsHandles[0], key3, val3);
     ASSERT_EQUALS(0, st.getErrno());
 
 
@@ -1384,10 +1389,10 @@ TEST_F(KVDBREGTEST, KvdbProbeTxnTest) {
 
 
     // put 2 vals
-    auto st = _db.kvs_put(_kvsHandles[0], 0, key1, val1);
+    auto st = _db.kvs_sub_txn_put(_kvsHandles[0], key1, val1);
     ASSERT_EQUALS(0, st.getErrno());
 
-    st = _db.kvs_put(_kvsHandles[0], 0, key2, val2);
+    st = _db.kvs_sub_txn_put(_kvsHandles[0], key2, val2);
     ASSERT_EQUALS(0, st.getErrno());
 
     // Create a txn and delete third key/val and commit
@@ -1432,7 +1437,7 @@ TEST_F(KVDBREGTEST, KvdbPrefixDeleteTest) {
 
     for (map<KVDBData, KVDBData>::iterator iter = keyVals.begin(); iter != keyVals.end(); iter++) {
 
-        st = _db.kvs_put(_kvsHandles[0], 0, iter->first, iter->second);
+        st = _db.kvs_sub_txn_put(_kvsHandles[0], iter->first, iter->second);
         ASSERT_EQUALS(0, st.getErrno());
     }
 
@@ -1454,7 +1459,7 @@ TEST_F(KVDBREGTEST, KvdbPrefixDeleteTest) {
 
     delete cursor;
 
-    st = _db.kvs_prefix_delete(_kvsHandles[0], 0, prefix);
+    st = _db.kvs_sub_txn_prefix_delete(_kvsHandles[0], prefix);
     ASSERT_EQUALS(0, st.getErrno());
 
     // Do a scan
