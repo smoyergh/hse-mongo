@@ -287,29 +287,6 @@ hse::Status KVDBRecoveryUnit::iterDelete(const KVSHandle& h, const KVDBData& pre
     return st;
 }
 
-hse::Status KVDBRecoveryUnit::nonTxnPut(const KVSHandle& h,
-                                        const KVDBData& key,
-                                        const KVDBData& val) {
-    // mongo bulk inserts use non transactional puts.
-    hse::Status st = _kvdb.kvs_put(h, 0, key, val);
-    return st;
-}
-
-hse::Status KVDBRecoveryUnit::nonTxnDel(const KVSHandle& h, const KVDBData& key) {
-    hse::Status st = _kvdb.kvs_delete(h, 0, key);
-    return st;
-}
-
-hse::Status KVDBRecoveryUnit::nonTxnPfxDel(const KVSHandle& h, const KVDBData& prefix) {
-    hse::Status st = _kvdb.kvs_prefix_delete(h, 0, prefix);
-    return st;
-}
-
-hse::Status KVDBRecoveryUnit::nonTxnIterDelete(const KVSHandle& h, const KVDBData& prefix) {
-    hse::Status st = _kvdb.kvs_iter_delete(h, 0, prefix);
-    return st;
-}
-
 hse::Status KVDBRecoveryUnit::beginScan(const KVSHandle& h,
                                         KVDBData pfx,
                                         bool forward,

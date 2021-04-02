@@ -33,8 +33,10 @@
  */
 #pragma once
 
+#include <chrono>
 #include <iomanip>
 #include <string>
+#include <thread>
 
 #include "hse.h"
 #include "mongo/db/record_id.h"
@@ -92,6 +94,8 @@ static const string OPLOG_LAST_BLK_DEL_KEY{"last_blk_del"};
 static const string OPLOG_CURR_BLK_KEY{"current_blk"};
 
 static const int INVARIANT_SLEEP_MS = 4000;
+
+static const int SUB_TXN_MAX_RETRIES = 200;
 
 //
 // Key Generation and Manipulation
@@ -255,6 +259,45 @@ inline mongo::Status hseToMongoStatus(const Status& status, const char* prefix =
         }                                                \
     } while (false)
 
+
+#define SUB_TXN_OP_RETRY_LOOP_BEGIN               \
+    do {                                          \
+        struct hse_kvdb_opspec opspec;            \
+        ClientTxn cTxn{_handle};                  \
+        HSE_KVDB_OPSPEC_INIT(&opspec);            \
+        int retries = 0;                          \
+        while (retries < SUB_TXN_MAX_RETRIES) {   \
+            cTxn.begin();                         \
+            opspec.kop_txn = cTxn.get_kvdb_txn(); \
+            do
+
+
+#define SUB_TXN_OP_RETRY_LOOP_END(rval)                       \
+    while (false)                                             \
+        ;                                                     \
+    if ((rval).ok()) {                                        \
+        cTxn.commit();                                        \
+    } else {                                                  \
+        cTxn.abort();                                         \
+    }                                                         \
+    if ((rval).getErrno() == ECANCELED) {                     \
+        if (retries < 4) {                                    \
+        } else if (retries < 10) {                            \
+            this_thread::sleep_for(chrono::milliseconds(1));  \
+        } else if (retries < 100) {                           \
+            this_thread::sleep_for(chrono::milliseconds(5));  \
+        } else {                                              \
+            this_thread::sleep_for(chrono::milliseconds(10)); \
+        }                                                     \
+        retries++;                                            \
+        continue;                                             \
+    }                                                         \
+    break;                                                    \
+    }                                                         \
+    }                                                         \
+    while (false)                                             \
+        ;
+
 static inline RecordId _recordIdFromKey(const KVDBData& key) {
     const uint32_t len = key.len();
     const unsigned char* data = (unsigned char*)key.data();
@@ -362,5 +405,4 @@ hse::Status decompressdata(const struct CompParms& compparms,
                            KVDBData& comp,
                            unsigned int off_comp,
                            KVDBData& unc);
-
 }  // namespace hse

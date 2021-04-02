@@ -313,7 +313,7 @@ void KVDBIdxBase::updateCounter() {
     KVDBData key{_indexSizeKeyKvs};
     KVDBData val = KVDBData{valString};
 
-    auto st = _db.kvs_put(_idxKvs, key, val);
+    auto st = _db.kvs_sub_txn_put(_idxKvs, key, val);
     invariantHseSt(st);
 }
 
@@ -1029,7 +1029,7 @@ Status KVDBStdIdx::bulkInsert(OperationContext* opctx, const BSONObj& key, const
                         encodedKey.getTypeBits().getSize());
     }
 
-    auto hseSt = ru->nonTxnPut(_idxKvs, pKey, iVal);
+    auto hseSt = ru->put(_idxKvs, pKey, iVal);
     invariantHseSt(hseSt);
 
     incrementCounter(ru, prefixedKey.size());
@@ -1154,7 +1154,6 @@ Status KVDBUniqBulkBuilder::addKey(const BSONObj& newKey, const RecordId& loc) {
 
     return Status::OK();
 }
-
 void KVDBUniqBulkBuilder::commit(bool mayInterrupt) {
     WriteUnitOfWork uow(_opctx);
     if (!_records.empty()) {
@@ -1182,7 +1181,7 @@ void KVDBUniqBulkBuilder::_doInsert() {
     KVDBData iVal{(uint8_t*)value.getBuffer(), value.getSize()};
 
     auto ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(_opctx);
-    auto hseSt = ru->nonTxnPut(_idxKvs, iKey, iVal);
+    auto hseSt = ru->put(_idxKvs, iKey, iVal);
     invariantHseSt(hseSt);
 
     _index.incrementCounter(ru, prefixedKey.size());

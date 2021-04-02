@@ -821,7 +821,7 @@ hse::Status KVDBOplogBlockManager::_writeMarker(const KVDBOplogBlock& block) {
     KVDBData val{valStr};
 
     // insert marker for new block
-    return _db.kvs_put(_kvs, key, val);
+    return _db.kvs_sub_txn_put(_kvs, key, val);
 }
 
 hse::Status KVDBOplogBlockManager::_deleteMarker(uint32_t blockId) {
@@ -831,7 +831,7 @@ hse::Status KVDBOplogBlockManager::_deleteMarker(uint32_t blockId) {
     KVDBData key{blockKey.data, KOBK_LEN(blockKey)};
 
     // delete marker for block
-    return _db.kvs_delete(_kvs, 0, key);
+    return _db.kvs_sub_txn_delete(_kvs, key);
 }
 
 // static
@@ -872,13 +872,13 @@ hse::Status KVDBOplogBlockManager::_writeCurrentBlkMarker() {
     valStr = KVDBOplogBlock::blockToBuf(_currBlock);
     KVDBData val{valStr};
 
-    return _db.kvs_put(_largeKvs, compatKey, val);
+    return _db.kvs_sub_txn_put(_largeKvs, compatKey, val);
 }
 
 hse::Status KVDBOplogBlockManager::_eraseCurrentBlkMarker() {
     KVDBData compatKey{_currentBlockKey};
 
-    return _db.kvs_delete(_largeKvs, 0, compatKey);
+    return _db.kvs_sub_txn_delete(_largeKvs, compatKey);
 }
 
 // static
