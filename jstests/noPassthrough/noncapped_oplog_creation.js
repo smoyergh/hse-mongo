@@ -17,8 +17,8 @@
     resetDbpath(dbpath);
     if (jsTest.options().storageEngine == 'hse') {
         resetKvdb(TestData.hse,
-                  TestData.mpool,
                   TestData.vg,
+                  dbpath,
                   MongoRunner.toRealKvdbName(dbpath, {}),
                   TestData.hseKvdbCParams);
     }

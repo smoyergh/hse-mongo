@@ -17,8 +17,6 @@ ToolTest = function(name, extraOptions) {
     this.extFile = this.root + "_external/a";
     this.kvdbNamePrefix = MongoRunner.kvdbNamePrefix;
     this.mpoolName = MongoRunner.mpoolName;
-    resetDbpath(this.dbpath);
-    resetDbpath(this.ext);
 
     if (this.options === undefined) {
         this.options = {};
@@ -33,11 +31,27 @@ ToolTest = function(name, extraOptions) {
         var _kvdbName = MongoRunner.toRealKvdbName("$kvdbPrefix-mongod-$port", pathOpts);
         this.options.hseMpoolName = _kvdbName;
 
+        deleteKvdb(jsTestOptions().hse,
+                   this.options.hseMpoolName,
+                   jsTestOptions().vg,
+                   this.dbpath,
+                   jsTestOptions().hseParams,
+                   false);
+    }
+
+    resetDbpath(this.dbpath);
+    resetDbpath(this.ext);
+
+    if (this.options === undefined) {
+        this.options = {};
+    }
+
+    if (storageEngine === "hse") {
         print("Resetting kvdb '" + this.options.hseMpoolName + "'");
 
         resetKvdb(jsTestOptions().hse,
-                  jsTestOptions().mpool,
                   jsTestOptions().vg,
+                  this.dbpath,
                   this.options.hseMpoolName,
                   jsTestOptions().hseParams);
     }

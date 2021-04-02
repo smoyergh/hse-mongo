@@ -130,7 +130,7 @@ def run_test(pwd, test):
     cmdargs = ['%s/%s' % (pwd, test), '>>', fname, '2>&1']
     exit_code = _run_cmd(cmdargs, logfile)
 
-    cmdargs = [ 'rm -f %s/%s/.lockfile && %s kvdb destroy %s' % (pwd, _KVDB_NAME, _HSEBIN, _KVDB_NAME), '>>', fname, '2>&1']
+    cmdargs = ['%s kvdb destroy %s' % (_HSEBIN, _KVDB_NAME), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
     logfile.close()

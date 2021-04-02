@@ -1797,6 +1797,20 @@ var ReplSetTest = function(opts) {
             return;
         }
 
+        if (_allKvdbNames.size) {
+            var i = 0;
+            for (var kName of _allKvdbNames) {
+                if (!resetKvdbs)
+                    print("ReplSetTest stopSet deleting kvdb " + kName);
+                deleteKvdb(jsTestOptions().hse,
+                           kName,
+                           jsTestOptions().vg,
+                           _alldbpaths[i++],
+                           jsTestOptions().hseParams,
+                           !resetKvdbs);
+	    }
+	}
+
         if ((!opts || !opts.noCleanData) && _alldbpaths) {
             print("ReplSetTest stopSet deleting all dbpaths");
             for (var i = 0; i < _alldbpaths.length; i++) {
@@ -1804,23 +1818,16 @@ var ReplSetTest = function(opts) {
             }
         }
 
-        if (_allKvdbNames.size) {
+        if (_allKvdbNames.size && resetKvdbs) {
+            var i = 0;
             for (var kName of _allKvdbNames) {
-                if (resetKvdbs) {
-                    // This should be set when the test needs to restart with empty KVDBs.
-                    print("ReplSetTest stopSet resetting kvdb " + kName);
-                    resetKvdb(jsTestOptions().hse,
-                              jsTestOptions().mpool,
-                              jsTestOptions().vg,
-                              kName,
-                              jsTestOptions().hseParams);
-                } else {
-                    print("ReplSetTest stopSet deleting kvdb " + kName);
-                    deleteKvdb(jsTestOptions().mpool,
-                               kName,
-                               jsTestOptions().vg,
-                               jsTestOptions().hseParams);
-                }
+                // This should be set when the test needs to restart with empty KVDBs.
+                print("ReplSetTest stopSet resetting kvdb " + kName);
+                resetKvdb(jsTestOptions().hse,
+                          jsTestOptions().vg,
+                          _alldbpaths[i++],
+                          kName,
+                          jsTestOptions().hseParams);
             }
         }
 

@@ -26,8 +26,8 @@ DEFAULT_DBTEST_EXECUTABLE = os.path.join(os.curdir, "dbtest")
 DEFAULT_MONGO_EXECUTABLE = os.path.join(os.curdir, "mongo")
 DEFAULT_MONGOD_EXECUTABLE = os.path.join(os.curdir, "mongod")
 DEFAULT_MONGOS_EXECUTABLE = os.path.join(os.curdir, "mongos")
-DEFAULT_HSE_EXECUTABLE = "/usr/bin/hse"
-DEFAULT_MPOOL_EXECUTABLE = "/usr/bin/mpool"
+DEFAULT_HSE_EXECUTABLE = "/opt/hse-1/bin/hse1"
+DEFAULT_HSE_LIBPATH = "/opt/hse-1/lib64"
 
 # Default root directory for where resmoke.py puts directories containing data files of mongod's it
 # starts, as well as those started by individual tests.
@@ -94,7 +94,7 @@ DEFAULTS = {
     "hseCollectionCompressionMinBytes": None,
     "continueOnCrash": False,
     "hse": None,
-    "mpool": None,
+    "hseLibPath": None,
     "vg": None,
 }
 

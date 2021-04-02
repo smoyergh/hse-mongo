@@ -768,20 +768,38 @@ var MongoRunner, _startMongod, startMongoProgram, runMongoProgram, startMongoPro
 
             if (opts.forceLock)
                 removeFile(opts.dbpath + "/mongod.lock");
+
             if ((opts.cleanData || opts.startClean) || (!opts.restart && !opts.noCleanData)) {
+                var storageEngine = opts.storageEngine || jsTestOptions().storageEngine;
+                if (storageEngine === "hse") {
+                    deleteKvdb(jsTestOptions().hse,
+                               opts.hseMpoolName,
+                               jsTestOptions().vg,
+                               opts.dbpath,
+                               jsTestOptions().hseParams,
+                               false);
+                }
+
                 print("Resetting db path '" + opts.dbpath + "'");
                 resetDbpath(opts.dbpath);
 
-                var storageEngine = opts.storageEngine || jsTestOptions().storageEngine;
                 if (storageEngine === "hse") {
                     print("Resetting kvdb '" + opts.hseMpoolName + "'");
                     resetKvdb(jsTestOptions().hse,
-                              jsTestOptions().mpool,
                               jsTestOptions().vg,
+                              opts.dbpath,
                               opts.hseMpoolName,
                               jsTestOptions().hseParams);
                 }
-            }
+            } else if (opts.restart) {
+                var storageEngine = opts.storageEngine || jsTestOptions().storageEngine;
+                if (storageEngine === "hse") {
+                    opts = MongoRunner.mongodOptions(opts);
+
+                    print("Resetting env for kvdb '" + opts.hseMpoolName + "'");
+                    resetKvdbEnv(opts.dbpath, opts.hseMpoolName);
+	        }
+	    }
 
             opts = MongoRunner.arrOptions("mongod", opts);
         }

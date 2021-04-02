@@ -151,7 +151,7 @@ def mongo_shell_program(logger, executable=None, connection_string=None, filenam
         "hseParams": (config.HSE_PARAMS, ""),
         "hseMpoolNamePrefix": (config.HSE_MPOOL_NAME_PREFIX, ""),
         "hse": (config.HSE_EXECUTABLE, config.DEFAULT_HSE_EXECUTABLE),
-        "mpool": (config.MPOOL_EXECUTABLE, config.DEFAULT_MPOOL_EXECUTABLE),
+        "hseLibPath": (config.HSE_LIBPATH, config.DEFAULT_HSE_LIBPATH),
         "vg": (config.VOLUME_GROUP, ""),
     }
 

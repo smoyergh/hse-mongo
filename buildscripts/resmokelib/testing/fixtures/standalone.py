@@ -70,8 +70,9 @@ class MongoDFixture(interface.Fixture):
 
             self._hse_executable = utils.default_if_none(
                 config.HSE_EXECUTABLE, config.DEFAULT_HSE_EXECUTABLE)
-            self._mpool_executable = utils.default_if_none(
-                config.MPOOL_EXECUTABLE, config.DEFAULT_MPOOL_EXECUTABLE)
+
+            self._hse_libpath = utils.default_if_none(
+                config.HSE_LIBPATH, config.DEFAULT_HSE_LIBPATH)
 
             if "hseMpoolName" not in self.mongod_options:
                 pfx = utils.default_if_none(
@@ -91,8 +92,29 @@ class MongoDFixture(interface.Fixture):
         self.mongod = None
 
     def setup(self):
+        storage_engine = config.STORAGE_ENGINE
+        if "storageEngine" in self.mongod_options:
+            storage_engine = self.mongod_options["storageEngine"]
+
         """Set up the mongod."""
         if not self.preserve_dbpath and os.path.lexists(self._dbpath):
+            if storage_engine == 'hse':
+                try:
+                    datadir = '{}/{}'.format(self._dbpath, self._hse_mpool_name)
+                    os.environ["HSE_STORAGE_PATH"] = datadir
+                    os.environ["HSE_REST_SOCK_PATH"] = datadir
+
+                    cmd = '{} kvdb destroy {}'.format(self._hse_executable, self._hse_mpool_name)
+                    self.logger.info(cmd)
+                    self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
+
+                    lvpath = self._make_lv_path(self._volume_group, self._hse_mpool_name)
+                    cmd = 'sudo umount {}'.format(lvpath)
+                    self.logger.info(cmd)
+                    self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
+                except subprocess.CalledProcessError as e:
+                    pass
+
             utils.rmtree(self._dbpath, ignore_errors=False)
 
         try:
@@ -104,10 +126,6 @@ class MongoDFixture(interface.Fixture):
         if "port" not in self.mongod_options:
             self.mongod_options["port"] = core.network.PortAllocator.next_fixture_port(self.job_num)
         self.port = self.mongod_options["port"]
-
-        storage_engine = config.STORAGE_ENGINE
-        if "storageEngine" in self.mongod_options:
-            storage_engine = self.mongod_options["storageEngine"]
 
         if storage_engine == 'hse' and not self.preserve_dbpath:
             #
@@ -123,6 +141,11 @@ class MongoDFixture(interface.Fixture):
             lvname = self._hse_mpool_name
             lvpath = self._make_lv_path(self._volume_group, lvname)
             lvsize = '50G'
+            datadir = '{}/{}'.format(self._dbpath, mpname)
+
+            os.environ["HSE_STORAGE_PATH"] = datadir
+            os.environ["HSE_REST_SOCK_PATH"] = datadir
+            os.environ["LD_LIBRARY_PATH"] = self._hse_libpath
 
             self.logger.info("Resetting KVDB {}...".format(mpname))
 
@@ -132,30 +155,27 @@ class MongoDFixture(interface.Fixture):
                 )
                 self.logger.info(cmd)
                 self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-            else:
-                try:
-                    cmd = 'sudo {} activate {}'.format(self._mpool_executable, mpname)
-                    self.logger.info(cmd)
-                    self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
+                cmd = 'sudo mkfs -t xfs -f {}'.format(lvpath)
+                self.logger.info(cmd)
+                self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
 
-                    cmd = 'sudo {} destroy {}'.format(self._mpool_executable, mpname)
-                    self.logger.info(cmd)
-                    self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-                except subprocess.CalledProcessError as e:
-                    if 'Cannot activate' not in e.output:
-                        raise
+            try:
+                os.makedirs(datadir)
+            except os.error:
+                # Directory already exists.
+                pass
 
-            cmd = 'sudo {} create -f {} {} uid={} gid={}'.format(
-                self._mpool_executable, self._hse_mpool_name, lvpath, os.getuid(), os.getgid()
-            )
+            cmd = 'sudo mount -onoatime {} {}'.format(lvpath, datadir)
             self.logger.info(cmd)
             self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
 
-            cmd = 'sudo {} activate {}'.format(self._mpool_executable, self._hse_mpool_name)
+            uid = os.getuid()
+            gid = os.getgid()
+            cmd = 'sudo chown {}:{} {}'.format(uid, gid, datadir)
             self.logger.info(cmd)
             self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
 
-            cmd = 'sudo {} kvdb create {}'.format(self._hse_executable, mpname)
+            cmd = '{} kvdb create {}'.format(self._hse_executable, mpname)
 
             if self._hse_params:
                 cmd += ' {}'.format(self._hse_params.replace(';', ' '))
@@ -234,6 +254,23 @@ class MongoDFixture(interface.Fixture):
             success = exit_code == 0
 
             if running_at_start:
+                storage_engine = config.STORAGE_ENGINE
+                if "storageEngine" in self.mongod_options:
+                    storage_engine = self.mongod_options["storageEngine"]
+
+                if storage_engine == 'hse':
+                    try:
+                        lvpath = self._make_lv_path(self._volume_group, self._hse_mpool_name)
+                        cmd = 'sudo umount {}'.format(lvpath)
+                        self.logger.info(cmd)
+                        self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
+
+                        cmd = 'sudo lvremove -y {}'.format(lvpath)
+                        self.logger.info(cmd)
+                        self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
+                    except subprocess.CalledProcessError:
+                        pass
+
                 self.logger.info("Successfully terminated the mongod on port %d, exited with code"
                                  " %d.",
                                  self.port,

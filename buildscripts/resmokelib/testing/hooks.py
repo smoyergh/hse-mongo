@@ -715,8 +715,8 @@ class CleanTestMpools(CustomBehavior):
         self._vg = config.VOLUME_GROUP
 
         if self._storage_engine == "hse":
-            self._mpool_executable = utils.default_if_none(
-                config.MPOOL_EXECUTABLE, config.DEFAULT_MPOOL_EXECUTABLE)
+            self._hse_executable = utils.default_if_none(
+                config.HSE_EXECUTABLE, config.DEFAULT_HSE_EXECUTABLE)
 
     @staticmethod
     def _make_lv_path(vgname, lvname):
@@ -731,17 +731,16 @@ class CleanTestMpools(CustomBehavior):
         for lv in lvs:
             lvpath = self._make_lv_path(self._vg, lv)
 
-            cmd = 'sudo {} deactivate {}'.format(self._mpool_executable, lv)
-            self.logger.info(cmd)
-            subprocess.check_call(cmd.split())
+            try:
+                cmd = 'sudo umount {}'.format(lvpath)
+                self.logger.info(cmd)
+                self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
 
-            cmd = 'sudo {} destroy {}'.format(self._mpool_executable, lv)
-            self.logger.info(cmd)
-            subprocess.check_call(cmd.split())
-
-            cmd = 'sudo lvremove -y {}'.format(lvpath)
-            self.logger.info(cmd)
-            subprocess.check_call(cmd.split())
+                cmd = 'sudo lvremove -y {}'.format(lvpath)
+                self.logger.info(cmd)
+                self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
+            except subprocess.CalledProcessError:
+                pass
 
     def after_test(self, test, test_report):
         self.tests_run += 1
