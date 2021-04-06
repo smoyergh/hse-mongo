@@ -73,7 +73,6 @@ DEST_TO_CONFIG = {
     "continue_on_crash": "continueOnCrash",
     "hse_executable": "hse",
     "hse_libpath": "hseLibPath",
-    "volume_group": "vg",
 }
 
 
@@ -271,12 +270,6 @@ def parse_command_line():
     parser.add_option("--hseLibPath", dest="hse_libpath", metavar="LIBPATH",
                       help="The path to the HSE shared lib for resmoke.py to use.")
 
-    parser.add_option("--vg", dest="volume_group", metavar="VG",
-                      help="Volume group that will be used to create mpools.  "
-                           "WARNING!  DATA ON THIS VG WILL BE LOST!")
-
-
-
     evergreen_options = optparse.OptionGroup(
         parser, title="Evergreen options",
         description=("Options used to propagate information about the Evergreen task running this"
@@ -387,12 +380,6 @@ def update_config_vars(values):
     _config.CONTINUE_ON_CRASH = config.pop("continueOnCrash")
     _config.HSE_EXECUTABLE = _expand_user(config.pop("hse"))
     _config.HSE_LIBPATH = _expand_user(config.pop("hseLibPath"))
-    _config.VOLUME_GROUP = _expand_user(config.pop("vg"))
-
-    if _config.STORAGE_ENGINE == 'hse':
-        if _config.VOLUME_GROUP is None:
-            raise optparse.OptionValueError(
-                "--vg is required for hse engine")
 
     if config:
         raise optparse.OptionValueError("Unknown option(s): %s" % (config.keys()))

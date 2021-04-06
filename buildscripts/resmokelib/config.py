@@ -95,7 +95,6 @@ DEFAULTS = {
     "continueOnCrash": False,
     "hse": None,
     "hseLibPath": None,
-    "vg": None,
 }
 
 

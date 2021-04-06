@@ -17,6 +17,3 @@ executor:
       shell_options:
         nodb: ''
         readMode: commands
-    hooks:
-    - class: CleanTestMpools
-      n: 5

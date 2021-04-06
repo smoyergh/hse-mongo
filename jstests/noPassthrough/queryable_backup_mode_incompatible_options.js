@@ -28,7 +28,6 @@
         var dbpath = MongoRunner.dataPath + name;
 
         resetKvdb(TestData.hse,
-                  TestData.vg,
                   dbpath,
                   MongoRunner.toRealKvdbName(dbpath, {}),
                   TestData.hseKvdbCParams);

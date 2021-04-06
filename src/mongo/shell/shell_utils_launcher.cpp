@@ -64,7 +64,6 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include <sys/mount.h>
 #include <unistd.h>
 #endif
 
@@ -802,16 +801,6 @@ BSONObj RunMongoProgram(const BSONObj& a, void* data) {
     return BSON(string("") << exit_code);
 }
 
-string makeLvPath(const string& vgName, const string& lvName) {
-    string adjustedVg = vgName;
-    string adjustedLv = lvName;
-
-    boost::replace_all(adjustedVg, "-", "--");
-    boost::replace_all(adjustedLv, "-", "--");
-
-    return "/dev/mapper/" + adjustedVg + "-" + adjustedLv;
-}
-
 BSONObj ResetKvdbEnv(const BSONObj& a, void* data) {
     using std::to_string;
 
@@ -839,10 +828,9 @@ BSONObj ResetKvdbEnv(const BSONObj& a, void* data) {
 BSONObj ResetKvdb(const BSONObj& a, void* data) {
     using std::to_string;
 
-    verify(a.nFields() == 5);
+    verify(a.nFields() == 4);
     BSONObjIterator i(a);
     string hseExecutable = i.next().str();
-    string vgName = i.next().str();
     string dbPath = i.next().str();
     string kvdbName = i.next().str();
     string hseParams = i.next().str();
@@ -851,7 +839,6 @@ BSONObj ResetKvdb(const BSONObj& a, void* data) {
 
     int rc;
     string cmd;
-    string lvPath = makeLvPath(vgName, kvdbName);
     string dataDir = dbPath + "/" + kvdbName;
 
     rc = setenv("HSE_STORAGE_PATH", dataDir.c_str(), 1);
@@ -862,50 +849,16 @@ BSONObj ResetKvdb(const BSONObj& a, void* data) {
     if (rc)
         return BSON(string("") << rc);
 
-    /*
-     * Create LV and kvdb
-     */
-    boost::filesystem::path lvPathObj(lvPath);
+    boost::filesystem::path dataDirObj(dataDir);
+    verify(!dataDirObj.empty());
 
-    if (!boost::filesystem::exists(lvPathObj)) {
-        cmd = "sudo lvcreate -y --size 50G --name " + kvdbName + " " + vgName;
-        cout << cmd << endl;
-        rc = system(cmd.c_str());
-        if (rc)
-            return BSON(string("") << rc);
-
-        cmd = "sudo mkfs -t xfs -f " + lvPath;
-        cout << cmd << endl;
-        rc = system(cmd.c_str());
-        if (rc)
-            return BSON(string("") << rc);
-    } else {
+    if (boost::filesystem::exists(dataDirObj)) {
         cmd = hseExecutable + " kvdb destroy " + kvdbName;
-        cout << cmd << endl;
-        rc = system(cmd.c_str()); /* ignore return code */
-
-        cmd = "sudo umount " + lvPath;
         cout << cmd << endl;
         rc = system(cmd.c_str()); /* ignore return code */
     }
 
-    boost::filesystem::path dataDirObj(dataDir);
-    verify(!dataDirObj.empty());
     boost::filesystem::create_directories(dataDirObj);
-
-    cmd = "sudo mount " + lvPath + " \"" + dataDir + "\"";
-    cout << cmd << endl;
-    rc = system(cmd.c_str());
-    if (rc)
-        return BSON(string("") << rc);
-
-    uid_t uid = getuid();
-    gid_t gid = getgid();
-    cmd = "sudo chown " + to_string(uid) + ":" + to_string(gid) + " \"" + dataDir + "\"";
-    cout << cmd << endl;
-    rc = system(cmd.c_str());
-    if (rc)
-        return BSON(string("") << rc);
 
     /*
      * Create KVDB
@@ -937,17 +890,14 @@ BSONObj ResetKvdb(const BSONObj& a, void* data) {
 BSONObj DeleteKvdb(const BSONObj& a, void* data) {
     using std::to_string;
 
-    verify(a.nFields() == 6);
+    verify(a.nFields() == 4);
     BSONObjIterator i(a);
     string hseExecutable = i.next().str();
     string kvdbName = i.next().str();
-    string vgName = i.next().str();
     string dbPath = i.next().str();
     string hseParams = i.next().str();
-    bool deleteLV = i.next().boolean();
     verify(!hseExecutable.empty());
     verify(!kvdbName.empty());
-    verify(!vgName.empty());
 
     string dataDir = dbPath + "/" + kvdbName;
 
@@ -962,25 +912,6 @@ BSONObj DeleteKvdb(const BSONObj& a, void* data) {
     string cmd = hseExecutable + " kvdb destroy " + kvdbName;
     rc = system(cmd.c_str()); /* Ignore error */
 
-    string lvPath = makeLvPath(vgName, kvdbName);
-    cmd = "sudo umount "+ lvPath;
-    rc = system(cmd.c_str());
-    if (rc)
-        return BSON(string("") << rc);
-
-    /*
-     * delete the lv
-     */
-    if (deleteLV) {
-        boost::filesystem::path lvPathObj(lvPath);
-        if (boost::filesystem::exists(lvPathObj)) {
-            cmd = "sudo lvremove -y " + lvPath;
-            rc = system(cmd.c_str());
-            if (rc)
-                return BSON(string("") << rc);
-        }
-    }
-
     return BSON(string("") << rc);
 }
 
@@ -988,15 +919,8 @@ BSONObj ResetDbpath(const BSONObj& a, void* data) {
     verify(a.nFields() == 1);
     string path = a.firstElement().valuestrsafe();
     verify(!path.empty());
-    if (boost::filesystem::exists(path)) {
-        for(auto & p : boost::filesystem::directory_iterator(path)) {
-            if (boost::filesystem::is_directory(p)) {
-                string cmd = "sudo umount "+ p.path().string();
-                system(cmd.c_str()); /* Ignore return code */
-            }
-        }
+    if (boost::filesystem::exists(path))
         boost::filesystem::remove_all(path);
-    }
     boost::filesystem::create_directory(path);
     return undefinedReturn;
 }

@@ -152,7 +152,6 @@ def mongo_shell_program(logger, executable=None, connection_string=None, filenam
         "hseMpoolNamePrefix": (config.HSE_MPOOL_NAME_PREFIX, ""),
         "hse": (config.HSE_EXECUTABLE, config.DEFAULT_HSE_EXECUTABLE),
         "hseLibPath": (config.HSE_LIBPATH, config.DEFAULT_HSE_LIBPATH),
-        "vg": (config.VOLUME_GROUP, ""),
     }
 
     test_data = global_vars.get("TestData", {}).copy()

@@ -405,10 +405,8 @@ var ShardingTest = function(params) {
                 for (var kName of _allKvdbNames) {
                     deleteKvdb(jsTestOptions().hse,
                                kName,
-                               jsTestOptions().vg,
                                _alldbpaths[i++],
-                               jsTestOptions().hseParams,
-                               true);
+                               jsTestOptions().hseParams);
                 }
             }
 

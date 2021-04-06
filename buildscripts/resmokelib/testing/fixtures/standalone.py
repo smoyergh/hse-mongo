@@ -65,9 +65,6 @@ class MongoDFixture(interface.Fixture):
             storage_engine = self.mongod_options["storageEngine"]
 
         if storage_engine == "hse":
-            assert config.VOLUME_GROUP
-            self._volume_group = config.VOLUME_GROUP
-
             self._hse_executable = utils.default_if_none(
                 config.HSE_EXECUTABLE, config.DEFAULT_HSE_EXECUTABLE)
 
@@ -107,11 +104,6 @@ class MongoDFixture(interface.Fixture):
                     cmd = '{} kvdb destroy {}'.format(self._hse_executable, self._hse_mpool_name)
                     self.logger.info(cmd)
                     self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-
-                    lvpath = self._make_lv_path(self._volume_group, self._hse_mpool_name)
-                    cmd = 'sudo umount {}'.format(lvpath)
-                    self.logger.info(cmd)
-                    self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
                 except subprocess.CalledProcessError as e:
                     pass
 
@@ -128,19 +120,7 @@ class MongoDFixture(interface.Fixture):
         self.port = self.mongod_options["port"]
 
         if storage_engine == 'hse' and not self.preserve_dbpath:
-            #
-            # NOTE: The following utilities must be configured for passwordless
-            #       sudo; see sudoers(5) man page and your /etc/sudoers config
-            #
-            #       - lvcreate
-            #       - lvremove
-            #       - lvs
-            #       - nf
-            #
             mpname = self._hse_mpool_name
-            lvname = self._hse_mpool_name
-            lvpath = self._make_lv_path(self._volume_group, lvname)
-            lvsize = '50G'
             datadir = '{}/{}'.format(self._dbpath, mpname)
 
             os.environ["HSE_STORAGE_PATH"] = datadir
@@ -149,31 +129,11 @@ class MongoDFixture(interface.Fixture):
 
             self.logger.info("Resetting KVDB {}...".format(mpname))
 
-            if not os.path.exists(lvpath):
-                cmd = 'sudo lvcreate -y --size {} {} --name {}'.format(
-                    lvsize, self._volume_group, lvname
-                )
-                self.logger.info(cmd)
-                self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-                cmd = 'sudo mkfs -t xfs -f {}'.format(lvpath)
-                self.logger.info(cmd)
-                self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-
             try:
                 os.makedirs(datadir)
             except os.error:
                 # Directory already exists.
                 pass
-
-            cmd = 'sudo mount -onoatime {} {}'.format(lvpath, datadir)
-            self.logger.info(cmd)
-            self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-
-            uid = os.getuid()
-            gid = os.getgid()
-            cmd = 'sudo chown {}:{} {}'.format(uid, gid, datadir)
-            self.logger.info(cmd)
-            self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
 
             cmd = '{} kvdb create {}'.format(self._hse_executable, mpname)
 
@@ -254,33 +214,12 @@ class MongoDFixture(interface.Fixture):
             success = exit_code == 0
 
             if running_at_start:
-                storage_engine = config.STORAGE_ENGINE
-                if "storageEngine" in self.mongod_options:
-                    storage_engine = self.mongod_options["storageEngine"]
-
-                if storage_engine == 'hse':
-                    try:
-                        lvpath = self._make_lv_path(self._volume_group, self._hse_mpool_name)
-                        cmd = 'sudo umount {}'.format(lvpath)
-                        self.logger.info(cmd)
-                        self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-
-                        cmd = 'sudo lvremove -y {}'.format(lvpath)
-                        self.logger.info(cmd)
-                        self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-                    except subprocess.CalledProcessError:
-                        pass
-
                 self.logger.info("Successfully terminated the mongod on port %d, exited with code"
                                  " %d.",
                                  self.port,
                                  exit_code)
 
         return success
-
-    @staticmethod
-    def _make_lv_path(vgname, lvname):
-        return "/dev/mapper/%s-%s" % (vgname.replace('-', '--'), lvname.replace('-', '--'))
 
     def is_running(self):
         return self.mongod is not None and self.mongod.poll() is None

@@ -44,6 +44,3 @@ executor:
           TestData:
             forceReplicationProtocolVersion: 0
         nodb: ''
-    hooks:
-    - class: CleanTestMpools
-      n: 5

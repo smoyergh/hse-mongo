@@ -1804,10 +1804,8 @@ var ReplSetTest = function(opts) {
                     print("ReplSetTest stopSet deleting kvdb " + kName);
                 deleteKvdb(jsTestOptions().hse,
                            kName,
-                           jsTestOptions().vg,
                            _alldbpaths[i++],
-                           jsTestOptions().hseParams,
-                           !resetKvdbs);
+                           jsTestOptions().hseParams);
 	    }
 	}
 
@@ -1824,7 +1822,6 @@ var ReplSetTest = function(opts) {
                 // This should be set when the test needs to restart with empty KVDBs.
                 print("ReplSetTest stopSet resetting kvdb " + kName);
                 resetKvdb(jsTestOptions().hse,
-                          jsTestOptions().vg,
                           _alldbpaths[i++],
                           kName,
                           jsTestOptions().hseParams);

@@ -33,24 +33,17 @@ ToolTest = function(name, extraOptions) {
 
         deleteKvdb(jsTestOptions().hse,
                    this.options.hseMpoolName,
-                   jsTestOptions().vg,
                    this.dbpath,
-                   jsTestOptions().hseParams,
-                   false);
+                   jsTestOptions().hseParams);
     }
 
     resetDbpath(this.dbpath);
     resetDbpath(this.ext);
 
-    if (this.options === undefined) {
-        this.options = {};
-    }
-
     if (storageEngine === "hse") {
         print("Resetting kvdb '" + this.options.hseMpoolName + "'");
 
         resetKvdb(jsTestOptions().hse,
-                  jsTestOptions().vg,
                   this.dbpath,
                   this.options.hseMpoolName,
                   jsTestOptions().hseParams);

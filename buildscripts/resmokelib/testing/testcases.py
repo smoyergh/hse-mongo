@@ -355,7 +355,6 @@ class JSTestCase(TestCase):
             pfx = "%s-job%d" % (pfx, self.fixture.job_num)
 
             global_vars["MongoRunner.mpoolNamePrefix"] = pfx
-            global_vars["MongoRunner.volumeGroup"] = config.VOLUME_GROUP
             global_vars["MongoRunner.hseParams"] = config.HSE_PARAMS
             global_vars["MongoRunner.hseCollectionCompression"] = config.HSE_COLL_COMPR
 

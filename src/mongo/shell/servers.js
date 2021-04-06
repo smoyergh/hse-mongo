@@ -774,10 +774,8 @@ var MongoRunner, _startMongod, startMongoProgram, runMongoProgram, startMongoPro
                 if (storageEngine === "hse") {
                     deleteKvdb(jsTestOptions().hse,
                                opts.hseMpoolName,
-                               jsTestOptions().vg,
                                opts.dbpath,
-                               jsTestOptions().hseParams,
-                               false);
+                               jsTestOptions().hseParams);
                 }
 
                 print("Resetting db path '" + opts.dbpath + "'");
@@ -786,7 +784,6 @@ var MongoRunner, _startMongod, startMongoProgram, runMongoProgram, startMongoPro
                 if (storageEngine === "hse") {
                     print("Resetting kvdb '" + opts.hseMpoolName + "'");
                     resetKvdb(jsTestOptions().hse,
-                              jsTestOptions().vg,
                               opts.dbpath,
                               opts.hseMpoolName,
                               jsTestOptions().hseParams);

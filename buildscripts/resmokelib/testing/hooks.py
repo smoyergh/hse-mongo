@@ -694,67 +694,6 @@ class PeriodicKillSecondaries(CustomBehavior):
                 % (secondary.port, fixtures.ReplFixture.AWAIT_REPL_TIMEOUT_MINS * 60, err.args[0]))
 
 
-class CleanTestMpools(CustomBehavior):
-    """
-    Cleans up mpools after every 'n' tests.
-    """
-
-    DEFAULT_N = 20
-
-    def __init__(self, logger, fixture, n=DEFAULT_N):
-        description = "CleanTestMpools (deletes leftovers between tests)"
-        CustomBehavior.__init__(self, logger, fixture, description)
-        self.hook_test_case = testcases.TestCase(logger, "Hook", "CleanTestMpools")
-
-        self.n = n
-        self.tests_run = 0
-
-        assert config.VOLUME_GROUP
-
-        self._storage_engine = config.STORAGE_ENGINE
-        self._vg = config.VOLUME_GROUP
-
-        if self._storage_engine == "hse":
-            self._hse_executable = utils.default_if_none(
-                config.HSE_EXECUTABLE, config.DEFAULT_HSE_EXECUTABLE)
-
-    @staticmethod
-    def _make_lv_path(vgname, lvname):
-        return "/dev/mapper/%s-%s" % (vgname.replace('-', '--'), lvname.replace('-', '--'))
-
-    def _clean_lvs(self):
-        cmd = 'sudo lvs -Svg_name={} --noheadings -oname'.format(self._vg)
-        self.logger.info(cmd)
-        out = subprocess.check_output(cmd.split())
-
-        lvs = out.split()
-        for lv in lvs:
-            lvpath = self._make_lv_path(self._vg, lv)
-
-            try:
-                cmd = 'sudo umount {}'.format(lvpath)
-                self.logger.info(cmd)
-                self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-
-                cmd = 'sudo lvremove -y {}'.format(lvpath)
-                self.logger.info(cmd)
-                self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-            except subprocess.CalledProcessError:
-                pass
-
-    def after_test(self, test, test_report):
-        self.tests_run += 1
-        if self.tests_run < self.n:
-            return
-
-        self.tests_run = 0
-
-        if self._storage_engine != "hse":
-            return
-
-        self._clean_lvs()
-
-
 _CUSTOM_BEHAVIORS = {
     "CleanEveryN": CleanEveryN,
     "CheckReplDBHash": CheckReplDBHash,
@@ -763,5 +702,4 @@ _CUSTOM_BEHAVIORS = {
     "IntermediateInitialSync": IntermediateInitialSync,
     "BackgroundInitialSync": BackgroundInitialSync,
     "PeriodicKillSecondaries": PeriodicKillSecondaries,
-    "CleanTestMpools": CleanTestMpools,
 }
