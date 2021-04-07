@@ -73,16 +73,16 @@ class MongoDFixture(interface.Fixture):
 
             if "hseMpoolName" not in self.mongod_options:
                 pfx = utils.default_if_none(
-                    config.HSE_MPOOL_NAME_PREFIX, config.DEFAULT_HSE_MPOOL_NAME_PREFIX)
-                mpname = "%s.job%d" % (pfx, self.job_num)
+                    config.HSE_KVDB_NAME_PREFIX, config.DEFAULT_HSE_KVDB_NAME_PREFIX)
+                kvdbname = "%s.job%d" % (pfx, self.job_num)
             else:
-                mpname = self.mongod_options["hseMpoolName"]
+                kvdbname = self.mongod_options["hseMpoolName"]
 
-            self.mongod_options["hseMpoolName"] = mpname
+            self.mongod_options["hseMpoolName"] = kvdbname
             self.mongod_options["hseCollectionCompression"] = utils.default_if_none(
                 config.HSE_COLL_COMPR, config.DEFAULT_HSE_COLL_COMPR)
 
-            self._hse_mpool_name = mpname
+            self._hse_kvdb_name = kvdbname
             self._hse_params = utils.default_if_none(
                 config.HSE_PARAMS, self.mongod_options.get("hseParams"))
 
@@ -108,14 +108,14 @@ class MongoDFixture(interface.Fixture):
             storage_engine = self.mongod_options["storageEngine"]
 
         if storage_engine == 'hse' and not self.preserve_dbpath:
-            mpname = self._hse_mpool_name
-            datadir = '{}/{}'.format(self._dbpath, mpname)
+            kvdbname = self._hse_kvdb_name
+            datadir = '{}/{}'.format(self._dbpath, kvdbname)
 
             os.environ["HSE_STORAGE_PATH"] = datadir
             os.environ["HSE_REST_SOCK_PATH"] = datadir
             os.environ["LD_LIBRARY_PATH"] = self._hse_libpath
 
-            self.logger.info("Resetting KVDB {}...".format(mpname))
+            self.logger.info("Resetting KVDB {}...".format(kvdbname))
 
             try:
                 os.makedirs(datadir)
@@ -123,7 +123,7 @@ class MongoDFixture(interface.Fixture):
                 # Directory already exists.
                 pass
 
-            cmd = '{} kvdb create {}'.format(self._hse_executable, mpname)
+            cmd = '{} kvdb create {}'.format(self._hse_executable, kvdbname)
 
             if self._hse_params:
                 cmd += ' {}'.format(self._hse_params.replace(';', ' '))

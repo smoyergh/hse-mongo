@@ -149,7 +149,7 @@ def mongo_shell_program(logger, executable=None, connection_string=None, filenam
         "hseCollectionCompression": (config.HSE_COLL_COMPR, ""),
         "hseCollectionCompressionMinBytes": (config.HSE_COLL_COMPR_MIN_BYTES, ""),
         "hseParams": (config.HSE_PARAMS, ""),
-        "hseMpoolNamePrefix": (config.HSE_MPOOL_NAME_PREFIX, ""),
+        "hseKvdbNamePrefix": (config.HSE_KVDB_NAME_PREFIX, ""),
         "hse": (config.HSE_EXECUTABLE, config.DEFAULT_HSE_EXECUTABLE),
         "hseLibPath": (config.HSE_LIBPATH, config.DEFAULT_HSE_LIBPATH),
     }

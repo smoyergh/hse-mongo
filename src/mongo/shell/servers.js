@@ -91,7 +91,7 @@ var MongoRunner, _startMongod, startMongoProgram, runMongoProgram, startMongoPro
     MongoRunner.dataDir = "/data/db";
     MongoRunner.dataPath = "/data/db/";
 
-    MongoRunner.mpoolNamePrefix = "jstests";
+    MongoRunner.kvdbNamePrefix = "jstests";
     MongoRunner.volumeGroup = "mp";
 
     MongoRunner.VersionSub = function(pattern, version) {

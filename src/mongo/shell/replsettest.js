@@ -1656,7 +1656,6 @@ var ReplSetTest = function(opts) {
 
         // Make sure to call _addPath, otherwise folders won't be cleaned.
         this._addPath(conn.dbpath);
-        // also add kvdbname if found, mpoolname == kvdbname
         if (conn.fullOptions.hasOwnProperty("hseMpoolName")) {
             print("ReplSetTest: adding kvdbname = " + conn.fullOptions.hseMpoolName);
             this._addKvdbName(conn.fullOptions.hseMpoolName);

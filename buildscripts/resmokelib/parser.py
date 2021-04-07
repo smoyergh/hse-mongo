@@ -68,7 +68,7 @@ DEST_TO_CONFIG = {
     "wt_index_config": "wiredTigerIndexConfigString",
     "wt_index_config": "wiredTigerIndexConfigString",
     "hse_params": "hseParams",
-    "hse_mpool_name_prefix": "hseMpoolNamePrefix",
+    "hse_kvdb_name_prefix": "hseKvdbNamePrefix",
     "hse_coll_compr": "hseCollectionCompression",
     "continue_on_crash": "continueOnCrash",
     "hse_executable": "hse",
@@ -253,8 +253,8 @@ def parse_command_line():
     parser.add_option("--hseParams", dest="hse_params", metavar="PARAMS",
                       help="Set the hse params configuration setting for all mongod's.")
 
-    parser.add_option("--hseMpoolNamePrefix", dest="hse_mpool_name_prefix", metavar="PREFIX",
-                      help="The name prefix of mpools created by resmoke.py or the tests "
+    parser.add_option("--hseKvdbNamePrefix", dest="hse_kvdb_name_prefix", metavar="PREFIX",
+                      help="The name prefix of kvdbs created by resmoke.py or the tests "
                            "themselves.  OPTIONAL.")
 
     parser.add_option("--hseCollectionCompression", dest="hse_coll_compr", metavar="PARAMS",
@@ -374,7 +374,7 @@ def update_config_vars(values):
     _config.WT_ENGINE_CONFIG = config.pop("wiredTigerEngineConfigString")
     _config.WT_INDEX_CONFIG = config.pop("wiredTigerIndexConfigString")
     _config.HSE_PARAMS = config.pop("hseParams")
-    _config.HSE_MPOOL_NAME_PREFIX = config.pop("hseMpoolNamePrefix")
+    _config.HSE_KVDB_NAME_PREFIX = config.pop("hseKvdbNamePrefix")
     _config.HSE_COLL_COMPR = config.pop("hseCollectionCompression")
     _config.HSE_COLL_COMPR_MIN_BYTES = config.pop("hseCollectionCompressionMinBytes")
     _config.CONTINUE_ON_CRASH = config.pop("continueOnCrash")

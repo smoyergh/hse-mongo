@@ -16,7 +16,7 @@ ToolTest = function(name, extraOptions) {
     this.ext = this.root + "_external/";
     this.extFile = this.root + "_external/a";
     this.kvdbNamePrefix = MongoRunner.kvdbNamePrefix;
-    this.mpoolName = MongoRunner.mpoolName;
+    this.kvdbName = MongoRunner.kvdbName;
     resetDbpath(this.dbpath);
     resetDbpath(this.ext);
 

@@ -70,11 +70,11 @@ class ReplicaSetFixture(interface.ReplFixture):
             self._dbpath_prefix = os.path.join(self._dbpath_prefix, config.FIXTURE_SUBDIR)
 
         if config.STORAGE_ENGINE == 'hse':
-            hse_mpool_name_prefix = config.HSE_MPOOL_NAME_PREFIX
-            hse_mpool_name_prefix = utils.default_if_none(
-                hse_mpool_name_prefix, config.DEFAULT_HSE_MPOOL_NAME_PREFIX)
+            hse_kvdb_name_prefix = config.HSE_KVDB_NAME_PREFIX
+            hse_kvdb_name_prefix = utils.default_if_none(
+                hse_kvdb_name_prefix, config.DEFAULT_HSE_KVDB_NAME_PREFIX)
             fmt = "%s-job%d"
-            self._hse_mpool_name_prefix = fmt % (hse_mpool_name_prefix, self.job_num)
+            self._hse_kvdb_name_prefix = fmt % (hse_kvdb_name_prefix, self.job_num)
 
         self.nodes = []
         self.replset_name = None
@@ -282,8 +282,8 @@ class ReplicaSetFixture(interface.ReplFixture):
         mongod_options["dbpath"] = os.path.join(self._dbpath_prefix, "node%d" % (index))
 
         if config.STORAGE_ENGINE == 'hse':
-            mpool_name = "%s-node%d" % (self._hse_mpool_name_prefix, index)
-            mongod_options["hseMpoolName"] = mpool_name
+            kvdb_name = "%s-node%d" % (self._hse_kvdb_name_prefix, index)
+            mongod_options["hseMpoolName"] = kvdb_name
 
         return standalone.MongoDFixture(mongod_logger,
                                         self.job_num,
