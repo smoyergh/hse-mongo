@@ -1797,18 +1797,6 @@ var ReplSetTest = function(opts) {
             return;
         }
 
-        if (_allKvdbNames.size) {
-            var i = 0;
-            for (var kName of _allKvdbNames) {
-                if (!resetKvdbs)
-                    print("ReplSetTest stopSet deleting kvdb " + kName);
-                deleteKvdb(jsTestOptions().hse,
-                           kName,
-                           _alldbpaths[i++],
-                           jsTestOptions().hseParams);
-	    }
-	}
-
         if ((!opts || !opts.noCleanData) && _alldbpaths) {
             print("ReplSetTest stopSet deleting all dbpaths");
             for (var i = 0; i < _alldbpaths.length; i++) {

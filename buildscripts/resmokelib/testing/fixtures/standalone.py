@@ -89,24 +89,8 @@ class MongoDFixture(interface.Fixture):
         self.mongod = None
 
     def setup(self):
-        storage_engine = config.STORAGE_ENGINE
-        if "storageEngine" in self.mongod_options:
-            storage_engine = self.mongod_options["storageEngine"]
-
         """Set up the mongod."""
         if not self.preserve_dbpath and os.path.lexists(self._dbpath):
-            if storage_engine == 'hse':
-                try:
-                    datadir = '{}/{}'.format(self._dbpath, self._hse_mpool_name)
-                    os.environ["HSE_STORAGE_PATH"] = datadir
-                    os.environ["HSE_REST_SOCK_PATH"] = datadir
-
-                    cmd = '{} kvdb destroy {}'.format(self._hse_executable, self._hse_mpool_name)
-                    self.logger.info(cmd)
-                    self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-                except subprocess.CalledProcessError as e:
-                    pass
-
             utils.rmtree(self._dbpath, ignore_errors=False)
 
         try:
@@ -118,6 +102,10 @@ class MongoDFixture(interface.Fixture):
         if "port" not in self.mongod_options:
             self.mongod_options["port"] = core.network.PortAllocator.next_fixture_port(self.job_num)
         self.port = self.mongod_options["port"]
+
+        storage_engine = config.STORAGE_ENGINE
+        if "storageEngine" in self.mongod_options:
+            storage_engine = self.mongod_options["storageEngine"]
 
         if storage_engine == 'hse' and not self.preserve_dbpath:
             mpname = self._hse_mpool_name

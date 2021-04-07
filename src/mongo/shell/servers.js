@@ -770,17 +770,10 @@ var MongoRunner, _startMongod, startMongoProgram, runMongoProgram, startMongoPro
                 removeFile(opts.dbpath + "/mongod.lock");
 
             if ((opts.cleanData || opts.startClean) || (!opts.restart && !opts.noCleanData)) {
-                var storageEngine = opts.storageEngine || jsTestOptions().storageEngine;
-                if (storageEngine === "hse") {
-                    deleteKvdb(jsTestOptions().hse,
-                               opts.hseMpoolName,
-                               opts.dbpath,
-                               jsTestOptions().hseParams);
-                }
-
                 print("Resetting db path '" + opts.dbpath + "'");
                 resetDbpath(opts.dbpath);
 
+                var storageEngine = opts.storageEngine || jsTestOptions().storageEngine;
                 if (storageEngine === "hse") {
                     print("Resetting kvdb '" + opts.hseMpoolName + "'");
                     resetKvdb(jsTestOptions().hse,

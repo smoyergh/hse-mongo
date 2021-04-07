@@ -851,13 +851,6 @@ BSONObj ResetKvdb(const BSONObj& a, void* data) {
 
     boost::filesystem::path dataDirObj(dataDir);
     verify(!dataDirObj.empty());
-
-    if (boost::filesystem::exists(dataDirObj)) {
-        cmd = hseExecutable + " kvdb destroy " + kvdbName;
-        cout << cmd << endl;
-        rc = system(cmd.c_str()); /* ignore return code */
-    }
-
     boost::filesystem::create_directories(dataDirObj);
 
     /*
@@ -883,34 +876,6 @@ BSONObj ResetKvdb(const BSONObj& a, void* data) {
 
     cout << cmd << endl;
     rc = system(cmd.c_str());
-
-    return BSON(string("") << rc);
-}
-
-BSONObj DeleteKvdb(const BSONObj& a, void* data) {
-    using std::to_string;
-
-    verify(a.nFields() == 4);
-    BSONObjIterator i(a);
-    string hseExecutable = i.next().str();
-    string kvdbName = i.next().str();
-    string dbPath = i.next().str();
-    string hseParams = i.next().str();
-    verify(!hseExecutable.empty());
-    verify(!kvdbName.empty());
-
-    string dataDir = dbPath + "/" + kvdbName;
-
-    int rc = setenv("HSE_STORAGE_PATH", dataDir.c_str(), 1);
-    if (rc)
-        return BSON(string("") << rc);
-
-    rc = setenv("HSE_REST_SOCK_PATH", dataDir.c_str(), 1);
-    if (rc)
-        return BSON(string("") << rc);
-
-    string cmd = hseExecutable + " kvdb destroy " + kvdbName;
-    rc = system(cmd.c_str()); /* Ignore error */
 
     return BSON(string("") << rc);
 }
@@ -1166,7 +1131,6 @@ void installShellUtilsLauncher(Scope& scope) {
     scope.injectNative("copyDbpath", CopyDbpath);
     scope.injectNative("resetKvdb", ResetKvdb);
     scope.injectNative("resetKvdbEnv", ResetKvdbEnv);
-    scope.injectNative("deleteKvdb", DeleteKvdb);
 }
 }
 }

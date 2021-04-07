@@ -110,8 +110,6 @@ var ShardingTest = function(params) {
     // cleaning up the data files on shutdown
     var _alldbpaths = [];
 
-    var _allKvdbNames = new Set();
-
     // Timeout to be used for operations scheduled by the sharding test, which must wait for write
     // concern (5 minutes)
     var kDefaultWTimeoutMs = 5 * 60 * 1000;
@@ -399,17 +397,6 @@ var ShardingTest = function(params) {
         }
 
         if (!opts || !opts.noCleanData) {
-            if (_allKvdbNames.size) {
-                print("ShardingTest stop, deleting kvdbs");
-                var i = 0;
-                for (var kName of _allKvdbNames) {
-                    deleteKvdb(jsTestOptions().hse,
-                               kName,
-                               _alldbpaths[i++],
-                               jsTestOptions().hseParams);
-                }
-            }
-
             print("ShardingTest stop deleting all dbpaths");
             for (var i = 0; i < _alldbpaths.length; i++) {
                 resetDbpath(MongoRunner.dataPath + _alldbpaths[i]);
@@ -1172,11 +1159,6 @@ var ShardingTest = function(params) {
             }
 
             _alldbpaths.push(testName + i);
-            if (conn.fullOptions.hasOwnProperty("hseMpoolName")) {
-                print("ShardingTest: adding kvdbname = " + conn.fullOptions.hseMpoolName);
-                _allKvdbNames.add(conn.fullOptions.hseMpoolName);
-            }
-
             this["shard" + i] = this._connections[i];
             this["d" + i] = this._connections[i];
 
