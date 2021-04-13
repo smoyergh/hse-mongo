@@ -813,12 +813,13 @@ BSONObj ResetKvdbEnv(const BSONObj& a, void* data) {
 
     int rc;
     string dataDir = dbPath + "/" + kvdbName;
+    string sockPath = dataDir + "/" + kvdbName + ".sock";
 
     rc = setenv("HSE_STORAGE_PATH", dataDir.c_str(), 1);
     if (rc)
         return BSON(string("") << rc);
 
-    rc = setenv("HSE_REST_SOCK_PATH", dataDir.c_str(), 1);
+    rc = setenv("HSE_REST_SOCK_PATH", sockPath.c_str(), 1);
     if (rc)
         return BSON(string("") << rc);
 
@@ -840,12 +841,13 @@ BSONObj ResetKvdb(const BSONObj& a, void* data) {
     int rc;
     string cmd;
     string dataDir = dbPath + "/" + kvdbName;
+    string sockPath = dataDir + "/" + kvdbName + ".sock";
 
     rc = setenv("HSE_STORAGE_PATH", dataDir.c_str(), 1);
     if (rc)
         return BSON(string("") << rc);
 
-    rc = setenv("HSE_REST_SOCK_PATH", dataDir.c_str(), 1);
+    rc = setenv("HSE_REST_SOCK_PATH", sockPath.c_str(), 1);
     if (rc)
         return BSON(string("") << rc);
 

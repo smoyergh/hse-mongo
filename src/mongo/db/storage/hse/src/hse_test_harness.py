@@ -98,7 +98,7 @@ def test_setup(pwd):
     _run_cmd(cmdargs, logfile)
 
     os.environ["HSE_STORAGE_PATH"] = '%s/%s' % (pwd, _KVDB_NAME)
-    os.environ["HSE_REST_SOCK_PATH"] = '%s/%s' % (pwd, _KVDB_NAME)
+    os.environ["HSE_REST_SOCK_PATH"] = '%s/%s/%s.sock' % (pwd, _KVDB_NAME, _KVDB_NAME)
 
     logfile.close()
 

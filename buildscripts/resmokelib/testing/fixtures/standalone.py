@@ -110,9 +110,10 @@ class MongoDFixture(interface.Fixture):
         if storage_engine == 'hse' and not self.preserve_dbpath:
             kvdbname = self._hse_kvdb_name
             datadir = '{}/{}'.format(self._dbpath, kvdbname)
+            sockfile = '{}/{}.sock'.format(datadir, kvdbname)
 
             os.environ["HSE_STORAGE_PATH"] = datadir
-            os.environ["HSE_REST_SOCK_PATH"] = datadir
+            os.environ["HSE_REST_SOCK_PATH"] = sockfile
             os.environ["LD_LIBRARY_PATH"] = self._hse_libpath
 
             self.logger.info("Resetting KVDB {}...".format(kvdbname))
