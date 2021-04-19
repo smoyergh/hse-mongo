@@ -1,7 +1,7 @@
 /**
  *    SPDX-License-Identifier: AGPL-3.0-only
  *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *    Copyright (C) 2017-2021 Micron Technology, Inc.
  *
  *    This code is derived from and modifies the mongo-rocks project.
  *
@@ -44,7 +44,7 @@ KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
 
     _kvdbPerUt = nullptr != getenv("KVDB_PER_UT") ? true : false;
 
-    hse::Status st = _db.kvdb_init();
+    hse::Status st = hse::init();
     ASSERT_EQUALS(0, st.getErrno());
 
     hse_params_create(&_params);
@@ -80,7 +80,7 @@ KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
 void KVDBTestSuiteFixture::reset() {
 
     if (_dbClosed) {
-        hse::Status st = _db.kvdb_init();
+        hse::Status st = hse::init();
         ASSERT_EQUALS(0, st.getErrno());
 
         st = _db.kvdb_open(_mpoolName.c_str(), _kvdbName.c_str(), _params);
@@ -119,7 +119,7 @@ void KVDBTestSuiteFixture::reset() {
 
 KVDBTestSuiteFixture::~KVDBTestSuiteFixture() {
     if (_dbClosed) {
-        hse::Status st = _db.kvdb_init();
+        hse::Status st = hse::init();
         ASSERT_EQUALS(0, st.getErrno());
 
         st = _db.kvdb_open(_mpoolName.c_str(), _kvdbName.c_str(), _params);
@@ -133,7 +133,7 @@ KVDBTestSuiteFixture::~KVDBTestSuiteFixture() {
 
     hse_params_destroy(_params);
 
-    _db.kvdb_fini();
+    hse::fini();
     _dbClosed = true;
 }
 
@@ -151,7 +151,7 @@ void KVDBTestSuiteFixture::closeDb() {
         hse::Status st = _db.kvdb_close();
         ASSERT_EQUALS(0, st.getErrno());
 
-        _db.kvdb_fini();
+        hse::fini();
         _dbClosed = true;
     }
 }

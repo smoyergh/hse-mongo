@@ -1,7 +1,7 @@
 /**
  *    SPDX-License-Identifier: AGPL-3.0-only
  *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *    Copyright (C) 2017-2021 Micron Technology, Inc.
  *
  *    This code is derived from and modifies the mongo-rocks project.
  *
@@ -70,16 +70,16 @@ namespace hse {
 
 struct hse_kvdb_txn;
 
-// KVDB Implementation
-Status KVDBImpl::kvdb_init() {
-    return Status(::hse_kvdb_init());
+Status init() {
+    return Status(::hse_init());
 }
 
-Status KVDBImpl::kvdb_fini() {
-    ::hse_kvdb_fini();
+Status fini() {
+    ::hse_fini();
     return Status();
 }
 
+// KVDB Implementation
 Status KVDBImpl::kvdb_make(const char* mp_name, const char* kvdb_name, struct hse_params* params) {
     return Status(::hse_kvdb_make(mp_name, params));
 }
