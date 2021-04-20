@@ -1,7 +1,7 @@
 /**
  *    SPDX-License-Identifier: AGPL-3.0-only
  *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *    Copyright (C) 2017-2021 Micron Technology, Inc.
  *
  *    This code is derived from and modifies the mongo-rocks project.
  *
@@ -323,10 +323,6 @@ static inline bool operator==(const KVDBData& lhs, const KVDBData& rhs) {
 class KVDB {
 public:
     KVDB() {}
-
-    virtual Status kvdb_init() = 0;
-
-    virtual Status kvdb_fini() = 0;
 
     virtual Status kvdb_make(const char* mp_name,
                              const char* kvdb_name,

@@ -1,7 +1,7 @@
 /**
  *    SPDX-License-Identifier: AGPL-3.0-only
  *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *    Copyright (C) 2017-2021 Micron Technology, Inc.
  *
  *    This code is derived from and modifies the mongo-rocks project.
  *
@@ -41,13 +41,13 @@ using namespace std;
 // KVDB interface
 namespace hse {
 
+Status init();
+
+Status fini();
+
 // KVDB Implementation
 class KVDBImpl : public KVDB {
 public:
-    virtual Status kvdb_init();
-
-    virtual Status kvdb_fini();
-
     virtual Status kvdb_make(const char* mp_name, const char* kvdb_name, struct hse_params* params);
 
     virtual Status kvdb_open(const char* mp_name, const char* kvdb_name, struct hse_params* params);

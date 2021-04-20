@@ -1,7 +1,7 @@
 /**
  *    SPDX-License-Identifier: AGPL-3.0-only
  *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
+ *    Copyright (C) 2017-2021 Micron Technology, Inc.
  *
  *    This code is derived from and modifies the mongo-rocks project.
  *
@@ -550,7 +550,7 @@ void KVDBEngine::_set_hse_params(struct hse_params* params) {
 }
 
 void KVDBEngine::_setupDb() {
-    auto st = _db.kvdb_init();
+    auto st = hse::init();
     invariantHseSt(st);
 
     const string mpoolName = kvdbGlobalOptions.getMpoolName();
@@ -701,7 +701,7 @@ void KVDBEngine::_cleanShutdown() {
     KVDBStatRate::finish();
 
     _db.kvdb_close();
-    _db.kvdb_fini();
+    hse::fini();
 }
 
 // non public api
