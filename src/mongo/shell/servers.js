@@ -781,7 +781,7 @@ var MongoRunner, _startMongod, startMongoProgram, runMongoProgram, startMongoPro
                               opts.hseMpoolName,
                               jsTestOptions().hseParams);
                 }
-            } else if (opts.restart) {
+            } else if (opts.restart || opts.noCleanData) {
                 var storageEngine = opts.storageEngine || jsTestOptions().storageEngine;
                 if (storageEngine === "hse") {
                     opts = MongoRunner.mongodOptions(opts);

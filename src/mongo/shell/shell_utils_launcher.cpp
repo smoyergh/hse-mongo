@@ -900,7 +900,7 @@ BSONObj PathExists(const BSONObj& a, void* data) {
     return BSON(string("") << exists);
 }
 
-void copyDir(const boost::filesystem::path& from, const boost::filesystem::path& to) {
+void copyDir(const boost::filesystem::path& from, const boost::filesystem::path& to, bool sparse) {
     boost::filesystem::directory_iterator end;
     boost::filesystem::directory_iterator i(from);
     while (i != end) {
@@ -917,9 +917,19 @@ void copyDir(const boost::filesystem::path& from, const boost::filesystem::path&
             if (boost::filesystem::is_directory(p)) {
                 boost::filesystem::path newDir = to / p.leaf();
                 boost::filesystem::create_directory(newDir);
-                copyDir(p, newDir);
+                copyDir(p, newDir, sparse);
             } else {
-                boost::filesystem::copy_file(p, to / p.leaf());
+                if (sparse) {
+                    string cmd = "cp --preserve=mode,ownership " + p.string() + " " +
+                                  (to / p.leaf()).string();
+                    int rc = system(cmd.c_str());
+                    if (rc) {
+                        log() << "Failed to copy file from '" << p.string() << "' to '"
+                              << (to / p.leaf()).string() << "' due to: " << errnoWithDescription();
+                    }
+                } else {
+                    boost::filesystem::copy_file(p, to / p.leaf());
+                }
             }
         }
         ++i;
@@ -937,7 +947,21 @@ BSONObj CopyDbpath(const BSONObj& a, void* data) {
     if (boost::filesystem::exists(to))
         boost::filesystem::remove_all(to);
     boost::filesystem::create_directory(to);
-    copyDir(from, to);
+    copyDir(from, to, false);
+    return undefinedReturn;
+}
+
+BSONObj CopyDbpathSparse(const BSONObj& a, void* data) {
+    verify(a.nFields() == 2);
+    BSONObjIterator i(a);
+    string from = i.next().str();
+    string to = i.next().str();
+    verify(!from.empty());
+    verify(!to.empty());
+    if (boost::filesystem::exists(to))
+        boost::filesystem::remove_all(to);
+    boost::filesystem::create_directory(to);
+    copyDir(from, to, true);
     return undefinedReturn;
 }
 
@@ -1131,6 +1155,7 @@ void installShellUtilsLauncher(Scope& scope) {
     scope.injectNative("resetDbpath", ResetDbpath);
     scope.injectNative("pathExists", PathExists);
     scope.injectNative("copyDbpath", CopyDbpath);
+    scope.injectNative("copyDbpathSparse", CopyDbpathSparse);
     scope.injectNative("resetKvdb", ResetKvdb);
     scope.injectNative("resetKvdbEnv", ResetKvdbEnv);
 }

@@ -171,6 +171,17 @@ var BackupRestoreTest = function(options) {
             host);
     }
 
+    function _hseCopyDbpath(srcDbpath, dstDbpath) {
+        var srcKvdb = MongoRunner.toRealKvdbName(srcDbpath, {});
+        var dstKvdb = MongoRunner.toRealKvdbName(dstDbpath, {});
+        copyDbpathSparse(srcDbpath, dstDbpath);
+        removeFile(dstDbpath + '/' + srcKvdb);
+
+        var srcPath = srcDbpath + "/" + srcKvdb;
+        var dstPath = dstDbpath + "/" + dstKvdb;
+        copyDbpathSparse(srcPath, dstPath);
+        removeFile(dstPath + '/.lockfile');
+    }
     /**
      * Runs the test.
      */
@@ -266,7 +277,11 @@ var BackupRestoreTest = function(options) {
             }
 
             dbHash = secondary.getDB(crudDb).runCommand({dbhash: 1}).md5;
-            copyDbpath(dbpathSecondary, hiddenDbpath);
+
+            if (jsTest.options().storageEngine == 'hse')
+                _hseCopyDbpath(dbpathSecondary, hiddenDbpath);
+            else
+                copyDbpath(dbpathSecondary, hiddenDbpath);
             removeFile(hiddenDbpath + '/mongod.lock');
             print("Source directory:", tojson(ls(dbpathSecondary)));
             copiedFiles = ls(hiddenDbpath);
@@ -294,7 +309,10 @@ var BackupRestoreTest = function(options) {
         } else if (options.backup == 'stopStart') {
             // Stop the mongod process
             rst.stop(secondary.nodeId);
-            copyDbpath(dbpathSecondary, hiddenDbpath);
+            if (jsTest.options().storageEngine == 'hse')
+                _hseCopyDbpath(dbpathSecondary, hiddenDbpath);
+            else
+                copyDbpath(dbpathSecondary, hiddenDbpath);
             removeFile(hiddenDbpath + '/mongod.lock');
             print("Source directory:", tojson(ls(dbpathSecondary)));
             copiedFiles = ls(hiddenDbpath);
