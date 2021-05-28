@@ -119,33 +119,10 @@ public:
     KVDBData(const uint8_t* mem, unsigned long len, bool owned)
         : KVDBData{(uint8_t*)mem, len, owned} {}
 
-    KVDBData(const KVDBData& n) {
-        this->_data = n._data;
-        this->_bufLen = n._bufLen;
-        this->_len = n._len;
-        this->_owned = n._owned;
-        this->_ownedData = n._ownedData;
-        this->_allocLen = n._allocLen;
-        this->_num_chunks = n._num_chunks;
-        this->_total_len = n._total_len;
-        this->_total_len_comp = n._total_len_comp;
-        this->_offset = n._offset;
-    }
-
-    KVDBData& operator=(const KVDBData& rhs) {
-        this->_data = rhs._data;
-        this->_bufLen = rhs._bufLen;
-        this->_len = rhs._len;
-        this->_owned = rhs._owned;
-        this->_ownedData = rhs._ownedData;
-        this->_allocLen = rhs._allocLen;
-        this->_num_chunks = rhs._num_chunks;
-        this->_total_len = rhs._total_len;
-        this->_total_len_comp = rhs._total_len_comp;
-        this->_offset = rhs._offset;
-
-        return *this;
-    }
+    KVDBData(const KVDBData& n) = default;
+    KVDBData& operator=(const KVDBData& rhs) = default;
+    KVDBData(KVDBData&& n) = default;
+    KVDBData& operator=(KVDBData&& rhs) = default;
 
     uint8_t* data() const {
         if (_owned) {
@@ -161,28 +138,6 @@ public:
 
     void adjustLen(unsigned long copied) {
         _len = _len + copied;
-    }
-
-    void setFraming(unsigned long totallen,
-                    unsigned long totallencomp,
-                    unsigned int num_chunks,
-                    unsigned int offset) {
-        _total_len = totallen;
-        _total_len_comp = totallencomp;
-        _num_chunks = num_chunks;
-        _offset = offset;
-    }
-    unsigned long getTotalLen() const {
-        return _total_len;
-    }
-    unsigned long getTotalLenComp() const {
-        return _total_len_comp;
-    }
-    unsigned int getNumChunks() const {
-        return _num_chunks;
-    }
-    unsigned int getOffset() const {
-        return _offset;
     }
 
     bool empty() const {
@@ -235,10 +190,6 @@ public:
         _bufLen = 0;
         _owned = false;
         _allocLen = 0;
-        _num_chunks = 0;
-        _total_len = 0;
-        _total_len_comp = 0;
-        _offset = 0;
     }
 
     uint8_t* getDataCopy() {
@@ -279,22 +230,6 @@ private:
     bool _owned{false};
     shared_ptr<uint8_t> _ownedData{};
     unsigned long _allocLen{0};
-
-    // The below 3 fields are updated only when this object corresponds
-    // to the first chunk of a user value.
-    // They are update after the value is read from KVS.
-    unsigned int _num_chunks{0};  // (Actual number of chunks) - 1.
-                                  // If the value is not chunked, it is 0.
-    unsigned int _offset{0};      // first byte of user data in the buffer.
-    unsigned long _total_len{0};  // Length of the uncompressed user data
-                                  // across all chunks. Does not include the
-                                  // length header that may be before "_offset".
-    unsigned long _total_len_comp{0};
-    // Length of the compressed user data across
-    // all chunks. Does not include the length
-    // header but include the compression headers.
-    // If the collection is not compressed, it is
-    // equal to _total_len.
 };
 
 // Lexicographic

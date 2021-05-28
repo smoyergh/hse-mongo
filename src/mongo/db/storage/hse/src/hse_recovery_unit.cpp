@@ -40,7 +40,6 @@
 #include "hse_util.h"
 
 using hse::ClientTxn;
-using hse::CompParms;
 using hse::KVDB;
 using hse::KVDBData;
 
@@ -205,14 +204,8 @@ hse::Status KVDBRecoveryUnit::probeVlen(
     const KVSHandle& h, const KVDBData& key, KVDBData& val, unsigned long len, bool& found) {
     _ensureTxn();
     invariantHse(tlsReadBuf);
-    invariantHse(len <= 1 + VALUE_META_SIZE + MAX_BYTES_LEB128);
     val.setReadBuf(tlsReadBuf.get(), len);
 
-    // On a compressed record store, "val" contains len bytes not having
-    // been uncompressed yet. This read is used only to adjust length stats,
-    // during a DeleteRecord/UpdateRecord. It reads up to 10 (len) bytes but
-    // sets the full value length in _len.
-    // This function does NOT update the value framing (updateFraming()).
     return _kvdb.kvs_probe_len(h, _txn, key, val, found);
 }
 
@@ -231,9 +224,6 @@ hse::Status KVDBRecoveryUnit::_get(
     return _kvdb.kvs_get(h, use_txn ? _txn : nullptr, key, val, found);
 }
 
-// On a compressed record store, "val" contains data not having
-// been de-compressed yet.
-// This function does NOT update the value framing (updateFraming()).
 hse::Status KVDBRecoveryUnit::getMCo(
     const KVSHandle& h, const KVDBData& key, KVDBData& val, bool& found, bool use_txn) {
     return _get(h, key, val, found, use_txn);
@@ -290,14 +280,13 @@ hse::Status KVDBRecoveryUnit::iterDelete(const KVSHandle& h, const KVDBData& pre
 hse::Status KVDBRecoveryUnit::beginScan(const KVSHandle& h,
                                         KVDBData pfx,
                                         bool forward,
-                                        KvsCursor** cursor,
-                                        const struct CompParms& compparm) {
+                                        KvsCursor** cursor) {
     KvsCursor* lcursor = 0;
 
     _ensureTxn();
 
     try {
-        lcursor = create_cursor(h, pfx, forward, compparm, _txn);
+        lcursor = create_cursor(h, pfx, forward, _txn);
     } catch (...) {
         return hse::Status(ENOMEM);
     }
@@ -335,13 +324,12 @@ hse::Status KVDBRecoveryUnit::endScan(KvsCursor* cursor) {
 hse::Status KVDBRecoveryUnit::beginOplogScan(const KVSHandle& h,
                                              KVDBData pfx,
                                              bool forward,
-                                             KvsCursor** cursor,
-                                             const struct CompParms& compparm) {
+                                             KvsCursor** cursor) {
     KvsCursor* lcursor = 0;
 
     /* Make sure this is an unbound cursor in order to be see all commits so far. */
     try {
-        lcursor = create_cursor(h, pfx, forward, compparm, nullptr);
+        lcursor = create_cursor(h, pfx, forward, nullptr);
     } catch (...) {
         return hse::Status(ENOMEM);
     }

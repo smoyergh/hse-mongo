@@ -51,7 +51,6 @@
 #include "hse_impl.h"
 #include "hse_index.h"
 
-using hse::CompParms;
 
 namespace mongo {
 using std::string;
@@ -278,8 +277,7 @@ void KVDBIdxCursorBase::_ensureCursor() {
 
     if (!_cursorValid) {
         KVDBData pKey{(const uint8_t*)_prefix.c_str(), _prefix.size()};
-        const struct CompParms compparms = {};  // no compression on indexes
-        auto hseSt = ru->beginScan(_idxKvs, pKey, _forward, &_cursor, compparms);
+        auto hseSt = ru->beginScan(_idxKvs, pKey, _forward, &_cursor);
         invariantHseSt(hseSt);
         _cursorValid = true;
         _needSeek = true;

@@ -85,9 +85,7 @@ public:
     }
 
     virtual Status validateCollectionStorageOptions(const BSONObj& options) const {
-        struct CompParms compparms = {};
-
-        return collconf::validateCollectionOptions(options, compparms);
+        return Status::OK();
     }
 
     virtual Status validateMetadata(const StorageEngineMetadata& metadata,

@@ -53,7 +53,6 @@ using hse::KVDBOplogBlockKey;
 using hse::_getNumChunks;
 using hse::_getValueLength;
 using hse::_makeChunkKey;
-using hse::CompParms;
 
 namespace mongo {
 
@@ -549,8 +548,7 @@ RecordId KVDBOplogBlockManager::getHighestFromPrevBlk(OperationContext* opctx, u
         KvsCursor* cursor = 0;
 
         // forward
-        const struct hse::CompParms compparms {};  // no compression for oplog
-        st = ru->beginScan(_kvs, pfxKey, true, &cursor, compparms);
+        st = ru->beginScan(_kvs, pfxKey, true, &cursor);
         invariantHseSt(st);
 
         bool eof = false;
@@ -648,8 +646,7 @@ hse::Status KVDBOplogBlockManager::_findLastKeptIdInclusive(KVDBRecoveryUnit* ru
     KVDBData pfxKey{(const uint8_t*)&olScanKey, sizeof(olScanKey)};
 
     // reverse
-    const struct CompParms compparms = {};  // no compression for oplog
-    st = ru->beginScan(_kvs, pfxKey, false, &cursor, compparms);
+    st = ru->beginScan(_kvs, pfxKey, false, &cursor);
     if (!st.ok())
         return st;
 
@@ -704,10 +701,9 @@ hse::Status KVDBOplogBlockManager::_deleteBlockByScan(KVDBRecoveryUnit* ru,
 
     KVDBData pfxKey{(const uint8_t*)&olScanKey, sizeof(olScanKey)};
     KvsCursor* cursor = 0;
-    const struct CompParms compparms = {};  // no compression for oplog
 
     // forward
-    st = ru->beginScan(_kvs, pfxKey, true, &cursor, compparms);
+    st = ru->beginScan(_kvs, pfxKey, true, &cursor);
     if (!st.ok())
         return st;
 
@@ -739,13 +735,13 @@ hse::Status KVDBOplogBlockManager::_deleteBlockByScan(KVDBRecoveryUnit* ru,
 
     if (inclusive) {
         invariantHse(!eof);
-        st = _delKeyHelper(ru, elKey, elVal.getNumChunks());
+        st = _delKeyHelper(ru, elKey, _getNumChunks(_getValueLength(elVal)));
         if (!st.ok()) {
             ru->endScan(cursor);
             return st;
         }
 
-        sizeDel += elVal.getTotalLen();
+        sizeDel += _getValueLength(elVal);
         recsDel++;
     }
 
@@ -759,13 +755,13 @@ hse::Status KVDBOplogBlockManager::_deleteBlockByScan(KVDBRecoveryUnit* ru,
         if (eof)
             break;
 
-        st = _delKeyHelper(ru, elKey, elVal.getNumChunks());
+        st = _delKeyHelper(ru, elKey, _getNumChunks(_getValueLength(elVal)));
         if (!st.ok()) {
             ru->endScan(cursor);
             return st;
         }
 
-        sizeDel += elVal.getTotalLen();
+        sizeDel += _getValueLength(elVal);
         recsDel++;
     }
 
@@ -912,8 +908,7 @@ hse::Status KVDBOplogBlockManager::_importCurrBlockByScan(KVDBRecoveryUnit* ru,
     KVDBData pfxKey{blockKey.data, KOBK_LEN(blockKey)};
     KvsCursor* cursor = 0;
 
-    const struct CompParms compparms = {};  // no compression for oplog
-    st = ru->beginScan(_kvs, pfxKey, true, &cursor, compparms);
+    st = ru->beginScan(_kvs, pfxKey, true, &cursor);
     if (!st.ok())
         return st;
 

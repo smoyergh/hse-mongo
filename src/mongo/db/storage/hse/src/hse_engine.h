@@ -58,7 +58,7 @@
 
 using std::string;
 
-using hse::CompAlgo;
+
 using hse::KVDBImpl;
 
 namespace mongo {
@@ -169,7 +169,6 @@ private:
     Status _createIdent(OperationContext* opCtx,
                         StringData ident,
                         KVDBIdentType type,
-                        CompParms& compparms,
                         BSONObjBuilder* configBuilder);
     BSONObj _getIdentConfig(StringData ident);
     uint32_t _extractPrefix(const BSONObj& config);

@@ -54,25 +54,6 @@ namespace hse {
 
 class KvsCursor;
 
-#define MAX_BYTES_LEB128 5UL  // worst case number of bytes needed to encode
-                              // with LEB128 an unsigned 4 bytes integer.
-enum CompAlgo {
-    ALGO_NONE = 0,  // No compression
-    ALGO_LZ4 = 1,   // Compress using lz4.
-};
-
-// Compression parameters
-struct CompParms {
-    CompAlgo compalgo;     // algorithm used for compression
-    uint32_t compminsize;  // size in bytes below (<=) which a value is not compressed
-
-    bool compdoit;  // Tell the compression/decompression routines if
-                    // they should compress/decompress on this
-                    // recordstore.
-                    // Updated when the recordstore object is created
-                    // based on the compression parameters above.
-};
-
 static const int VALUE_META_SIZE = 4;
 static const int VALUE_META_THRESHOLD_LEN = HSE_KVS_VLEN_MAX - VALUE_META_SIZE;
 
@@ -366,45 +347,6 @@ hse::Status _cursorRead(mongo::KVDBRecoveryUnit* ru,
                         KVDBData& key,
                         KVDBData& val,
                         bool& eof);
-
-hse::Status encodeLeb128(uint64_t val,
-                         uint8_t* out_buf,
-                         uint32_t outbuf_len,
-                         uint32_t* codedlen_bytes);
-
-hse::Status decodeLeb128(const uint8_t* buf,
-                         int max_encoded_bytes,
-                         uint64_t* val,
-                         uint32_t* codedlen_bytes);
-
-void computeFraming(const uint8_t* buf,
-                    unsigned long len,
-                    const CompParms& compparms,
-                    unsigned long* totallen,
-                    unsigned long* totallencomp,
-                    unsigned int* addchunks,
-                    unsigned int* offset,
-                    unsigned int* off_comp);
-
-void updateFraming(const CompParms& compparms, KVDBData& val);
-
-void compressneeded(bool oplog, struct CompParms& compparms);
-
-hse::Status compressdata(const struct CompParms& compparms,
-                         const char* in_data,
-                         const int in_len,
-                         KVDBData& comp);
-
-hse::Status decompressdata1(const struct CompParms& compparms,
-                            const void* comp_buf,
-                            size_t comp_len,
-                            unsigned int off_comp,
-                            void** unc_buf,
-                            size_t* unc_len);
-hse::Status decompressdata(const struct CompParms& compparms,
-                           KVDBData& comp,
-                           unsigned int off_comp,
-                           KVDBData& unc);
 
 class CStyleStrVec {
 public:

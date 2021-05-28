@@ -148,11 +148,7 @@ public:
                           hse_kvs_pfx_probe_cnt& found);
     hse::Status prefixDelete(const KVSHandle& h, const KVDBData& prefix);
     hse::Status iterDelete(const KVSHandle& h, const KVDBData& prefix);
-    hse::Status beginScan(const KVSHandle& h,
-                          KVDBData prefix,
-                          bool forward,
-                          KvsCursor** cursor,
-                          const struct hse::CompParms& compparm);
+    hse::Status beginScan(const KVSHandle& h, KVDBData prefix, bool forward, KvsCursor** cursor);
     hse::Status cursorUpdate(KvsCursor* cursor);
     hse::Status cursorSeek(KvsCursor* cursor, const KVDBData& key, KVDBData* foundKey);
     hse::Status cursorRead(KvsCursor* cursor, KVDBData& key, KVDBData& val, bool& eof);
@@ -161,8 +157,7 @@ public:
     hse::Status beginOplogScan(const KVSHandle& h,
                                KVDBData prefix,
                                bool forward,
-                               KvsCursor** cursor,
-                               const struct hse::CompParms& compparm);
+                               KvsCursor** cursor);
     hse::Status oplogCursorUpdate(KvsCursor* cursor);
     hse::Status oplogCursorSeek(KvsCursor* cursor,
                                 const KVDBData& key,
