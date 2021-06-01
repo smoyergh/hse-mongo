@@ -60,11 +60,9 @@ public:
 private:
     string _kvdbName{"kvdb1"};
 
-    struct hse_params* _params{nullptr};
-
     bool _kvdbPerUt = true;
 
     KVDBImpl _db{};
     bool _dbClosed = true;
 };
-}
+}  // namespace hse

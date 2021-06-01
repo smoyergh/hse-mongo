@@ -58,8 +58,8 @@
 
 using std::string;
 
-using hse::KVDBImpl;
 using hse::CompAlgo;
+using hse::KVDBImpl;
 
 namespace mongo {
 
@@ -154,9 +154,8 @@ public:
 
 private:
     void _setupDb();
-    void _set_hse_params(struct hse_params* params);
-    void _open_kvdb(const string& kvdbName, struct hse_params* params);
-    void _open_kvs(const string& kvsName, KVSHandle& h, struct hse_params* params);
+    void _open_kvdb(const string& dbHome, const string& configStr);
+    void _open_kvs(const string& kvsName, KVSHandle& h, const string& configStr);
     void _cleanShutdown();
     uint32_t _getMaxPrefixInKvs(KVSHandle& kvs);
     void _checkMaxPrefix();
@@ -169,7 +168,9 @@ private:
     BSONObj _getIdentConfig(StringData ident);
     uint32_t _extractPrefix(const BSONObj& config);
     KVDBIdentType _extractType(const BSONObj& config);
+    string _getMongoConfigStr(void);
 
+    const string _dbHome;
     bool _durable;
     const int _formatVersion;
 
@@ -186,6 +187,9 @@ private:
 
     // Special prefixes
     static const string kMetadataPrefix;
+
+    // Const static config for db
+    static const string staticConfigStr;
 
     KVSHandle _mainKvs;
     KVSHandle _stdIdxKvs;
@@ -219,4 +223,4 @@ private:
 
     std::shared_ptr<KVDBOplogBlockManager> _oplogBlkMgr{};
 };
-}
+}  // namespace mongo

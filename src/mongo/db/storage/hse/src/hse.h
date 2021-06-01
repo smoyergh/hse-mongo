@@ -324,15 +324,11 @@ class KVDB {
 public:
     KVDB() {}
 
-    virtual Status kvdb_make(const char* kvdb_name,
-                             struct hse_params* params) = 0;
+    virtual Status kvdb_make(const char* kvdb_home, const char* config) = 0;
 
-    virtual Status kvdb_open(const char* kvdb_name,
-                             struct hse_params* params) = 0;
+    virtual Status kvdb_open(const char* kvdb_home, const char* config) = 0;
 
-    virtual Status kvdb_kvs_open(const char* kvs_name,
-                                 struct hse_params* params,
-                                 KVSHandle& kvs_out) = 0;
+    virtual Status kvdb_kvs_open(const char* kvs_name, const char* config, KVSHandle& kvs_out) = 0;
 
     virtual Status kvdb_kvs_close(KVSHandle handle) = 0;
 
@@ -342,7 +338,7 @@ public:
 
     virtual Status kvdb_free_names(char** kvsv) = 0;
 
-    virtual Status kvdb_kvs_make(const char* kvs_name, struct hse_params* params) = 0;
+    virtual Status kvdb_kvs_make(const char* kvs_name, const char* config) = 0;
 
     virtual Status kvdb_kvs_drop(const char* kvs_name) = 0;
 
@@ -387,12 +383,6 @@ public:
 
     virtual Status kvdb_sync() = 0;
 
-    virtual Status kvdb_params_from_file(struct hse_params* params, const string& filePath) = 0;
-
-    virtual Status kvdb_params_set(struct hse_params* params,
-                                   const string& key,
-                                   const string& val) = 0;
-
     bool keyStartsWith(KVDBData key, const uint8_t* prefix, unsigned long pLen) {
         if (pLen <= key.len() && 0 == memcmp(key.data(), prefix, pLen)) {
             return true;
@@ -403,4 +393,4 @@ public:
 
     virtual ~KVDB() {}
 };
-}
+}  // namespace hse

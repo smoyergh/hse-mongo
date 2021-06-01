@@ -43,10 +43,7 @@ namespace moe = mongo::optionenvironment;
 class KVDBGlobalOptions {
 public:
     KVDBGlobalOptions()
-        : _kvdbName{kDefaultKvdbName},
-          _forceLag{kDefaultForceLag},
-          _configPathStr{kDefaultConfigPathStr},
-          _paramsStr{kDefaultParamsStr},
+        : _forceLag{kDefaultForceLag},
           _collectionCompressionStr{kDefaultCollectionCompressionStr},
           _collectionCompressionMinBytesStr{kDefaultCollectionCompressionMinBytesStr},
           _enableMetrics{kDefaultEnableMetrics},
@@ -54,12 +51,6 @@ public:
 
     Status add(moe::OptionSection* options);
     Status store(const moe::Environment& params, const std::vector<std::string>& args);
-
-    std::string getKvdbName() const;
-
-    std::string getConfigPathStr() const;
-
-    std::string getParamsStr() const;
 
     std::string getCollectionCompressionStr() const;
     std::string getCollectionCompressionMinBytesStr() const;
@@ -70,19 +61,12 @@ public:
     int getForceLag() const;
 
 private:
-    static const std::string kDefaultKvdbName;
     static const int kDefaultForceLag;
-    static const std::string kDefaultConfigPathStr;
-    static const std::string kDefaultParamsStr;
-
     static const std::string kDefaultCollectionCompressionStr;
     static const std::string kDefaultCollectionCompressionMinBytesStr;
     static const bool kDefaultEnableMetrics;
 
-    std::string _kvdbName;
     int _forceLag;
-    std::string _configPathStr;
-    std::string _paramsStr;
 
     std::string _collectionCompressionStr;
     std::string _collectionCompressionMinBytesStr;
@@ -92,4 +76,4 @@ private:
 };
 
 extern KVDBGlobalOptions kvdbGlobalOptions;
-}
+}  // namespace mongo

@@ -45,16 +45,16 @@ Status init();
 
 Status fini();
 
+Status config_merge(const char* staticConfig, const char* mongoConfig, char** mergedConfig);
+
 // KVDB Implementation
 class KVDBImpl : public KVDB {
 public:
-    virtual Status kvdb_make(const char* kvdb_name, struct hse_params* params);
+    virtual Status kvdb_make(const char* kvdb_home, const char* config);
 
-    virtual Status kvdb_open(const char* kvdb_name, struct hse_params* params);
+    virtual Status kvdb_open(const char* kvdb_home, const char* config);
 
-    virtual Status kvdb_kvs_open(const char* kvs_name,
-                                 struct hse_params* params,
-                                 KVSHandle& kvs_out);
+    virtual Status kvdb_kvs_open(const char* kvs_name, const char* config, KVSHandle& kvs_out);
 
     virtual Status kvdb_kvs_close(KVSHandle handle);
 
@@ -66,7 +66,7 @@ public:
 
     virtual Status kvdb_free_names(char** kvsv);
 
-    virtual Status kvdb_kvs_make(const char* kvs_name, struct hse_params* params);
+    virtual Status kvdb_kvs_make(const char* kvs_name, const char* config);
 
     virtual Status kvdb_kvs_drop(const char* kvs_name);
 
@@ -111,11 +111,7 @@ public:
 
     virtual Status kvdb_sync();
 
-    virtual Status kvdb_params_from_file(struct hse_params* params, const string& filePath);
-
-    virtual Status kvdb_params_set(struct hse_params* params, const string& key, const string& val);
-
 private:
     struct hse_kvdb* _handle = nullptr;
 };
-}
+}  // namespace hse

@@ -68,7 +68,7 @@ public:
         }
 
         auto engine =
-            new KVDBEngine(params.dbpath + "/db", params.dur, formatVersion, params.readOnly);
+            new KVDBEngine(params.dbpath + "/hse", params.dur, formatVersion, params.readOnly);
 
         if (kvdbGlobalOptions.getMetricsEnabled()) {
             KVDBStat::enableStatsGlobally(true);
@@ -107,9 +107,7 @@ public:
                               << "Database was created with old format version "
                               << element.numberInt()
                               << " and this version only supports format versions from "
-                              << kMinSupportedKVDBFormatVersion
-                              << " to "
-                              << kKVDBFormatVersion
+                              << kMinSupportedKVDBFormatVersion << " to " << kKVDBFormatVersion
                               << ". Please reload the database using mongodump and mongorestore");
         } else if (element.numberInt() > kKVDBFormatVersion) {
             // database is newer than what we can understand
@@ -118,9 +116,7 @@ public:
                               << "Database was created with newer format version "
                               << element.numberInt()
                               << " and this version only supports format versions from "
-                              << kMinSupportedKVDBFormatVersion
-                              << " to "
-                              << kKVDBFormatVersion
+                              << kMinSupportedKVDBFormatVersion << " to " << kKVDBFormatVersion
                               << ". Please reload the database using mongodump and mongorestore");
         }
         formatVersion = element.numberInt();
@@ -161,4 +157,4 @@ MONGO_INITIALIZER_WITH_PREREQUISITES(KVDBEngineInit, ("SetGlobalEnvironment"))
     getGlobalServiceContext()->registerStorageEngine(kKVDBEngineName, new KVDBFactory());
     return Status::OK();
 }
-}
+}  // namespace mongo

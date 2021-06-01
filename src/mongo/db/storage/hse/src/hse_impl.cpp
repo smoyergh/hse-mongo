@@ -45,24 +45,24 @@ using namespace std;
 using mongo::warning;
 
 // stats
-using hse_stat::_hseKvsGetLatency;
-using hse_stat::_hseKvsGetCounter;
-using hse_stat::_hseKvsCursorCreateLatency;
-using hse_stat::_hseKvsCursorCreateCounter;
-using hse_stat::_hseKvsCursorReadLatency;
-using hse_stat::_hseKvsCursorReadCounter;
-using hse_stat::_hseKvsCursorDestroyLatency;
-using hse_stat::_hseKvsCursorDestroyCounter;
-using hse_stat::_hseKvsPutLatency;
-using hse_stat::_hseKvsPutCounter;
-using hse_stat::_hseKvsProbeLatency;
-using hse_stat::_hseKvsProbeCounter;
-using hse_stat::_hseKvdbSyncLatency;
 using hse_stat::_hseKvdbSyncCounter;
-using hse_stat::_hseKvsDeleteLatency;
+using hse_stat::_hseKvdbSyncLatency;
+using hse_stat::_hseKvsCursorCreateCounter;
+using hse_stat::_hseKvsCursorCreateLatency;
+using hse_stat::_hseKvsCursorDestroyCounter;
+using hse_stat::_hseKvsCursorDestroyLatency;
+using hse_stat::_hseKvsCursorReadCounter;
+using hse_stat::_hseKvsCursorReadLatency;
 using hse_stat::_hseKvsDeleteCounter;
-using hse_stat::_hseKvsPrefixDeleteLatency;
+using hse_stat::_hseKvsDeleteLatency;
+using hse_stat::_hseKvsGetCounter;
+using hse_stat::_hseKvsGetLatency;
 using hse_stat::_hseKvsPrefixDeleteCounter;
+using hse_stat::_hseKvsPrefixDeleteLatency;
+using hse_stat::_hseKvsProbeCounter;
+using hse_stat::_hseKvsProbeLatency;
+using hse_stat::_hseKvsPutCounter;
+using hse_stat::_hseKvsPutLatency;
 
 
 // KVDB interface
@@ -79,21 +79,28 @@ Status fini() {
     return Status();
 }
 
-// KVDB Implementation
-Status KVDBImpl::kvdb_make(const char* kvdb_name, struct hse_params* params) {
-    return Status(::hse_kvdb_make(kvdb_name, params));
+Status config_merge(const char* staticConfig, const char* mongoConfig, char** mergedConfig) {
+    hse::Status st = ::hse_config_merge(mergedConfig, 2, mongoConfig, staticConfig);
+
+    if (st.ok()) {
+        st = ::hse_config_valid(*mergedConfig);
+    }
+    return st;
 }
 
-Status KVDBImpl::kvdb_open(const char* kvdb_name, struct hse_params* params) {
-    auto st = ::hse_kvdb_open(kvdb_name, params, &_handle);
+// KVDB Implementation
+Status KVDBImpl::kvdb_make(const char* kvdb_home, const char* config) {
+    return Status(::hse_kvdb_make(kvdb_home, config));
+}
+
+Status KVDBImpl::kvdb_open(const char* kvdb_home, const char* config) {
+    auto st = ::hse_kvdb_open(kvdb_home, config, &_handle);
     return Status(st);
 }
 
-Status KVDBImpl::kvdb_kvs_open(const char* kvs_name,
-                               struct hse_params* params,
-                               KVSHandle& kvs_out) {
+Status KVDBImpl::kvdb_kvs_open(const char* kvs_name, const char* config, KVSHandle& kvs_out) {
     struct hse_kvs* kvsH = nullptr;
-    auto st = ::hse_kvdb_kvs_open(_handle, kvs_name, params, &kvsH);
+    auto st = ::hse_kvdb_kvs_open(_handle, kvs_name, config, &kvsH);
     kvs_out = (KVSHandle)kvsH;
     return st;
 }
@@ -112,8 +119,8 @@ Status KVDBImpl::kvdb_free_names(char** kvsv) {
     return Status();
 }
 
-Status KVDBImpl::kvdb_kvs_make(const char* kvs_name, struct hse_params* params) {
-    return Status(::hse_kvdb_kvs_make(_handle, kvs_name, params));
+Status KVDBImpl::kvdb_kvs_make(const char* kvs_name, const char* config) {
+    return Status(::hse_kvdb_kvs_make(_handle, kvs_name, config));
 }
 
 Status KVDBImpl::kvdb_kvs_drop(const char* kvs_name) {
@@ -352,14 +359,6 @@ Status KVDBImpl::kvdb_sync() {
     return Status{ret};
 }
 
-Status KVDBImpl::kvdb_params_from_file(struct hse_params* params, const string& filePath) {
-    return Status(::hse_params_from_file(params, filePath.c_str()));
-}
-
-Status KVDBImpl::kvdb_params_set(struct hse_params* params, const string& key, const string& val) {
-    return Status(::hse_params_set(params, key.c_str(), val.c_str()));
-};
-
 // The sub_txn ops below are used in lieu of not-txnal ops where snapshot isolation is not
 // required. This is so since we use only transaction enabled KVSes now.
 Status KVDBImpl::kvs_sub_txn_put(KVSHandle handle, const KVDBData& key, const KVDBData& val) {
@@ -411,4 +410,4 @@ Status KVDBImpl::kvs_sub_txn_prefix_delete(KVSHandle handle, const KVDBData& pre
 
     return ret;
 }
-}
+}  // namespace hse

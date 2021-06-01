@@ -44,10 +44,7 @@
 
 namespace mongo {
 
-const std::string KVDBGlobalOptions::kDefaultKvdbName = "kvdb1";
 const int KVDBGlobalOptions::kDefaultForceLag = 0;
-const std::string KVDBGlobalOptions::kDefaultConfigPathStr = "";
-const std::string KVDBGlobalOptions::kDefaultParamsStr = "";
 
 // Collection options
 const std::string KVDBGlobalOptions::kDefaultCollectionCompressionStr = "lz4";
@@ -61,26 +58,11 @@ KVDBGlobalOptions kvdbGlobalOptions;
 namespace {
 const std::string modName{"hse"};
 
-/* HSE_REVISIT: Change this to KvdbName */
-const std::string kvdbNameOptStr = modName + "MpoolName";
-
 const std::string forceLagOptStr = modName + "ForceLag";
-
-const std::string configPathOptStr = modName + "ConfigPath";
-
-const std::string paramsOptStr = modName + "Params";
 
 const std::string cfgStrPrefix = ("storage." + modName) + ".";
 
-/* HSE_REVISIT: Change this to kvdbName */
-const std::string kvdbNameCfgStr = cfgStrPrefix + "mpoolName";
-
 const std::string forceLagCfgStr = cfgStrPrefix + "forceLag";
-
-const std::string configPathCfgStr = cfgStrPrefix + "configPath";
-
-const std::string paramsCfgStr = cfgStrPrefix + "params";
-
 
 // Collection options.
 const std::string collectionCompressionCfgStr = cfgStrPrefix + "collectionCompression";
@@ -92,24 +74,15 @@ const std::string collectionCompressionMinBytesOptStr = modName + "CollectionCom
 // Enable metrics
 const std::string enableMetricsCfgStr = cfgStrPrefix + "enableMetrics";
 const std::string enableMetricsOptStr = modName + "EnableMetrics";
-}
+}  // namespace
 
 Status KVDBGlobalOptions::add(moe::OptionSection* options) {
     moe::OptionSection kvdbOptions("Heterogeneous-memory Storage Engine options");
 
     kvdbOptions
-        .addOptionChaining(
-            kvdbNameCfgStr, kvdbNameOptStr, moe::String, "name of the kvdb")
-        .setDefault(moe::Value(kDefaultKvdbName));
-    kvdbOptions
         .addOptionChaining(forceLagCfgStr, forceLagOptStr, moe::Int, "force x seconds of lag")
         .hidden()
         .setDefault(moe::Value(kDefaultForceLag));
-    kvdbOptions
-        .addOptionChaining(configPathCfgStr, configPathOptStr, moe::String, "HSE config path")
-        .setDefault(moe::Value(kDefaultParamsStr));
-    kvdbOptions.addOptionChaining(paramsCfgStr, paramsOptStr, moe::String, "HSE parameters")
-        .setDefault(moe::Value(kDefaultParamsStr));
 
     // Collection options
     kvdbOptions
@@ -138,24 +111,9 @@ Status KVDBGlobalOptions::add(moe::OptionSection* options) {
 
 Status KVDBGlobalOptions::store(const moe::Environment& params,
                                 const std::vector<std::string>& args) {
-    if (params.count(kvdbNameCfgStr)) {
-        kvdbGlobalOptions._kvdbName = params[kvdbNameCfgStr].as<std::string>();
-        log() << "KVDB Name: " << kvdbGlobalOptions._kvdbName;
-    }
-
     if (params.count(forceLagCfgStr)) {
         kvdbGlobalOptions._forceLag = params[forceLagCfgStr].as<int>();
         log() << "Force Lag: " << kvdbGlobalOptions._forceLag;
-    }
-
-    if (params.count(configPathCfgStr)) {
-        kvdbGlobalOptions._configPathStr = params[configPathCfgStr].as<std::string>();
-        log() << "HSE config path str: " << kvdbGlobalOptions._configPathStr;
-    }
-
-    if (params.count(paramsCfgStr)) {
-        kvdbGlobalOptions._paramsStr = params[paramsCfgStr].as<std::string>();
-        log() << "HSE params str: " << kvdbGlobalOptions._paramsStr;
     }
 
     if (params.count(collectionCompressionCfgStr)) {
@@ -179,20 +137,8 @@ Status KVDBGlobalOptions::store(const moe::Environment& params,
     return Status::OK();
 }
 
-std::string KVDBGlobalOptions::getKvdbName() const {
-    return _kvdbName;
-}
-
 bool KVDBGlobalOptions::getCrashSafeCounters() const {
     return _crashSafeCounters;
-}
-
-std::string KVDBGlobalOptions::getConfigPathStr() const {
-    return _configPathStr;
-}
-
-std::string KVDBGlobalOptions::getParamsStr() const {
-    return _paramsStr;
 }
 
 std::string KVDBGlobalOptions::getCollectionCompressionStr() const {

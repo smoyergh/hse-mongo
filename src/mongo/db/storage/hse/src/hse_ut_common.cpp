@@ -47,17 +47,9 @@ KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
     hse::Status st = hse::init();
     ASSERT_EQUALS(0, st.getErrno());
 
-    hse_params_create(&_params);
-    ASSERT_FALSE(nullptr == _params);
-
-    if (_kvdbPerUt) {
-        st = _db.kvdb_params_set(_params, string("kvdb.dur_capacity"), std::to_string(16));
-        ASSERT_EQUALS(0, st.getErrno());
-    }
-
     int err{0};
     while (true) {
-        st = _db.kvdb_make(_kvdbName.c_str(), _params);
+        st = _db.kvdb_make(_kvdbName.c_str(), NULL);
 
         err = st.getErrno();
         if (EAGAIN != err) {
@@ -71,7 +63,7 @@ KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
 
     ASSERT_EQUALS(0, err);
 
-    st = _db.kvdb_open(_kvdbName.c_str(), _params);
+    st = _db.kvdb_open(_kvdbName.c_str(), NULL);
     ASSERT_EQUALS(0, st.getErrno());
 
     _dbClosed = false;
@@ -83,7 +75,7 @@ void KVDBTestSuiteFixture::reset() {
         hse::Status st = hse::init();
         ASSERT_EQUALS(0, st.getErrno());
 
-        st = _db.kvdb_open(_kvdbName.c_str(), _params);
+        st = _db.kvdb_open(_kvdbName.c_str(), NULL);
         ASSERT_EQUALS(0, st.getErrno());
 
         _dbClosed = false;
@@ -103,7 +95,6 @@ void KVDBTestSuiteFixture::reset() {
 
     _db.kvdb_free_names(kvsList);
 
-
     if (!_kvdbPerUt) {
         // do nothing
         return;
@@ -113,7 +104,7 @@ void KVDBTestSuiteFixture::reset() {
     st = _db.kvdb_close();
     ASSERT_EQUALS(0, st.getErrno());
 
-    st = _db.kvdb_open(_kvdbName.c_str(), _params);
+    st = _db.kvdb_open(_kvdbName.c_str(), NULL);
     ASSERT_EQUALS(0, st.getErrno());
 }
 
@@ -122,7 +113,7 @@ KVDBTestSuiteFixture::~KVDBTestSuiteFixture() {
         hse::Status st = hse::init();
         ASSERT_EQUALS(0, st.getErrno());
 
-        st = _db.kvdb_open(_kvdbName.c_str(), _params);
+        st = _db.kvdb_open(_kvdbName.c_str(), NULL);
         ASSERT_EQUALS(0, st.getErrno());
 
         _dbClosed = false;
@@ -130,8 +121,6 @@ KVDBTestSuiteFixture::~KVDBTestSuiteFixture() {
 
     hse::Status st = _db.kvdb_close();
     ASSERT_EQUALS(0, st.getErrno());
-
-    hse_params_destroy(_params);
 
     hse::fini();
     _dbClosed = true;
@@ -165,4 +154,4 @@ KVDBTestSuiteFixture& KVDBTestSuiteFixture::getFixture() {
 
     return fx;
 }
-}
+}  // namespace hse

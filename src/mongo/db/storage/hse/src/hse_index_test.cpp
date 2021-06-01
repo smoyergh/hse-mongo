@@ -49,8 +49,8 @@
 #include "hse_recovery_unit.h"
 #include "hse_ut_common.h"
 
-using hse::KVSHandle;
 using hse::KVDB_prefix;
+using hse::KVSHandle;
 
 namespace mongo {
 
@@ -71,48 +71,52 @@ public:
     }
 
     void setupDb() {
-        hse_params_create(&_params);
-        invariantHse(nullptr != _params);
 
-        string paramName = string("kvs.pfx_len");
-        invariantHseSt(
-            _db.kvdb_params_set(_params, paramName, std::to_string(hse::DEFAULT_PFX_LEN)));
+        /* clang-format off */
+        const string configStr =
+        "\
+        {\"kvdb\": {\
+          \"kvs\": {\
+            \"default\": {\
+              \"pfx_len\": " + std::to_string(DEFAULT_PFX_LEN) +",\
+              \"transactions_enable\": " + std::to_string(1) +"\
+              },\
+            \"" + kUniqIdxKvsName + "\": {\
+              \"sfx_len\": " + std::to_string(DEFAULT_SFX_LEN) +"\
+              },\
+            \"" + kStdIdxKvsName + "\": {\
+              \"sfx_len\": " + std::to_string(STDIDX_SFX_LEN) +"\
+              }\
+            }\
+          }\
+        }";
+        /* clang-format on */
 
-        // always open kvses in transactional mode.
-        invariantHseSt(
-            _db.kvdb_params_set(_params, string("kvs.transactions_enable"), string("1")));
+        auto config = configStr.c_str();
 
-        hse::Status hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), _params);
+        hse::Status hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), config);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_colKvsName.c_str(), _params, _colKvs);
+        hseSt = _db.kvdb_kvs_open(_colKvsName.c_str(), config, _colKvs);
         invariantHseSt(hseSt);
 
-        paramName = string("kvs.") + _uniqIdxKvsName + string(".sfx_len");
-        invariantHseSt(
-            _db.kvdb_params_set(_params, paramName, std::to_string(hse::DEFAULT_SFX_LEN)));
-        hseSt = _db.kvdb_kvs_make(_uniqIdxKvsName.c_str(), _params);
+        hseSt = _db.kvdb_kvs_make(_uniqIdxKvsName.c_str(), config);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_uniqIdxKvsName.c_str(), _params, _uniqIdxKvs);
+        hseSt = _db.kvdb_kvs_open(_uniqIdxKvsName.c_str(), config, _uniqIdxKvs);
         invariantHseSt(hseSt);
 
-        paramName = string("kvs.") + _stdIdxKvsName + string(".sfx_len");
-        invariantHseSt(
-            _db.kvdb_params_set(_params, paramName, std::to_string(hse::STDIDX_SFX_LEN)));
-        hseSt = _db.kvdb_kvs_make(_stdIdxKvsName.c_str(), _params);
+        hseSt = _db.kvdb_kvs_make(_stdIdxKvsName.c_str(), config);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_stdIdxKvsName.c_str(), _params, _stdIdxKvs);
+        hseSt = _db.kvdb_kvs_open(_stdIdxKvsName.c_str(), config, _stdIdxKvs);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_make(_largeKvsName.c_str(), _params);
+        hseSt = _db.kvdb_kvs_make(_largeKvsName.c_str(), config);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_largeKvsName.c_str(), _params, _largeKvs);
+        hseSt = _db.kvdb_kvs_open(_largeKvsName.c_str(), config, _largeKvs);
         invariantHseSt(hseSt);
-
-        hse_params_destroy(_params);
     }
 
     void teardownDb() {
@@ -170,8 +174,6 @@ public:
 
 private:
     Ordering _order;
-
-    struct hse_params* _params{nullptr};
 
     string _colKvsName = "ColKvs";
     KVSHandle _colKvs;
@@ -291,4 +293,4 @@ TEST(KVDBIndexTest, SeekExactRemoveNext_Reverse_Unique) {
 TEST(KVDBIndexTest, SeekExactRemoveNext_Reverse_Standard) {
     testSeekExactRemoveNext(false, false);
 }
-}
+}  // namespace mongo
