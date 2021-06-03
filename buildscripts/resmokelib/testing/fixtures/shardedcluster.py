@@ -1,11 +1,3 @@
-#
-#    SPDX-License-Identifier: AGPL-3.0-only
-#
-#    Copyright (C) 2017-2020 Micron Technology, Inc.
-#
-#    This code is derived from and modifies the MongoDB project.
-#
-
 """
 Sharded cluster fixture for executing JSTests against.
 """
@@ -71,13 +63,6 @@ class ShardedClusterFixture(interface.Fixture):
         self.auth_options = auth_options
 
         self._dbpath_prefix = os.path.join(self._dbpath_prefix, config.FIXTURE_SUBDIR)
-
-        if config.STORAGE_ENGINE == 'hse':
-            hse_kvdb_name_prefix = config.HSE_KVDB_NAME_PREFIX
-            hse_kvdb_name_prefix = utils.default_if_none(
-                hse_kvdb_name_prefix, config.DEFAULT_HSE_KVDB_NAME_PREFIX)
-            fmt = "%s-job%d"
-            self._hse_kvdb_name_prefix = fmt % (hse_kvdb_name_prefix, self.job_num)
 
         self.configsvr = None
         self.mongos = None
@@ -239,10 +224,6 @@ class ShardedClusterFixture(interface.Fixture):
         mongod_options = copy.deepcopy(self.mongod_options)
         mongod_options["shardsvr"] = ""
         mongod_options["dbpath"] = os.path.join(self._dbpath_prefix, "shard%d" % (index))
-
-        if config.STORAGE_ENGINE == 'hse':
-            kvdb_name = "%s-shard%d" % (self._hse_kvdb_name_prefix, index)
-            mongod_options["hseMpoolName"] = kvdb_name
 
         return standalone.MongoDFixture(mongod_logger,
                                         self.job_num,

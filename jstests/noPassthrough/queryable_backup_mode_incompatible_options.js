@@ -1,12 +1,4 @@
 /**
- *    SPDX-License-Identifier: AGPL-3.0-only
- *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
- *
- *    This code is derived from and modifies the MongoDB project.
- */
-
-/**
  * Tests that the following mongod command line options are incompatible with --queryableBackupMode:
  *   --replSet
  *   --configsvr
@@ -23,15 +15,6 @@
     var dbdir = MongoRunner.dataPath + name + "/";
 
     resetDbpath(dbdir);
-    if (jsTest.options().storageEngine == 'hse') {
-        // drop the trailing slash
-        var dbpath = MongoRunner.dataPath + name;
-
-        resetKvdb(TestData.hse,
-                  dbpath,
-                  MongoRunner.toRealKvdbName(dbpath, {}),
-                  TestData.hseKvdbCParams);
-    }
 
     // Insert dummy document to ensure startup failure isn't due to lack of storage metadata file.
     var conn = MongoRunner.runMongod({dbpath: dbdir, noCleanData: true});

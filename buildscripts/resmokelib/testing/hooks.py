@@ -14,7 +14,6 @@ executed before or after each test, and before or after each suite.
 from __future__ import absolute_import
 
 import os
-import subprocess
 import sys
 import time
 
@@ -24,7 +23,6 @@ import random
 
 from . import fixtures
 from . import testcases
-from .. import config
 from .. import errors
 from .. import logging
 from .. import utils

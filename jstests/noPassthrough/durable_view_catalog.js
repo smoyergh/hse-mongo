@@ -1,12 +1,4 @@
 /**
- *    SPDX-License-Identifier: AGPL-3.0-only
- *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
- *
- *    This code is derived from and modifies the MongoDB project.
- */
-
-/**
  * Tests that view creation and modification is correctly persisted.
  *
  * This test requires persistence to ensure data survives a restart.
@@ -19,12 +11,6 @@
     // durable.
     let dbpath = MongoRunner.dataPath + '_durable_view_catalog';
     resetDbpath(dbpath);
-    if (jsTest.options().storageEngine == 'hse') {
-        resetKvdb(TestData.hse,
-                  dbpath,
-                  MongoRunner.toRealKvdbName(dbpath, {}),
-                  TestData.hseKvdbCParams);
-    }
 
     let mongodArgs = {dbpath: dbpath, noCleanData: true, journal: ''};
 

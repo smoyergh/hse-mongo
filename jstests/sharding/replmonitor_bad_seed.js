@@ -1,12 +1,4 @@
 /**
- *    SPDX-License-Identifier: AGPL-3.0-only
- *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
- *
- *    This code is derived from and modifies the MongoDB project.
- */
-
-/**
  * This tests tries to check that a ReplicaSetMonitor initialized with a
  * replica set seed that has none of the nodes up will be able to recover
  * once the replica set come back up.
@@ -33,8 +25,7 @@
     // The cluster now has the shard information. Then kill the replica set so when mongos restarts
     // and tries to create a ReplSetMonitor for that shard, it will not be able to connect to any of
     // the seed servers.
-    // set last argument to stopSet() to true to reset hse KVDBs instead of deleting them
-    replTest.stopSet(undefined, undefined, undefined, true);
+    replTest.stopSet();
 
     st.restartMongos(0);
 

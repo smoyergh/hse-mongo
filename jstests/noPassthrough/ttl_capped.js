@@ -1,12 +1,4 @@
 /**
- *    SPDX-License-Identifier: AGPL-3.0-only
- *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
- *
- *    This code is derived from and modifies the MongoDB project.
- */
-
-/**
  * Test that a TTL index on a capped collection doesn't crash the server or cause the TTL monitor
  * to skip processing other (non-capped) collections on the database.
  */
@@ -15,12 +7,6 @@
 
     var dbpath = MongoRunner.dataPath + "ttl_capped";
     resetDbpath(dbpath);
-    if (jsTest.options().storageEngine == 'hse') {
-        resetKvdb(TestData.hse,
-                  dbpath,
-                  MongoRunner.toRealKvdbName(dbpath, {}),
-                  TestData.hseKvdbCParams);
-    }
 
     var conn = MongoRunner.runMongod({
         dbpath: dbpath,

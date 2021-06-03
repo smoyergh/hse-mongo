@@ -14,7 +14,6 @@ from __future__ import absolute_import
 
 import os
 import os.path
-import subprocess
 import time
 
 import pymongo
@@ -63,28 +62,9 @@ class MongoDFixture(interface.Fixture):
         storage_engine = config.STORAGE_ENGINE
         if "storageEngine" in self.mongod_options:
             storage_engine = self.mongod_options["storageEngine"]
-
         if storage_engine == "hse":
-            self._hse_executable = utils.default_if_none(
-                config.HSE_EXECUTABLE, config.DEFAULT_HSE_EXECUTABLE)
-
-            self._hse_libpath = utils.default_if_none(
-                config.HSE_LIBPATH, config.DEFAULT_HSE_LIBPATH)
-
-            if "hseMpoolName" not in self.mongod_options:
-                pfx = utils.default_if_none(
-                    config.HSE_KVDB_NAME_PREFIX, config.DEFAULT_HSE_KVDB_NAME_PREFIX)
-                kvdbname = "%s.job%d" % (pfx, self.job_num)
-            else:
-                kvdbname = self.mongod_options["hseMpoolName"]
-
-            self.mongod_options["hseMpoolName"] = kvdbname
             self.mongod_options["hseCollectionCompression"] = utils.default_if_none(
                 config.HSE_COLL_COMPR, config.DEFAULT_HSE_COLL_COMPR)
-
-            self._hse_kvdb_name = kvdbname
-            self._hse_params = utils.default_if_none(
-                config.HSE_PARAMS, self.mongod_options.get("hseParams"))
 
         self.mongod = None
 
@@ -102,43 +82,6 @@ class MongoDFixture(interface.Fixture):
         if "port" not in self.mongod_options:
             self.mongod_options["port"] = core.network.PortAllocator.next_fixture_port(self.job_num)
         self.port = self.mongod_options["port"]
-
-        storage_engine = config.STORAGE_ENGINE
-        if "storageEngine" in self.mongod_options:
-            storage_engine = self.mongod_options["storageEngine"]
-
-        if storage_engine == 'hse' and not self.preserve_dbpath:
-            kvdbname = self._hse_kvdb_name
-            datadir = '{}/{}'.format(self._dbpath, kvdbname)
-            sockfile = '{}/{}.sock'.format(datadir, kvdbname)
-
-            os.environ["HSE_STORAGE_PATH"] = datadir
-            os.environ["HSE_REST_SOCK_PATH"] = sockfile
-            os.environ["LD_LIBRARY_PATH"] = self._hse_libpath
-
-            self.logger.info("Resetting KVDB {}...".format(kvdbname))
-
-            try:
-                os.makedirs(datadir)
-            except os.error:
-                # Directory already exists.
-                pass
-
-            cmd = '{} kvdb create {}'.format(self._hse_executable, kvdbname)
-
-            if self._hse_params:
-                cmd += ' {}'.format(self._hse_params.replace(';', ' '))
-
-            done = False
-            while not done:
-                try:
-                    self.logger.info(cmd)
-                    self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-                    done = True
-                except subprocess.CalledProcessError as e:
-                    if 'temporarily unavailable' not in e.output:
-                        raise
-                    time.sleep(1)
 
         mongod = core.programs.mongod_program(self.logger,
                                               executable=self.mongod_executable,

@@ -801,87 +801,6 @@ BSONObj RunMongoProgram(const BSONObj& a, void* data) {
     return BSON(string("") << exit_code);
 }
 
-BSONObj ResetKvdbEnv(const BSONObj& a, void* data) {
-    using std::to_string;
-
-    verify(a.nFields() == 2);
-    BSONObjIterator i(a);
-    string dbPath = i.next().str();
-    string kvdbName = i.next().str();
-    verify(!dbPath.empty());
-    verify(!kvdbName.empty());
-
-    int rc;
-    string dataDir = dbPath + "/" + kvdbName;
-    string sockPath = dataDir + "/" + kvdbName + ".sock";
-
-    rc = setenv("HSE_STORAGE_PATH", dataDir.c_str(), 1);
-    if (rc)
-        return BSON(string("") << rc);
-
-    rc = setenv("HSE_REST_SOCK_PATH", sockPath.c_str(), 1);
-    if (rc)
-        return BSON(string("") << rc);
-
-    return BSON(string("") << rc);
-}
-
-BSONObj ResetKvdb(const BSONObj& a, void* data) {
-    using std::to_string;
-
-    verify(a.nFields() == 4);
-    BSONObjIterator i(a);
-    string hseExecutable = i.next().str();
-    string dbPath = i.next().str();
-    string kvdbName = i.next().str();
-    string hseParams = i.next().str();
-    verify(!hseExecutable.empty());
-    verify(!kvdbName.empty());
-
-    int rc;
-    string cmd;
-    string dataDir = dbPath + "/" + kvdbName;
-    string sockPath = dataDir + "/" + kvdbName + ".sock";
-
-    rc = setenv("HSE_STORAGE_PATH", dataDir.c_str(), 1);
-    if (rc)
-        return BSON(string("") << rc);
-
-    rc = setenv("HSE_REST_SOCK_PATH", sockPath.c_str(), 1);
-    if (rc)
-        return BSON(string("") << rc);
-
-    boost::filesystem::path dataDirObj(dataDir);
-    verify(!dataDirObj.empty());
-    boost::filesystem::create_directories(dataDirObj);
-
-    /*
-     * Create KVDB
-     */
-    cmd = hseExecutable + " kvdb create " + kvdbName;
-    if (!hseParams.empty()) {
-        /*
-         * Change semicolon-delimited params to space-delimited.
-         */
-        size_t pos = 0;
-
-        while ((pos = hseParams.find(';', pos))) {
-            if (pos == string::npos) {
-                break;
-            }
-            hseParams[pos] = ' ';
-        }
-
-        cmd += " ";
-        cmd += hseParams;
-    }
-
-    cout << cmd << endl;
-    rc = system(cmd.c_str());
-
-    return BSON(string("") << rc);
-}
-
 BSONObj ResetDbpath(const BSONObj& a, void* data) {
     verify(a.nFields() == 1);
     string path = a.firstElement().valuestrsafe();
@@ -1156,8 +1075,6 @@ void installShellUtilsLauncher(Scope& scope) {
     scope.injectNative("pathExists", PathExists);
     scope.injectNative("copyDbpath", CopyDbpath);
     scope.injectNative("copyDbpathSparse", CopyDbpathSparse);
-    scope.injectNative("resetKvdb", ResetKvdb);
-    scope.injectNative("resetKvdbEnv", ResetKvdbEnv);
 }
 }
 }

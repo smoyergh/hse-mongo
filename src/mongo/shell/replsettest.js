@@ -1,12 +1,4 @@
 /**
- *    SPDX-License-Identifier: AGPL-3.0-only
- *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
- *
- *    This code is derived from and modifies the MongoDB project.
- */
-
-/**
  * Sets up a replica set. To make the set running, call {@link #startSet},
  * followed by {@link #initiate} (and optionally,
  * {@link #awaitSecondaryNodes} to block till the  set is fully operational).
@@ -89,7 +81,6 @@ var ReplSetTest = function(opts) {
     var Health = {UP: 1, DOWN: 0};
 
     var _alldbpaths;
-    var _allKvdbNames = new Set();
     var _configSettings;
 
     // mongobridge related variables. Only available if the bridge option is selected.
@@ -425,11 +416,6 @@ var ReplSetTest = function(opts) {
         else
             _alldbpaths.push(p);
 
-        return p;
-    };
-
-    this._addKvdbName = function(p) {
-        _allKvdbNames.add(p);
         return p;
     };
 
@@ -1656,10 +1642,6 @@ var ReplSetTest = function(opts) {
 
         // Make sure to call _addPath, otherwise folders won't be cleaned.
         this._addPath(conn.dbpath);
-        if (conn.fullOptions.hasOwnProperty("hseMpoolName")) {
-            print("ReplSetTest: adding kvdbname = " + conn.fullOptions.hseMpoolName);
-            this._addKvdbName(conn.fullOptions.hseMpoolName);
-        }
 
         if (_useBridge) {
             this.nodes[n].connectToBridge();
@@ -1787,7 +1769,7 @@ var ReplSetTest = function(opts) {
      * @param {boolean} forRestart will not cleanup data directory
      * @param {Object} opts @see MongoRunner.stopMongod
      */
-    this.stopSet = function(signal, forRestart, opts, resetKvdbs) {
+    this.stopSet = function(signal, forRestart, opts) {
         for (var i = 0; i < this.ports.length; i++) {
             this.stop(i, signal, opts);
         }
@@ -1800,18 +1782,6 @@ var ReplSetTest = function(opts) {
             print("ReplSetTest stopSet deleting all dbpaths");
             for (var i = 0; i < _alldbpaths.length; i++) {
                 resetDbpath(_alldbpaths[i]);
-            }
-        }
-
-        if (_allKvdbNames.size && resetKvdbs) {
-            var i = 0;
-            for (var kName of _allKvdbNames) {
-                // This should be set when the test needs to restart with empty KVDBs.
-                print("ReplSetTest stopSet resetting kvdb " + kName);
-                resetKvdb(jsTestOptions().hse,
-                          _alldbpaths[i++],
-                          kName,
-                          jsTestOptions().hseParams);
             }
         }
 

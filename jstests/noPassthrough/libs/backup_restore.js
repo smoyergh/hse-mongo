@@ -172,15 +172,9 @@ var BackupRestoreTest = function(options) {
     }
 
     function _hseCopyDbpath(srcDbpath, dstDbpath) {
-        var srcKvdb = MongoRunner.toRealKvdbName(srcDbpath, {});
-        var dstKvdb = MongoRunner.toRealKvdbName(dstDbpath, {});
+        var dstPath = dstDbpath + "/hse";
         copyDbpathSparse(srcDbpath, dstDbpath);
-        removeFile(dstDbpath + '/' + srcKvdb);
-
-        var srcPath = srcDbpath + "/" + srcKvdb;
-        var dstPath = dstDbpath + "/" + dstKvdb;
-        copyDbpathSparse(srcPath, dstPath);
-        removeFile(dstPath + '/.lockfile');
+        removeFile(dstPath + '/hse.pid');
     }
     /**
      * Runs the test.

@@ -1,11 +1,3 @@
-/**
- *    SPDX-License-Identifier: AGPL-3.0-only
- *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
- *
- *    This code is derived from and modifies the MongoDB project.
- */
-
 // Tests administrative sharding operations and map-reduce work or fail as expected, when key-based
 // authentication is used
 (function() {
@@ -105,8 +97,7 @@
 
     print("start rs w/correct key");
 
-    // set last argument to stopSet() to true to reset hse KVDBs instead of deleting them
-    d1.stopSet(undefined, undefined, undefined, true);
+    d1.stopSet();
     d1.startSet({keyFile: "jstests/libs/key1", restart: true});
     d1.initiate();
 
@@ -348,7 +339,4 @@
 
     s.stop();
 
-    // explicit stopSet() calls to make sure hse KVDBs are cleaned up
-    d1.stopSet();
-    d2.stopSet();
 })();

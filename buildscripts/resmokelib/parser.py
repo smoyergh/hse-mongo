@@ -67,12 +67,8 @@ DEST_TO_CONFIG = {
     "wt_engine_config": "wiredTigerEngineConfigString",
     "wt_index_config": "wiredTigerIndexConfigString",
     "wt_index_config": "wiredTigerIndexConfigString",
-    "hse_params": "hseParams",
-    "hse_kvdb_name_prefix": "hseKvdbNamePrefix",
     "hse_coll_compr": "hseCollectionCompression",
     "continue_on_crash": "continueOnCrash",
-    "hse_executable": "hse",
-    "hse_libpath": "hseLibPath",
 }
 
 
@@ -250,25 +246,12 @@ def parse_command_line():
 
     parser.add_option("--wiredTigerIndexConfigString", dest="wt_index_config", metavar="CONFIG",
                       help="Set the WiredTiger index configuration setting for all mongod's.")
-    parser.add_option("--hseParams", dest="hse_params", metavar="PARAMS",
-                      help="Set the hse params configuration setting for all mongod's.")
-
-    parser.add_option("--hseKvdbNamePrefix", dest="hse_kvdb_name_prefix", metavar="PREFIX",
-                      help="The name prefix of kvdbs created by resmoke.py or the tests "
-                           "themselves.  OPTIONAL.")
 
     parser.add_option("--hseCollectionCompression", dest="hse_coll_compr", metavar="PARAMS",
                       help="Collection compression algorithm.")
 
     parser.add_option("--continueOnCrash", action="store_true", dest="continue_on_crash",
                       help="Restart test fixture and continue to execute tests after a crash.")
-
-    parser.add_option("--hse", dest="hse_executable", metavar="PATH",
-                      help="The path to the HSE CLI executable for resmoke.py to use.  "
-                           "MUST BE ENABLED FOR PASSWORDLESS SUDO!")
-
-    parser.add_option("--hseLibPath", dest="hse_libpath", metavar="LIBPATH",
-                      help="The path to the HSE shared lib for resmoke.py to use.")
 
     evergreen_options = optparse.OptionGroup(
         parser, title="Evergreen options",
@@ -373,13 +356,9 @@ def update_config_vars(values):
     _config.WT_COLL_CONFIG = config.pop("wiredTigerCollectionConfigString")
     _config.WT_ENGINE_CONFIG = config.pop("wiredTigerEngineConfigString")
     _config.WT_INDEX_CONFIG = config.pop("wiredTigerIndexConfigString")
-    _config.HSE_PARAMS = config.pop("hseParams")
-    _config.HSE_KVDB_NAME_PREFIX = config.pop("hseKvdbNamePrefix")
     _config.HSE_COLL_COMPR = config.pop("hseCollectionCompression")
     _config.HSE_COLL_COMPR_MIN_BYTES = config.pop("hseCollectionCompressionMinBytes")
     _config.CONTINUE_ON_CRASH = config.pop("continueOnCrash")
-    _config.HSE_EXECUTABLE = _expand_user(config.pop("hse"))
-    _config.HSE_LIBPATH = _expand_user(config.pop("hseLibPath"))
 
     if config:
         raise optparse.OptionValueError("Unknown option(s): %s" % (config.keys()))
