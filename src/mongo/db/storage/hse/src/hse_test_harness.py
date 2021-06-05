@@ -52,7 +52,7 @@ import sys
 from subprocess import Popen, PIPE
 
 _HSEBIN = '/opt/hse-1/bin/hse1'
-_KVDB_NAME = 'kvdb1'
+_KVDB_HOME = 'kvdb1'
 _DEVICE_LIST = []
 
 def check_for_tests(pwd, tests):
@@ -94,11 +94,8 @@ def test_setup(pwd):
     cmdargs = [ 'mkfs -t ext4 -F /dev/%s/%s' % (harness_vg, harness_lv), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
-    cmdargs = [ 'mkdir -p %s/%s && mount -onoatime /dev/%s/%s %s/%s' % (pwd, _KVDB_NAME, harness_vg, harness_lv, pwd, _KVDB_NAME), '>>', fname, '2>&1']
+    cmdargs = [ 'mkdir -p %s/%s && mount -onoatime /dev/%s/%s %s/%s' % (pwd, _KVDB_HOME, harness_vg, harness_lv, pwd, _KVDB_HOME), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
-
-    os.environ["HSE_STORAGE_PATH"] = '%s/%s' % (pwd, _KVDB_NAME)
-    os.environ["HSE_REST_SOCK_PATH"] = '%s/%s/%s.sock' % (pwd, _KVDB_NAME, _KVDB_NAME)
 
     logfile.close()
 
@@ -108,7 +105,7 @@ def test_teardown(pwd):
 
     harness_vg = 'harness_vg'
 
-    cmdargs = [ 'umount %s/%s && rmdir %s/%s' % (pwd, _KVDB_NAME, pwd, _KVDB_NAME), '>>', fname, '2>&1']
+    cmdargs = [ 'umount %s/%s && rmdir %s/%s' % (pwd, _KVDB_HOME, pwd, _KVDB_HOME), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
     cmdargs = [ 'vgremove -y %s' % (harness_vg), '>>', fname, '2>&1']
@@ -122,7 +119,7 @@ def run_test(pwd, test):
 
     exit_code = 0
 
-    cmdargs = [ '%s kvdb create %s' % (_HSEBIN, _KVDB_NAME), '>>', fname, '2>&1']
+    cmdargs = [ '%s -C %s kvdb create' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
     exit_code = _run_cmd(cmdargs, logfile)
     if exit_code != 0:
         return exit_code
@@ -130,7 +127,7 @@ def run_test(pwd, test):
     cmdargs = ['%s/%s' % (pwd, test), '>>', fname, '2>&1']
     exit_code = _run_cmd(cmdargs, logfile)
 
-    cmdargs = ['%s kvdb destroy %s' % (_HSEBIN, _KVDB_NAME), '>>', fname, '2>&1']
+    cmdargs = ['%s -C %s kvdb destroy' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
     logfile.close()
@@ -167,7 +164,7 @@ if __name__ == '__main__':
 
     build_number = sys.argv[1]
     _HSEBIN = sys.argv[2]
-    _KVDB_NAME = sys.argv[3]
+    _KVDB_HOME = sys.argv[3]
     _DEVICE_LIST = sys.argv[4:]
 
     pwd = os.getcwd()

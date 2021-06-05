@@ -81,10 +81,10 @@ public:
               \"pfx_len\": " + std::to_string(DEFAULT_PFX_LEN) +",\
               \"transactions_enable\": " + std::to_string(1) +"\
               },\
-            \"" + kUniqIdxKvsName + "\": {\
+            \"" + _uniqIdxKvsName + "\": {\
               \"sfx_len\": " + std::to_string(DEFAULT_SFX_LEN) +"\
               },\
-            \"" + kStdIdxKvsName + "\": {\
+            \"" + _stdIdxKvsName + "\": {\
               \"sfx_len\": " + std::to_string(STDIDX_SFX_LEN) +"\
               }\
             }\

@@ -165,7 +165,7 @@ public:
 
         auto config = configStr.c_str();
 
-        hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), config);
+        hse::Status hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), config);
         invariantHseSt(hseSt);
 
         hseSt = _db.kvdb_kvs_open(_colKvsName.c_str(), config, _colKvs);

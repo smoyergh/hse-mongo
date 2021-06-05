@@ -241,7 +241,7 @@ protected:
 
         // Create all the kvses
         for (unsigned int i = 0; i < TEST_KVS_CNT; i++) {
-            st = _db.kvdb_kvs_make(_kvsNames[i], config);
+            hse::Status st = _db.kvdb_kvs_make(_kvsNames[i], config);
             ASSERT_EQUALS(0, st.getErrno());
             st = _db.kvdb_kvs_open(_kvsNames[i], config, _kvsHandles[i]);
             ASSERT_EQUALS(0, st.getErrno());
