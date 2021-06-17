@@ -64,6 +64,8 @@ using hse_stat::_hseKvsProbeLatency;
 using hse_stat::_hseKvsPutCounter;
 using hse_stat::_hseKvsPutLatency;
 
+using hse::CStyleStrVec;
+
 
 // KVDB interface
 namespace hse {
@@ -79,28 +81,24 @@ Status fini() {
     return Status();
 }
 
-Status config_merge(const char* staticConfig, const char* mongoConfig, char** mergedConfig) {
-    hse::Status st = ::hse_config_merge(mergedConfig, 2, mongoConfig, staticConfig);
-
-    if (st.ok()) {
-        st = ::hse_config_valid(*mergedConfig);
-    }
-    return st;
-}
-
 // KVDB Implementation
-Status KVDBImpl::kvdb_make(const char* kvdb_home, const char* config) {
-    return Status(::hse_kvdb_make(kvdb_home, config));
+Status KVDBImpl::kvdb_make(const char* kvdb_home, const vector<string>& params) {
+    CStyleStrVec cVec{params};
+    return Status(::hse_kvdb_make(kvdb_home, cVec.getCount(), cVec.getCVec()));
 }
 
-Status KVDBImpl::kvdb_open(const char* kvdb_home, const char* config) {
-    auto st = ::hse_kvdb_open(kvdb_home, config, &_handle);
+Status KVDBImpl::kvdb_open(const char* kvdb_home, const vector<string>& params) {
+    CStyleStrVec cVec{params};
+    auto st = ::hse_kvdb_open(kvdb_home, cVec.getCount(), cVec.getCVec(), &_handle);
     return Status(st);
 }
 
-Status KVDBImpl::kvdb_kvs_open(const char* kvs_name, const char* config, KVSHandle& kvs_out) {
+Status KVDBImpl::kvdb_kvs_open(const char* kvs_name,
+                               const vector<string>& params,
+                               KVSHandle& kvs_out) {
+    CStyleStrVec cVec{params};
     struct hse_kvs* kvsH = nullptr;
-    auto st = ::hse_kvdb_kvs_open(_handle, kvs_name, config, &kvsH);
+    auto st = ::hse_kvdb_kvs_open(_handle, kvs_name, cVec.getCount(), cVec.getCVec(), &kvsH);
     kvs_out = (KVSHandle)kvsH;
     return st;
 }
@@ -119,8 +117,9 @@ Status KVDBImpl::kvdb_free_names(char** kvsv) {
     return Status();
 }
 
-Status KVDBImpl::kvdb_kvs_make(const char* kvs_name, const char* config) {
-    return Status(::hse_kvdb_kvs_make(_handle, kvs_name, config));
+Status KVDBImpl::kvdb_kvs_make(const char* kvs_name, const vector<string>& params) {
+    CStyleStrVec cVec{params};
+    return Status(::hse_kvdb_kvs_make(_handle, kvs_name, cVec.getCount(), cVec.getCVec()));
 }
 
 Status KVDBImpl::kvdb_kvs_drop(const char* kvs_name) {

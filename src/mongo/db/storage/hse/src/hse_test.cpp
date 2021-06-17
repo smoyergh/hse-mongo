@@ -223,27 +223,17 @@ class KVDBREGTEST : public unittest::Test {
 protected:
     void setUp() {
         // ASSERT_EQ(0, _db._testGetMaxIdx());
-        /* clang-format off */
-        const string configStr =
-        "\
-        {\"kvdb\": {\
-          \"kvs\": {\
-            \"default\": {\
-              \"pfx_len\": " + std::to_string(DEFAULT_PFX_LEN) +",\
-              \"transactions_enable\": " + std::to_string(1) +"\
-              },\
-            }\
-          }\
-        }";
-        /* clang-format on */
+        vector<string> makeParams{};
+        vector<string> openParams{};
+        makeParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
+        openParams.push_back("transactions_enable=" + std::to_string(1));
 
-        auto config = configStr.c_str();
 
         // Create all the kvses
         for (unsigned int i = 0; i < TEST_KVS_CNT; i++) {
-            hse::Status st = _db.kvdb_kvs_make(_kvsNames[i], config);
+            hse::Status st = _db.kvdb_kvs_make(_kvsNames[i], makeParams);
             ASSERT_EQUALS(0, st.getErrno());
-            st = _db.kvdb_kvs_open(_kvsNames[i], config, _kvsHandles[i]);
+            st = _db.kvdb_kvs_open(_kvsNames[i], openParams, _kvsHandles[i]);
             ASSERT_EQUALS(0, st.getErrno());
         }
     }

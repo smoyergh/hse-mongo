@@ -36,6 +36,8 @@
 #include "hse.h"
 #include "hse_clienttxn.h"
 
+#include <vector>
+
 using namespace std;
 
 // KVDB interface
@@ -45,16 +47,16 @@ Status init();
 
 Status fini();
 
-Status config_merge(const char* staticConfig, const char* mongoConfig, char** mergedConfig);
-
 // KVDB Implementation
 class KVDBImpl : public KVDB {
 public:
-    virtual Status kvdb_make(const char* kvdb_home, const char* config);
+    virtual Status kvdb_make(const char* kvdb_home, const vector<string>& params);
 
-    virtual Status kvdb_open(const char* kvdb_home, const char* config);
+    virtual Status kvdb_open(const char* kvdb_home, const vector<string>& params);
 
-    virtual Status kvdb_kvs_open(const char* kvs_name, const char* config, KVSHandle& kvs_out);
+    virtual Status kvdb_kvs_open(const char* kvs_name,
+                                 const vector<string>& params,
+                                 KVSHandle& kvs_out);
 
     virtual Status kvdb_kvs_close(KVSHandle handle);
 
@@ -66,7 +68,7 @@ public:
 
     virtual Status kvdb_free_names(char** kvsv);
 
-    virtual Status kvdb_kvs_make(const char* kvs_name, const char* config);
+    virtual Status kvdb_kvs_make(const char* kvs_name, const vector<string>& params);
 
     virtual Status kvdb_kvs_drop(const char* kvs_name);
 

@@ -40,6 +40,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #ifdef __cplusplus
 extern "C" {
@@ -324,11 +325,13 @@ class KVDB {
 public:
     KVDB() {}
 
-    virtual Status kvdb_make(const char* kvdb_home, const char* config) = 0;
+    virtual Status kvdb_make(const char* kvdb_home, const vector<string>& params) = 0;
 
-    virtual Status kvdb_open(const char* kvdb_home, const char* config) = 0;
+    virtual Status kvdb_open(const char* kvdb_home, const vector<string>& params) = 0;
 
-    virtual Status kvdb_kvs_open(const char* kvs_name, const char* config, KVSHandle& kvs_out) = 0;
+    virtual Status kvdb_kvs_open(const char* kvs_name,
+                                 const vector<string>& params,
+                                 KVSHandle& kvs_out) = 0;
 
     virtual Status kvdb_kvs_close(KVSHandle handle) = 0;
 
@@ -338,7 +341,7 @@ public:
 
     virtual Status kvdb_free_names(char** kvsv) = 0;
 
-    virtual Status kvdb_kvs_make(const char* kvs_name, const char* config) = 0;
+    virtual Status kvdb_kvs_make(const char* kvs_name, const vector<string>& params) = 0;
 
     virtual Status kvdb_kvs_drop(const char* kvs_name) = 0;
 

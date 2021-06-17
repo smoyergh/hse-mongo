@@ -142,57 +142,43 @@ public:
     }
 
     void setupDb() {
+        vector<string> cParams{};
+        vector<string> rParams{};
 
-        /* clang-format off */
-        const string configStr =
-        "\
-        {\"kvdb\": {\
-          \"kvs\": {\
-            \"default\": {\
-              \"pfx_len\": " + std::to_string(DEFAULT_PFX_LEN) +",\
-              \"transactions_enable\": " + std::to_string(1) +"\
-              },\
-            \"" + _oplogKvsName + "\": {\
-              \"pfx_len\": " + std::to_string(hse::OPLOG_PFX_LEN) +"\
-              },\
-            \"" + _oplogLargeKvsName + "\": {\
-              \"sfx_len\": " + std::to_string(hse::OPLOG_PFX_LEN) +"\
-              }\
-            }\
-          }\
-        }";
-        /* clang-format on */
+        cParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
+        rParams.push_back("transactions_enable=1");
 
-        auto config = configStr.c_str();
-
-        hse::Status hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), config);
+        hse::Status hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), cParams);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_colKvsName.c_str(), config, _colKvs);
+        hseSt = _db.kvdb_kvs_open(_colKvsName.c_str(), rParams, _colKvs);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_make(_idxKvsName.c_str(), config);
+        hseSt = _db.kvdb_kvs_make(_idxKvsName.c_str(), cParams);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_idxKvsName.c_str(), config, _idxKvs);
+        hseSt = _db.kvdb_kvs_open(_idxKvsName.c_str(), rParams, _idxKvs);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_make(_largeKvsName.c_str(), config);
+        hseSt = _db.kvdb_kvs_make(_largeKvsName.c_str(), cParams);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_largeKvsName.c_str(), config, _largeKvs);
+        hseSt = _db.kvdb_kvs_open(_largeKvsName.c_str(), rParams, _largeKvs);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_make(_oplogKvsName.c_str(), config);
+        cParams.clear();
+        cParams.push_back("pfx_len=" + std::to_string(OPLOG_PFX_LEN));
+
+        hseSt = _db.kvdb_kvs_make(_oplogKvsName.c_str(), cParams);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_oplogKvsName.c_str(), config, _oplogKvs);
+        hseSt = _db.kvdb_kvs_open(_oplogKvsName.c_str(), rParams, _oplogKvs);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_make(_oplogLargeKvsName.c_str(), config);
+        hseSt = _db.kvdb_kvs_make(_oplogLargeKvsName.c_str(), cParams);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_oplogLargeKvsName.c_str(), config, _oplogLargeKvs);
+        hseSt = _db.kvdb_kvs_open(_oplogLargeKvsName.c_str(), rParams, _oplogLargeKvs);
         invariantHseSt(hseSt);
     }
 

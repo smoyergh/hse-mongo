@@ -95,37 +95,6 @@ const string KVDBEngine::kOplogKvsName = "OplogKvs";
 const string KVDBEngine::kOplogLargeKvsName = "OplogLargeKvs";
 const string KVDBEngine::kMetadataPrefix = KVDB_prefix + "meta-";
 
-/* clang-format off */
-
-const string KVDBEngine::staticConfigStr =
-"\
-{\"kvdb\": {\
-  \"txn_timeout\": 8589934591,\
-  \"kvs\": {\
-    \"default\": {\
-      \"pfx_len\": " + std::to_string(DEFAULT_PFX_LEN) +",\
-      \"transactions_enable\": " + std::to_string(1) +"\
-      },\
-    \"" + kOplogKvsName + "\": {\
-      \"fanout\": " + std::to_string(OPLOG_FANOUT) +",\
-      \"pfx_len\": " + std::to_string(OPLOG_PFX_LEN) +",\
-      \"kvs_ext01\": " + std::to_string(1) +"\
-      },\
-    \"" + kOplogLargeKvsName + "\": {\
-      \"fanout\": " + std::to_string(OPLOG_FANOUT) +",\
-      \"pfx_len\": " + std::to_string(OPLOG_PFX_LEN) +"\
-      },\
-    \"" + kUniqIdxKvsName + "\": {\
-      \"sfx_len\": " + std::to_string(DEFAULT_SFX_LEN) +"\
-      },\
-    \"" + kStdIdxKvsName + "\": {\
-      \"sfx_len\": " + std::to_string(STDIDX_SFX_LEN) +"\
-      }\
-    }\
-  }\
-}";
-
-/* clang-format on */
 
 KVDBEngine::KVDBEngine(const std::string& path, bool durable, int formatVersion, bool readOnly)
     : _dbHome(path), _durable(durable), _formatVersion(formatVersion), _maxPrefix(0) {
@@ -477,39 +446,42 @@ void KVDBEngine::setJournalListener(JournalListener* jl) {
     _durabilityManager->setJournalListener(jl);
 }
 
-void KVDBEngine::_open_kvdb(const string& dbHome, const string& configStr) {
+void KVDBEngine::_open_kvdb(const string& dbHome,
+                            const vector<string>& cParams,
+                            const vector<string>& rParams) {
 
-    auto config = configStr.c_str();
-    auto st = _db.kvdb_open(dbHome.c_str(), config);
+    auto st = _db.kvdb_open(dbHome.c_str(), rParams);
     if (st.getErrno()) {
         if (st.getErrno() != ENOENT)
             invariantHseSt(st);
 
-        st = _db.kvdb_make(dbHome.c_str(), config);
+        st = _db.kvdb_make(dbHome.c_str(), cParams);
         invariantHseSt(st);
 
-        st = _db.kvdb_open(dbHome.c_str(), config);
+        st = _db.kvdb_open(dbHome.c_str(), rParams);
     }
     invariantHseSt(st);
 }
 
-void KVDBEngine::_open_kvs(const string& kvs, KVSHandle& h, const string& configStr) {
+void KVDBEngine::_open_kvs(const string& kvs,
+                           KVSHandle& h,
+                           const vector<string>& cParams,
+                           const vector<string>& rParams) {
 
-    auto config = configStr.c_str();
-    auto st = _db.kvdb_kvs_open(kvs.c_str(), config, h);
+    auto st = _db.kvdb_kvs_open(kvs.c_str(), rParams, h);
     if (st.getErrno()) {
         if (st.getErrno() != ENOENT)
             invariantHseSt(st);
 
-        st = _db.kvdb_kvs_make(kvs.c_str(), config);
+        st = _db.kvdb_kvs_make(kvs.c_str(), cParams);
         invariantHseSt(st);
 
-        st = _db.kvdb_kvs_open(kvs.c_str(), config, h);
+        st = _db.kvdb_kvs_open(kvs.c_str(), rParams, h);
     }
     invariantHseSt(st);
 }
 
-std::string KVDBEngine::_getMongoConfigStr() {
+void KVDBEngine::_prepareConfig() {
     unsigned int ms = DUR_LAG;
 
     if (isDurable()) {
@@ -517,18 +489,33 @@ std::string KVDBEngine::_getMongoConfigStr() {
             ms = storageGlobalParams.journalCommitIntervalMs;
     }
 
-    /* clang-format off */
+    _kvdbCParams = {};
+    _kvdbRParams.push_back("txn_timeout=8589934591");
+    _kvdbRParams.push_back("dur_intvl_ms=" + std::to_string(ms));
 
-    const string mongoConfigStr =
-    "\
-    {\"kvdb\": {\
-      \"dur_intvl_ms\":" + std::to_string(ms) +"\
-       }\
-    }";
+    _mainKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
+    _mainKvsRParams.push_back("transactions_enable=1");
 
-    /* clang-format on */
+    _largeKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
+    _largeKvsRParams.push_back("transactions_enable=1");
 
-    return mongoConfigStr;
+    _oplogKvsCParams.push_back("pfx_len=" + std::to_string(OPLOG_PFX_LEN));
+    _oplogKvsCParams.push_back("fanout=" + std::to_string(OPLOG_FANOUT));
+    _oplogKvsCParams.push_back("kvs_ext01=1");
+    _oplogKvsRParams.push_back("transactions_enable=1");
+
+    _oplogLargeKvsCParams.push_back("pfx_len=" + std::to_string(OPLOG_PFX_LEN));
+    _oplogLargeKvsCParams.push_back("fanout=" + std::to_string(OPLOG_FANOUT));
+    _oplogLargeKvsCParams.push_back("kvs_ext01=1");
+    _oplogLargeKvsRParams.push_back("transactions_enable=1");
+
+    _uniqIdxKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
+    _uniqIdxKvsCParams.push_back("sfx_len=" + std::to_string(DEFAULT_SFX_LEN));
+    _uniqIdxKvsRParams.push_back("transactions_enable=1");
+
+    _stdIdxKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
+    _stdIdxKvsCParams.push_back("sfx_len=" + std::to_string(STDIDX_SFX_LEN));
+    _stdIdxKvsRParams.push_back("transactions_enable=1");
 }
 
 void KVDBEngine::_setupDb() {
@@ -541,26 +528,19 @@ void KVDBEngine::_setupDb() {
         fs::permissions(dbHomePath,
                         fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exe);
 
-    string mongoConfigStr = _getMongoConfigStr();
-    char* mergedConfig;
-    st = hse::config_merge(staticConfigStr.c_str(), mongoConfigStr.c_str(), &mergedConfig);
-    invariantHseSt(st);
+    _prepareConfig();
 
-    string mergedConfigStr(reinterpret_cast<const char*>(mergedConfig));
+    _open_kvdb(_dbHome, _kvdbCParams, _kvdbRParams);
 
-    _open_kvdb(_dbHome, mergedConfigStr);
+    _open_kvs(kMainKvsName, _mainKvs, _mainKvsCParams, _mainKvsRParams);
+    _open_kvs(kLargeKvsName, _largeKvs, _largeKvsCParams, _largeKvsRParams);
 
-    _open_kvs(kMainKvsName, _mainKvs, mergedConfigStr);
-    _open_kvs(kLargeKvsName, _largeKvs, mergedConfigStr);
+    _open_kvs(kOplogKvsName, _oplogKvs, _oplogKvsCParams, _oplogKvsRParams);
+    _open_kvs(kOplogLargeKvsName, _oplogLargeKvs, _oplogLargeKvsCParams, _oplogLargeKvsRParams);
 
-    _open_kvs(kOplogLargeKvsName, _oplogLargeKvs, mergedConfigStr);
-    _open_kvs(kOplogKvsName, _oplogKvs, mergedConfigStr);
+    _open_kvs(kUniqIdxKvsName, _uniqIdxKvs, _uniqIdxKvsCParams, _uniqIdxKvsRParams);
 
-    _open_kvs(kUniqIdxKvsName, _uniqIdxKvs, mergedConfigStr);
-
-    _open_kvs(kStdIdxKvsName, _stdIdxKvs, mergedConfigStr);
-
-    free(static_cast<void*>(mergedConfig));
+    _open_kvs(kStdIdxKvsName, _stdIdxKvs, _stdIdxKvsCParams, _stdIdxKvsRParams);
 }
 
 uint32_t KVDBEngine::_getMaxPrefixInKvs(KVSHandle& kvs) {

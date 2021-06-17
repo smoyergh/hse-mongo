@@ -153,9 +153,15 @@ public:
 
 
 private:
+    void _prepareConfig();
     void _setupDb();
-    void _open_kvdb(const string& dbHome, const string& configStr);
-    void _open_kvs(const string& kvsName, KVSHandle& h, const string& configStr);
+    void _open_kvdb(const string& dbHome,
+                    const vector<string>& cParams,
+                    const vector<string>& rParams);
+    void _open_kvs(const string& kvsName,
+                   KVSHandle& h,
+                   const vector<string>& cParams,
+                   const vector<string>& rParams);
     void _cleanShutdown();
     uint32_t _getMaxPrefixInKvs(KVSHandle& kvs);
     void _checkMaxPrefix();
@@ -188,8 +194,21 @@ private:
     // Special prefixes
     static const string kMetadataPrefix;
 
-    // Const static config for db
-    static const string staticConfigStr;
+    // configuration
+    vector<string> _kvdbCParams{};
+    vector<string> _kvdbRParams{};
+    vector<string> _mainKvsCParams{};
+    vector<string> _mainKvsRParams{};
+    vector<string> _largeKvsCParams{};
+    vector<string> _largeKvsRParams{};
+    vector<string> _oplogKvsCParams{};
+    vector<string> _oplogKvsRParams{};
+    vector<string> _oplogLargeKvsCParams{};
+    vector<string> _oplogLargeKvsRParams{};
+    vector<string> _uniqIdxKvsCParams{};
+    vector<string> _uniqIdxKvsRParams{};
+    vector<string> _stdIdxKvsCParams{};
+    vector<string> _stdIdxKvsRParams{};
 
     KVSHandle _mainKvs;
     KVSHandle _stdIdxKvs;
