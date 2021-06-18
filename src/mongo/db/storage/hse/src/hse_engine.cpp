@@ -489,7 +489,10 @@ void KVDBEngine::_prepareConfig() {
             ms = storageGlobalParams.journalCommitIntervalMs;
     }
 
-    _kvdbCParams = {};
+    if (!kvdbGlobalOptions.getStagingPathStr().empty()) {
+        _kvdbCParams.push_back("storage.staging.path=" + kvdbGlobalOptions.getStagingPathStr());
+    }
+
     _kvdbRParams.push_back("txn_timeout=8589934591");
     _kvdbRParams.push_back("dur_intvl_ms=" + std::to_string(ms));
 

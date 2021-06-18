@@ -52,6 +52,9 @@ const std::string KVDBGlobalOptions::kDefaultCollectionCompressionMinBytesStr = 
 
 const bool KVDBGlobalOptions::kDefaultEnableMetrics = false;
 
+// Default staging path is empty.
+const std::string KVDBGlobalOptions::kDefaultStagingPathStr{};
+
 
 KVDBGlobalOptions kvdbGlobalOptions;
 
@@ -74,6 +77,11 @@ const std::string collectionCompressionMinBytesOptStr = modName + "CollectionCom
 // Enable metrics
 const std::string enableMetricsCfgStr = cfgStrPrefix + "enableMetrics";
 const std::string enableMetricsOptStr = modName + "EnableMetrics";
+
+// HSE staging path
+const std::string stagingPathCfgStr = cfgStrPrefix + "stagingPath";
+const std::string stagingPathOptStr = modName + "StagingPath";
+
 }  // namespace
 
 Status KVDBGlobalOptions::add(moe::OptionSection* options) {
@@ -105,6 +113,10 @@ Status KVDBGlobalOptions::add(moe::OptionSection* options) {
             enableMetricsCfgStr, enableMetricsOptStr, moe::Switch, "enable metrics collection")
         .hidden();
 
+    kvdbOptions
+        .addOptionChaining(
+            stagingPathCfgStr, stagingPathOptStr, moe::String, "path for staging media class")
+        .setDefault(moe::Value(kDefaultStagingPathStr));
 
     return options->addSection(kvdbOptions);
 }
@@ -134,6 +146,11 @@ Status KVDBGlobalOptions::store(const moe::Environment& params,
         log() << "Metrics enabled: " << kvdbGlobalOptions._enableMetrics;
     }
 
+    if (params.count(stagingPathCfgStr)) {
+        kvdbGlobalOptions._stagingPathStr = params[stagingPathCfgStr].as<std::string>();
+        log() << "Staging path str: " << kvdbGlobalOptions._stagingPathStr;
+    }
+
     return Status::OK();
 }
 
@@ -156,5 +173,10 @@ bool KVDBGlobalOptions::getMetricsEnabled() const {
 int KVDBGlobalOptions::getForceLag() const {
     return _forceLag;
 }
+
+std::string KVDBGlobalOptions::getStagingPathStr() const {
+    return _stagingPathStr;
+}
+
 
 }  // namespace mongo
