@@ -68,7 +68,7 @@ public:
 
     virtual KVEngine* restartEngine() {
         _engine.reset(nullptr);
-        _engine.reset(new KVDBEngine(_dbpath.path(), false, 3, false));
+        _engine.reset(new KVDBEngine(_dbFixture.getDbHome(), false, 3, false));
         return _engine.get();
     }
 

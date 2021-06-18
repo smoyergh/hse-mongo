@@ -840,7 +840,7 @@ void copyDir(const boost::filesystem::path& from, const boost::filesystem::path&
             } else {
                 if (sparse) {
                     string cmd = "cp --preserve=mode,ownership " + p.string() + " " +
-                                  (to / p.leaf()).string();
+                        (to / p.leaf()).string();
                     int rc = system(cmd.c_str());
                     if (rc) {
                         log() << "Failed to copy file from '" << p.string() << "' to '"

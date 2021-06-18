@@ -107,7 +107,9 @@ public:
                               << "Database was created with old format version "
                               << element.numberInt()
                               << " and this version only supports format versions from "
-                              << kMinSupportedKVDBFormatVersion << " to " << kKVDBFormatVersion
+                              << kMinSupportedKVDBFormatVersion
+                              << " to "
+                              << kKVDBFormatVersion
                               << ". Please reload the database using mongodump and mongorestore");
         } else if (element.numberInt() > kKVDBFormatVersion) {
             // database is newer than what we can understand
@@ -116,7 +118,9 @@ public:
                               << "Database was created with newer format version "
                               << element.numberInt()
                               << " and this version only supports format versions from "
-                              << kMinSupportedKVDBFormatVersion << " to " << kKVDBFormatVersion
+                              << kMinSupportedKVDBFormatVersion
+                              << " to "
+                              << kKVDBFormatVersion
                               << ". Please reload the database using mongodump and mongorestore");
         }
         formatVersion = element.numberInt();

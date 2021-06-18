@@ -52,7 +52,7 @@ import sys
 from subprocess import Popen, PIPE
 
 _HSEBIN = '/opt/hse-1/bin/hse1'
-_KVDB_HOME = 'kvdb1'
+_KVDB_HOME = '/var/tmp/mongo-ut-kvdbs/kvdb1'
 _DEVICE_LIST = []
 
 def check_for_tests(pwd, tests):
@@ -80,6 +80,9 @@ def test_setup(pwd):
     harness_vg = 'harness_vg'
     harness_lv = 'harness_lv'
 
+    cmdargs = [ 'umount %s && rmdir %s' % (_KVDB_HOME,_KVDB_HOME), '>>', fname, '2>&1']
+    _run_cmd(cmdargs, logfile)
+
     cmdargs = [ 'vgremove -y %s' % (harness_vg), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
     for dev in _DEVICE_LIST:
@@ -94,7 +97,7 @@ def test_setup(pwd):
     cmdargs = [ 'mkfs -t ext4 -F /dev/%s/%s' % (harness_vg, harness_lv), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
-    cmdargs = [ 'mkdir -p %s/%s && mount -onoatime /dev/%s/%s %s/%s' % (pwd, _KVDB_HOME, harness_vg, harness_lv, pwd, _KVDB_HOME), '>>', fname, '2>&1']
+    cmdargs = [ 'mkdir -p %s && mount -onoatime /dev/%s/%s %s' % (_KVDB_HOME, harness_vg, harness_lv, _KVDB_HOME), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
     logfile.close()
@@ -105,7 +108,7 @@ def test_teardown(pwd):
 
     harness_vg = 'harness_vg'
 
-    cmdargs = [ 'umount %s/%s && rmdir %s/%s' % (pwd, _KVDB_HOME, pwd, _KVDB_HOME), '>>', fname, '2>&1']
+    cmdargs = [ 'umount %s && rmdir %s' % (_KVDB_HOME, _KVDB_HOME), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
     cmdargs = [ 'vgremove -y %s' % (harness_vg), '>>', fname, '2>&1']
@@ -124,7 +127,7 @@ def run_test(pwd, test):
     if exit_code != 0:
         return exit_code
 
-    cmdargs = ['%s/%s' % (pwd, test), '>>', fname, '2>&1']
+    cmdargs = ['MONGO_UT_KVDB_HOME=%s %s/%s' % (_KVDB_HOME, pwd, test), '>>', fname, '2>&1']
     exit_code = _run_cmd(cmdargs, logfile)
 
     cmdargs = ['%s -C %s kvdb destroy' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
@@ -155,7 +158,7 @@ def parse_output(pwd, test):
 
 
 if __name__ == '__main__':
-    usage = "Usage: hse_test_harness build_number hse_bin_path kvdb_name device1 device2 ..."
+    usage = "Usage: hse_test_harness build_number hse_bin_path kvdb_home device1 device2 ..."
 
     if len(sys.argv) < 4:
         print("Error:  incorrect number of arguments!", file=sys.stderr)

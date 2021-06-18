@@ -42,7 +42,10 @@ namespace hse {
 
 KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
 
-    _kvdbPerUt = nullptr != getenv("KVDB_PER_UT") ? true : false;
+    const char* envStr = getenv("MONGO_UT_KVDB_HOME");
+    if (nullptr != envStr) {
+        _kvdbHome = envStr;
+    }
 
     hse::Status st = hse::init();
     ASSERT_EQUALS(0, st.getErrno());
@@ -50,7 +53,7 @@ KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
     int err{0};
     vector<string> params{};
     while (true) {
-        st = _db.kvdb_make(_kvdbName.c_str(), params);
+        st = _db.kvdb_make(_kvdbHome.c_str(), params);
 
         err = st.getErrno();
         if (EAGAIN != err) {
@@ -64,20 +67,19 @@ KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
 
     ASSERT_EQUALS(0, err);
 
-    st = _db.kvdb_open(_kvdbName.c_str(), params);
+    st = _db.kvdb_open(_kvdbHome.c_str(), params);
     ASSERT_EQUALS(0, st.getErrno());
 
     _dbClosed = false;
 }
 
 void KVDBTestSuiteFixture::reset() {
-
     if (_dbClosed) {
         hse::Status st = hse::init();
         ASSERT_EQUALS(0, st.getErrno());
 
         vector<string> params{};
-        st = _db.kvdb_open(_kvdbName.c_str(), params);
+        st = _db.kvdb_open(_kvdbHome.c_str(), params);
         ASSERT_EQUALS(0, st.getErrno());
 
         _dbClosed = false;
@@ -96,19 +98,6 @@ void KVDBTestSuiteFixture::reset() {
     }
 
     _db.kvdb_free_names(kvsList);
-
-    if (!_kvdbPerUt) {
-        // do nothing
-        return;
-    }
-
-    // drop the kvdb
-    st = _db.kvdb_close();
-    ASSERT_EQUALS(0, st.getErrno());
-
-    vector<string> params{};
-    st = _db.kvdb_open(_kvdbName.c_str(), params);
-    ASSERT_EQUALS(0, st.getErrno());
 }
 
 KVDBTestSuiteFixture::~KVDBTestSuiteFixture() {
@@ -117,7 +106,7 @@ KVDBTestSuiteFixture::~KVDBTestSuiteFixture() {
         ASSERT_EQUALS(0, st.getErrno());
 
         vector<string> params{};
-        st = _db.kvdb_open(_kvdbName.c_str(), params);
+        st = _db.kvdb_open(_kvdbHome.c_str(), params);
         ASSERT_EQUALS(0, st.getErrno());
 
         _dbClosed = false;
@@ -134,8 +123,8 @@ KVDB& KVDBTestSuiteFixture::getDb() {
     return _db;
 }
 
-string KVDBTestSuiteFixture::getDbName() {
-    return _kvdbName;
+string KVDBTestSuiteFixture::getDbHome() {
+    return _kvdbHome;
 }
 
 void KVDBTestSuiteFixture::closeDb() {
