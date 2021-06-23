@@ -63,8 +63,8 @@ class MongoDFixture(interface.Fixture):
         if "storageEngine" in self.mongod_options:
             storage_engine = self.mongod_options["storageEngine"]
         if storage_engine == "hse":
-            self.mongod_options["hseCollectionCompression"] = utils.default_if_none(
-                config.HSE_COLL_COMPR, config.DEFAULT_HSE_COLL_COMPR)
+            self.mongod_options["hseCompression"] = utils.default_if_none(
+                config.HSE_COMPR, config.DEFAULT_HSE_COMPR)
 
         self.mongod = None
 
