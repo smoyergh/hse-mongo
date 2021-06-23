@@ -133,7 +133,7 @@ Status KVDBEngine::createRecordStore(OperationContext* opCtx,
     // The options are in a BSON whose name is "hse".
     BSONObj engine = options.storageEngine.getObjectField("hse");
 
-    
+
     if (!engine.isEmpty()) {
         // HSE_REVIST: TBD when we have put options for compression.
     }
@@ -465,14 +465,23 @@ void KVDBEngine::_prepareConfig() {
         _kvdbCParams.push_back("storage.staging.path=" + kvdbGlobalOptions.getStagingPathStr());
     }
 
+    string vCompr = kvdbGlobalOptions.getCompressionStr();
+    string vComprMinBytes = kvdbGlobalOptions.getCompressionMinBytesStr();
+
     _kvdbRParams.push_back("txn_timeout=8589934591");
     _kvdbRParams.push_back("dur_intvl_ms=" + std::to_string(ms));
 
     _mainKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
     _mainKvsRParams.push_back("transactions_enable=1");
+    _mainKvsRParams.push_back("value_compression=" + vCompr);
+    _mainKvsRParams.push_back("vcompmin=" + vComprMinBytes);
+
 
     _largeKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
     _largeKvsRParams.push_back("transactions_enable=1");
+    _largeKvsRParams.push_back("value_compression=" + vCompr);
+    _largeKvsRParams.push_back("vcompmin=" + vComprMinBytes);
+
 
     _oplogKvsCParams.push_back("pfx_len=" + std::to_string(OPLOG_PFX_LEN));
     _oplogKvsCParams.push_back("fanout=" + std::to_string(OPLOG_FANOUT));
@@ -487,10 +496,14 @@ void KVDBEngine::_prepareConfig() {
     _uniqIdxKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
     _uniqIdxKvsCParams.push_back("sfx_len=" + std::to_string(DEFAULT_SFX_LEN));
     _uniqIdxKvsRParams.push_back("transactions_enable=1");
+    _uniqIdxKvsRParams.push_back("value_compression=" + vCompr);
+    _uniqIdxKvsRParams.push_back("vcompmin=" + vComprMinBytes);
 
     _stdIdxKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
     _stdIdxKvsCParams.push_back("sfx_len=" + std::to_string(STDIDX_SFX_LEN));
     _stdIdxKvsRParams.push_back("transactions_enable=1");
+    _stdIdxKvsRParams.push_back("value_compression=" + vCompr);
+    _stdIdxKvsRParams.push_back("vcompmin=" + vComprMinBytes);
 }
 
 void KVDBEngine::_setupDb() {
@@ -524,7 +537,7 @@ uint32_t KVDBEngine::_getMaxPrefixInKvs(KVSHandle& kvs) {
 
     // create a reverse cursor
     KvsCursor* cursor;
-    KVDBData kPrefix{(uint8_t*)"", 0};      // no prefix
+    KVDBData kPrefix{(uint8_t*)"", 0};  // no prefix
     cursor = new KvsCursor(kvs, kPrefix, false, 0);
     invariantHse(cursor != 0);
 
