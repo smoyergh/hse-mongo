@@ -51,21 +51,16 @@ public:
     ~KVDBTestSuiteFixture();
 
     KVDB& getDb();
-    string getDbName();
+    string getDbHome();
     static KVDBTestSuiteFixture& getFixture();
 
     void closeDb();
     void reset();
 
 private:
-    string _kvdbName{"mp1"};
-    string _mpoolName{"mp1"};
-
-    struct hse_params* _params{nullptr};
-
-    bool _kvdbPerUt = true;
+    string _kvdbHome{"/var/tmp/mongo-ut-kvdbs/kvdb1"};
 
     KVDBImpl _db{};
     bool _dbClosed = true;
 };
-}
+}  // namespace hse

@@ -1,12 +1,4 @@
 /**
- *    SPDX-License-Identifier: AGPL-3.0-only
- *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
- *
- *    This code is derived from and modifies the MongoDB project.
- */
-
-/**
  * SERVER-20617: Tests that journaled write operations survive a kill -9 of the mongod.
  *
  * This test requires persistence to ensure data survives a restart.
@@ -18,13 +10,6 @@
     //  The following test verifies that writeConcern: {j: true} ensures that data is durable.
     var dbpath = MongoRunner.dataPath + 'sync_write';
     resetDbpath(dbpath);
-    if (jsTest.options().storageEngine == 'hse') {
-        resetKvdb(TestData.hse,
-                  TestData.mpool,
-                  TestData.vg,
-                  MongoRunner.toRealKvdbName(dbpath, {}),
-                  TestData.hseKvdbCParams);
-    }
 
     var mongodArgs = {dbpath: dbpath, noCleanData: true, journal: ''};
 

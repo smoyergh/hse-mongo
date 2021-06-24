@@ -1,11 +1,3 @@
-/**
- *    SPDX-License-Identifier: AGPL-3.0-only
- *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
- *
- *    This code is derived from and modifies the MongoDB project.
- */
-
 // Test that removing and re-adding shard works correctly.
 
 load("jstests/replsets/rslib.js");
@@ -113,8 +105,7 @@ jsTestLog("Attempting to remove shard, restart the set, and then add it back in"
 originalSeed = seedString(rst1);
 
 removeShard(st, rst1);
-// set last argument to stopSet() to true to reset hse KVDBs instead of deleting them
-rst1.stopSet(undefined, undefined, undefined, true);
+rst1.stopSet();
 print("Sleeping for 20 seconds to let the other shard's ReplicaSetMonitor time out");
 sleep(20000);  // 1 failed check should take 10 seconds, sleep for 20 just to be safe
 
@@ -161,8 +152,7 @@ assert( conn.getDB('test2').dropDatabase().ok );*/
 // Remove shard and add a new shard with the same replica set and shard name, but different ports.
 jsTestLog("Attempt removing shard and adding a new shard with the same Replica Set name");
 removeShard(st, rst1);
-// set last argument to stopSet() to true to reset hse KVDBs instead of deleting them
-rst1.stopSet(undefined, undefined, undefined, true);
+rst1.stopSet();
 print("Sleeping for 60 seconds to let the other shards restart their ReplicaSetMonitors");
 sleep(60000);
 
@@ -183,8 +173,7 @@ assert.eq(1, conn.getDB('test2').foo.find().itcount());
 jsTestLog("Putting ShardingTest back to state it expects");
 printjson(st.admin.runCommand({movePrimary: 'test2', to: rst0.name}));
 removeShard(st, rst2);
-// set last argument to stopSet() to true to reset hse KVDBs instead of deleting them
-rst2.stopSet(undefined, undefined, undefined, true);
+rst2.stopSet();
 print("Sleeping for 60 seconds to let the other shards restart their ReplicaSetMonitors");
 sleep(60000);
 

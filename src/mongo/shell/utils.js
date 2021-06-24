@@ -282,10 +282,6 @@ jsTestOptions = function() {
             forceValidationWithFeatureCompatibilityVersion:
                 TestData.forceValidationWithFeatureCompatibilityVersion,
             skipValidationNamespaces: TestData.skipValidationNamespaces || [],
-            hse: TestData.hse,
-            mpool: TestData.mpool,
-            vg: TestData.vg,
-            hseParams: TestData.hseParams,
             hseCollectionCompression: TestData.hseCollectionCompression,
         });
     }

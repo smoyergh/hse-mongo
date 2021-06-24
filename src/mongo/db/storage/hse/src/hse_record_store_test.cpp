@@ -53,9 +53,9 @@ namespace mongo {
 
 using std::string;
 
-using hse::VALUE_META_THRESHOLD_LEN;
 using hse::DEFAULT_PFX_LEN;
 using hse::OPLOG_PFX_LEN;
+using hse::VALUE_META_THRESHOLD_LEN;
 
 
 class KVDBRecordStoreHarnessHelper final : public HarnessHelper {
@@ -142,58 +142,44 @@ public:
     }
 
     void setupDb() {
-        hse_params_create(&_params);
-        invariantHse(nullptr != _params);
+        vector<string> cParams{};
+        vector<string> rParams{};
 
-        string paramName = string("kvs.pfx_len");
+        cParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
+        rParams.push_back("transactions_enable=1");
 
-        hse::Status hseSt =
-            _db.kvdb_params_set(_params, paramName, std::to_string(hse::DEFAULT_PFX_LEN));
+        hse::Status hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), cParams);
         invariantHseSt(hseSt);
 
-        // always open kvses in transactional mode.
-        hseSt = _db.kvdb_params_set(_params, string("kvs.transactions_enable"), string("1"));
+        hseSt = _db.kvdb_kvs_open(_colKvsName.c_str(), rParams, _colKvs);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), _params);
+        hseSt = _db.kvdb_kvs_make(_idxKvsName.c_str(), cParams);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_colKvsName.c_str(), _params, _colKvs);
+        hseSt = _db.kvdb_kvs_open(_idxKvsName.c_str(), rParams, _idxKvs);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_make(_idxKvsName.c_str(), _params);
+        hseSt = _db.kvdb_kvs_make(_largeKvsName.c_str(), cParams);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_idxKvsName.c_str(), _params, _idxKvs);
+        hseSt = _db.kvdb_kvs_open(_largeKvsName.c_str(), rParams, _largeKvs);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_make(_largeKvsName.c_str(), _params);
+        cParams.clear();
+        cParams.push_back("pfx_len=" + std::to_string(OPLOG_PFX_LEN));
+
+        hseSt = _db.kvdb_kvs_make(_oplogKvsName.c_str(), cParams);
         invariantHseSt(hseSt);
 
-        hseSt = _db.kvdb_kvs_open(_largeKvsName.c_str(), _params, _largeKvs);
+        hseSt = _db.kvdb_kvs_open(_oplogKvsName.c_str(), rParams, _oplogKvs);
         invariantHseSt(hseSt);
 
-        paramName = string("kvs.") + _oplogKvsName + string(".pfx_len");
-        hseSt = _db.kvdb_params_set(_params, paramName, std::to_string(hse::OPLOG_PFX_LEN));
+        hseSt = _db.kvdb_kvs_make(_oplogLargeKvsName.c_str(), cParams);
         invariantHseSt(hseSt);
 
-        paramName = string("kvs.") + _oplogLargeKvsName + string(".pfx_len");
-        hseSt = _db.kvdb_params_set(_params, paramName, std::to_string(hse::OPLOG_PFX_LEN));
+        hseSt = _db.kvdb_kvs_open(_oplogLargeKvsName.c_str(), rParams, _oplogLargeKvs);
         invariantHseSt(hseSt);
-
-        hseSt = _db.kvdb_kvs_make(_oplogKvsName.c_str(), _params);
-        invariantHseSt(hseSt);
-
-        hseSt = _db.kvdb_kvs_open(_oplogKvsName.c_str(), _params, _oplogKvs);
-        invariantHseSt(hseSt);
-
-        hseSt = _db.kvdb_kvs_make(_oplogLargeKvsName.c_str(), _params);
-        invariantHseSt(hseSt);
-
-        hseSt = _db.kvdb_kvs_open(_oplogLargeKvsName.c_str(), _params, _oplogLargeKvs);
-        invariantHseSt(hseSt);
-
-        hse_params_destroy(_params);
     }
 
     void teardownDb() {
@@ -217,8 +203,6 @@ public:
     }
 
 private:
-    struct hse_params* _params{nullptr};
-
     string _colKvsName = "ColKVS";
     KVSHandle _colKvs;
 
@@ -1855,4 +1839,4 @@ TEST(KVDBRecordStoreTest, compress) {
 //         ASSERT_EQ(0, opBlkMgr->currentBytes());
 //     }
 // }
-}
+}  // namespace mongo

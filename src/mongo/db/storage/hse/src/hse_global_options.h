@@ -43,25 +43,15 @@ namespace moe = mongo::optionenvironment;
 class KVDBGlobalOptions {
 public:
     KVDBGlobalOptions()
-        : _mpoolName{kDefaultMpoolName},
-          _forceLag{kDefaultForceLag},
-          _configPathStr{kDefaultConfigPathStr},
-          _paramsStr{kDefaultParamsStr},
+        : _forceLag{kDefaultForceLag},
           _collectionCompressionStr{kDefaultCollectionCompressionStr},
           _collectionCompressionMinBytesStr{kDefaultCollectionCompressionMinBytesStr},
           _enableMetrics{kDefaultEnableMetrics},
-          _crashSafeCounters{false} {}
+          _crashSafeCounters{false},
+          _stagingPathStr{kDefaultStagingPathStr} {}
 
     Status add(moe::OptionSection* options);
     Status store(const moe::Environment& params, const std::vector<std::string>& args);
-
-    std::string getMpoolName() const;
-
-    std::string getKvdbName() const;
-
-    std::string getConfigPathStr() const;
-
-    std::string getParamsStr() const;
 
     std::string getCollectionCompressionStr() const;
     std::string getCollectionCompressionMinBytesStr() const;
@@ -70,29 +60,23 @@ public:
     bool getMetricsEnabled() const;
     bool getCrashSafeCounters() const;
     int getForceLag() const;
+    std::string getStagingPathStr() const;
 
 private:
-    static const std::string kDefaultMpoolName;
-    static const std::string kDefaultKvdbName;
     static const int kDefaultForceLag;
-    static const std::string kDefaultConfigPathStr;
-    static const std::string kDefaultParamsStr;
-
     static const std::string kDefaultCollectionCompressionStr;
     static const std::string kDefaultCollectionCompressionMinBytesStr;
     static const bool kDefaultEnableMetrics;
+    static const std::string kDefaultStagingPathStr;
 
-    std::string _mpoolName;
     int _forceLag;
-    std::string _configPathStr;
-    std::string _paramsStr;
 
     std::string _collectionCompressionStr;
     std::string _collectionCompressionMinBytesStr;
     bool _enableMetrics;
-
     bool _crashSafeCounters;
+    std::string _stagingPathStr;
 };
 
 extern KVDBGlobalOptions kvdbGlobalOptions;
-}
+}  // namespace mongo

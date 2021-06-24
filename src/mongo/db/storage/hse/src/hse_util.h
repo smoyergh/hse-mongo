@@ -405,4 +405,38 @@ hse::Status decompressdata(const struct CompParms& compparms,
                            KVDBData& comp,
                            unsigned int off_comp,
                            KVDBData& unc);
+
+class CStyleStrVec {
+public:
+    CStyleStrVec(const vector<string>& strVec) {
+        _count = strVec.size();
+        _srcV = new const char*[_count];
+        for (int i = 0; i < _count; i++) {
+            _srcV[i] = strVec[i].c_str();
+        }
+    }
+
+    CStyleStrVec(const CStyleStrVec&) = delete;
+    CStyleStrVec& operator=(const CStyleStrVec& rhs) = delete;
+    CStyleStrVec(CStyleStrVec&&) = delete;
+    CStyleStrVec& operator=(CStyleStrVec&& rhs) = delete;
+
+
+    ~CStyleStrVec() {
+        delete[] _srcV;
+    }
+
+    const char** getCVec() {
+        return _srcV;
+    }
+
+    int getCount() {
+        return _count;
+    }
+
+private:
+    const char** _srcV{nullptr};
+    int _count{0};
+};
+
 }  // namespace hse

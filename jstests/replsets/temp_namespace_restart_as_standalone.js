@@ -1,12 +1,4 @@
 /**
- *    SPDX-License-Identifier: AGPL-3.0-only
- *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
- *
- *    This code is derived from and modifies the MongoDB project.
- */
-
-/**
  * Tests that temporary collections are not dropped when a member of a replica set is started up as
  * a stand-alone mongod, i.e. without the --replSet parameter.
  *
@@ -63,11 +55,7 @@
     var secondaryNodeId = rst.getNodeId(secondaryDB.getMongo());
     rst.stop(secondaryNodeId);
 
-    secondaryConn = MongoRunner.runMongod({
-        dbpath: secondaryConn.dbpath,
-        hseMpoolName: secondaryConn.fullOptions.hseMpoolName,
-        noCleanData: true
-    });
+    secondaryConn = MongoRunner.runMongod({dbpath: secondaryConn.dbpath, noCleanData: true});
     assert.neq(null, secondaryConn, "secondary failed to start up as a stand-alone mongod");
     secondaryDB = secondaryConn.getDB("test");
 

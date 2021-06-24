@@ -49,7 +49,6 @@ def mongod_program(logger, executable=None, process_kwargs=None, **kwargs):
         "wiredTigerCollectionConfigString": config.WT_COLL_CONFIG,
         "wiredTigerEngineConfigString": config.WT_ENGINE_CONFIG,
         "wiredTigerIndexConfigString": config.WT_INDEX_CONFIG,
-        "hseParams": config.HSE_PARAMS,
     }
 
     if config.STORAGE_ENGINE == "rocksdb":
@@ -148,11 +147,6 @@ def mongo_shell_program(logger, executable=None, connection_string=None, filenam
         "wiredTigerIndexConfigString": (config.WT_INDEX_CONFIG, ""),
         "hseCollectionCompression": (config.HSE_COLL_COMPR, ""),
         "hseCollectionCompressionMinBytes": (config.HSE_COLL_COMPR_MIN_BYTES, ""),
-        "hseParams": (config.HSE_PARAMS, ""),
-        "hseMpoolNamePrefix": (config.HSE_MPOOL_NAME_PREFIX, ""),
-        "hse": (config.HSE_EXECUTABLE, config.DEFAULT_HSE_EXECUTABLE),
-        "mpool": (config.MPOOL_EXECUTABLE, config.DEFAULT_MPOOL_EXECUTABLE),
-        "vg": (config.VOLUME_GROUP, ""),
     }
 
     test_data = global_vars.get("TestData", {}).copy()

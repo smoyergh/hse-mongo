@@ -350,13 +350,6 @@ class JSTestCase(TestCase):
         global_vars["MongoRunner.dataPath"] = data_path
 
         if config.STORAGE_ENGINE == 'hse':
-            pfx = config.HSE_MPOOL_NAME_PREFIX
-            pfx = utils.default_if_none(pfx, config.DEFAULT_HSE_MPOOL_NAME_PREFIX)
-            pfx = "%s-job%d" % (pfx, self.fixture.job_num)
-
-            global_vars["MongoRunner.mpoolNamePrefix"] = pfx
-            global_vars["MongoRunner.volumeGroup"] = config.VOLUME_GROUP
-            global_vars["MongoRunner.hseParams"] = config.HSE_PARAMS
             global_vars["MongoRunner.hseCollectionCompression"] = config.HSE_COLL_COMPR
 
         test_data = global_vars.get("TestData", {}).copy()

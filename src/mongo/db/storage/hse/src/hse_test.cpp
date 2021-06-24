@@ -215,7 +215,7 @@ Status getcoUtil(KVDB& kvdb,
     val.createOwned(HSE_KVS_VLEN_MAX);
     return kvdb.kvs_get(kvsHandle, txn, key, val, found);
 }
-}
+}  // namespace
 
 namespace mongo {
 
@@ -223,27 +223,18 @@ class KVDBREGTEST : public unittest::Test {
 protected:
     void setUp() {
         // ASSERT_EQ(0, _db._testGetMaxIdx());
+        vector<string> makeParams{};
+        vector<string> openParams{};
+        makeParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
+        openParams.push_back("transactions_enable=" + std::to_string(1));
+
 
         // Create all the kvses
         for (unsigned int i = 0; i < TEST_KVS_CNT; i++) {
-            hse_params_create(&_params[i]);
-            ASSERT_FALSE(nullptr == _params[i]);
-
-            string paramName = string("kvs.pfx_len");
-            hse::Status st =
-                _db.kvdb_params_set(_params[i], paramName, std::to_string(hse::DEFAULT_PFX_LEN));
+            hse::Status st = _db.kvdb_kvs_make(_kvsNames[i], makeParams);
             ASSERT_EQUALS(0, st.getErrno());
-
-            // always open kvses in transactional mode.
-            st = _db.kvdb_params_set(_params[i], string("kvs.transactions_enable"), string("1"));
+            st = _db.kvdb_kvs_open(_kvsNames[i], openParams, _kvsHandles[i]);
             ASSERT_EQUALS(0, st.getErrno());
-
-            st = _db.kvdb_kvs_make(_kvsNames[i], _params[i]);
-            ASSERT_EQUALS(0, st.getErrno());
-            st = _db.kvdb_kvs_open(_kvsNames[i], _params[i], _kvsHandles[i]);
-            ASSERT_EQUALS(0, st.getErrno());
-
-            hse_params_destroy(_params[i]);
         }
     }
 
@@ -264,9 +255,6 @@ protected:
     hse::KVDB& _db = _dbFixture.getDb();
 
     const char* _kvsNames[2] = {"KVS1", "KVS2"};
-    struct hse_params* _params1{nullptr};
-    struct hse_params* _params2{nullptr};
-    struct hse_params* _params[2] = {_params1, _params2};
 
     KVSHandle _kvsHandles[TEST_KVS_CNT];
 };
@@ -1501,4 +1489,4 @@ TEST_F(KVDBREGTEST, KvdbTransactionTest) {
 
     delete txn;
 }
-}
+}  // namespace mongo

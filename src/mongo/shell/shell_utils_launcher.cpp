@@ -801,131 +801,6 @@ BSONObj RunMongoProgram(const BSONObj& a, void* data) {
     return BSON(string("") << exit_code);
 }
 
-string makeLvPath(const string& vgName, const string& lvName) {
-    string adjustedVg = vgName;
-    string adjustedLv = lvName;
-
-    boost::replace_all(adjustedVg, "-", "--");
-    boost::replace_all(adjustedLv, "-", "--");
-
-    return "/dev/mapper/" + adjustedVg + "-" + adjustedLv;
-}
-
-BSONObj ResetKvdb(const BSONObj& a, void* data) {
-    using std::to_string;
-
-    verify(a.nFields() == 5);
-    BSONObjIterator i(a);
-    string hseExecutable = i.next().str();
-    string mpoolExecutable = i.next().str();
-    string vgName = i.next().str();
-    string mpoolName = i.next().str();
-    string hseParams = i.next().str();
-    verify(!hseExecutable.empty());
-    verify(!mpoolExecutable.empty());
-    verify(!mpoolName.empty());
-
-    int rc;
-    string cmd;
-    string lvPath = makeLvPath(vgName, mpoolName);
-
-    /*
-     * Create LV and mpool
-     */
-    boost::filesystem::path lvPathObj(lvPath);
-
-    if (!boost::filesystem::exists(lvPathObj)) {
-        cmd = "sudo lvcreate -y --size 50G --name " + mpoolName + " " + vgName;
-        cout << cmd << endl;
-        rc = system(cmd.c_str());
-        if (rc)
-            return BSON(string("") << rc);
-    } else {
-        cmd = "sudo " + mpoolExecutable + " deactivate " + mpoolName;
-        cout << cmd << endl;
-        rc = system(cmd.c_str()); /* ignore return code */
-
-        cmd = "sudo " + mpoolExecutable + " destroy " + mpoolName;
-        cout << cmd << endl;
-        rc = system(cmd.c_str()); /* ignore return code */
-    }
-
-    cmd = "sudo " + mpoolExecutable + " create -f " + mpoolName + " " + lvPath + " uid=" +
-        to_string(geteuid()) + " gid=" + to_string(getegid());
-    cout << cmd << endl;
-    rc = system(cmd.c_str());
-    if (rc)
-        return BSON(string("") << rc);
-
-    cmd = "sudo " + mpoolExecutable + " activate " + mpoolName;
-    cout << cmd << endl;
-    rc = system(cmd.c_str());
-    if (rc)
-        return BSON(string("") << rc);
-
-    /*
-     * Create KVDB
-     */
-    cmd = "sudo " + hseExecutable + " kvdb create " + mpoolName;
-    cout << cmd << endl;
-
-    if (!hseParams.empty()) {
-        /*
-         * Change semicolon-delimited params to space-delimited.
-         */
-        size_t pos = 0;
-
-        while ((pos = hseParams.find(';', pos))) {
-            if (pos == string::npos) {
-                break;
-            }
-            hseParams[pos] = ' ';
-        }
-
-        cmd += " ";
-        cmd += hseParams;
-    }
-
-    cout << cmd << endl;
-    rc = system(cmd.c_str());
-
-    return BSON(string("") << rc);
-}
-
-BSONObj DeleteKvdb(const BSONObj& a, void* data) {
-    using std::to_string;
-
-    verify(a.nFields() == 4);
-    BSONObjIterator i(a);
-    string mpoolExecutable = i.next().str();
-    string mpoolName = i.next().str();
-    string vgName = i.next().str();
-    string hseParams = i.next().str();
-    verify(!mpoolExecutable.empty());
-    verify(!mpoolName.empty());
-    verify(!vgName.empty());
-
-    string cmd = "sudo " + mpoolExecutable + " destroy " + mpoolName;
-    int rc = system(cmd.c_str());
-    if (rc)
-        return BSON(string("") << rc);
-
-    /*
-     * delete the lv
-     */
-    string lvPath = makeLvPath(vgName, mpoolName);
-    boost::filesystem::path lvPathObj(lvPath);
-    if (boost::filesystem::exists(lvPathObj)) {
-        cmd = "sudo lvremove -y " + lvPath;
-        cout << cmd << endl;
-        rc = system(cmd.c_str());
-        if (rc)
-            return BSON(string("") << rc);
-    }
-
-    return BSON(string("") << rc);
-}
-
 BSONObj ResetDbpath(const BSONObj& a, void* data) {
     verify(a.nFields() == 1);
     string path = a.firstElement().valuestrsafe();
@@ -944,7 +819,7 @@ BSONObj PathExists(const BSONObj& a, void* data) {
     return BSON(string("") << exists);
 }
 
-void copyDir(const boost::filesystem::path& from, const boost::filesystem::path& to) {
+void copyDir(const boost::filesystem::path& from, const boost::filesystem::path& to, bool sparse) {
     boost::filesystem::directory_iterator end;
     boost::filesystem::directory_iterator i(from);
     while (i != end) {
@@ -961,9 +836,19 @@ void copyDir(const boost::filesystem::path& from, const boost::filesystem::path&
             if (boost::filesystem::is_directory(p)) {
                 boost::filesystem::path newDir = to / p.leaf();
                 boost::filesystem::create_directory(newDir);
-                copyDir(p, newDir);
+                copyDir(p, newDir, sparse);
             } else {
-                boost::filesystem::copy_file(p, to / p.leaf());
+                if (sparse) {
+                    string cmd = "cp --preserve=mode,ownership " + p.string() + " " +
+                        (to / p.leaf()).string();
+                    int rc = system(cmd.c_str());
+                    if (rc) {
+                        log() << "Failed to copy file from '" << p.string() << "' to '"
+                              << (to / p.leaf()).string() << "' due to: " << errnoWithDescription();
+                    }
+                } else {
+                    boost::filesystem::copy_file(p, to / p.leaf());
+                }
             }
         }
         ++i;
@@ -981,7 +866,21 @@ BSONObj CopyDbpath(const BSONObj& a, void* data) {
     if (boost::filesystem::exists(to))
         boost::filesystem::remove_all(to);
     boost::filesystem::create_directory(to);
-    copyDir(from, to);
+    copyDir(from, to, false);
+    return undefinedReturn;
+}
+
+BSONObj CopyDbpathSparse(const BSONObj& a, void* data) {
+    verify(a.nFields() == 2);
+    BSONObjIterator i(a);
+    string from = i.next().str();
+    string to = i.next().str();
+    verify(!from.empty());
+    verify(!to.empty());
+    if (boost::filesystem::exists(to))
+        boost::filesystem::remove_all(to);
+    boost::filesystem::create_directory(to);
+    copyDir(from, to, true);
     return undefinedReturn;
 }
 
@@ -1175,8 +1074,7 @@ void installShellUtilsLauncher(Scope& scope) {
     scope.injectNative("resetDbpath", ResetDbpath);
     scope.injectNative("pathExists", PathExists);
     scope.injectNative("copyDbpath", CopyDbpath);
-    scope.injectNative("resetKvdb", ResetKvdb);
-    scope.injectNative("deleteKvdb", DeleteKvdb);
+    scope.injectNative("copyDbpathSparse", CopyDbpathSparse);
 }
 }
 }

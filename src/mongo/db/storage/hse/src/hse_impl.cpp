@@ -45,24 +45,26 @@ using namespace std;
 using mongo::warning;
 
 // stats
-using hse_stat::_hseKvsGetLatency;
-using hse_stat::_hseKvsGetCounter;
-using hse_stat::_hseKvsCursorCreateLatency;
-using hse_stat::_hseKvsCursorCreateCounter;
-using hse_stat::_hseKvsCursorReadLatency;
-using hse_stat::_hseKvsCursorReadCounter;
-using hse_stat::_hseKvsCursorDestroyLatency;
-using hse_stat::_hseKvsCursorDestroyCounter;
-using hse_stat::_hseKvsPutLatency;
-using hse_stat::_hseKvsPutCounter;
-using hse_stat::_hseKvsProbeLatency;
-using hse_stat::_hseKvsProbeCounter;
-using hse_stat::_hseKvdbSyncLatency;
 using hse_stat::_hseKvdbSyncCounter;
-using hse_stat::_hseKvsDeleteLatency;
+using hse_stat::_hseKvdbSyncLatency;
+using hse_stat::_hseKvsCursorCreateCounter;
+using hse_stat::_hseKvsCursorCreateLatency;
+using hse_stat::_hseKvsCursorDestroyCounter;
+using hse_stat::_hseKvsCursorDestroyLatency;
+using hse_stat::_hseKvsCursorReadCounter;
+using hse_stat::_hseKvsCursorReadLatency;
 using hse_stat::_hseKvsDeleteCounter;
-using hse_stat::_hseKvsPrefixDeleteLatency;
+using hse_stat::_hseKvsDeleteLatency;
+using hse_stat::_hseKvsGetCounter;
+using hse_stat::_hseKvsGetLatency;
 using hse_stat::_hseKvsPrefixDeleteCounter;
+using hse_stat::_hseKvsPrefixDeleteLatency;
+using hse_stat::_hseKvsProbeCounter;
+using hse_stat::_hseKvsProbeLatency;
+using hse_stat::_hseKvsPutCounter;
+using hse_stat::_hseKvsPutLatency;
+
+using hse::CStyleStrVec;
 
 
 // KVDB interface
@@ -80,20 +82,23 @@ Status fini() {
 }
 
 // KVDB Implementation
-Status KVDBImpl::kvdb_make(const char* mp_name, const char* kvdb_name, struct hse_params* params) {
-    return Status(::hse_kvdb_make(mp_name, params));
+Status KVDBImpl::kvdb_make(const char* kvdb_home, const vector<string>& params) {
+    CStyleStrVec cVec{params};
+    return Status(::hse_kvdb_make(kvdb_home, cVec.getCount(), cVec.getCVec()));
 }
 
-Status KVDBImpl::kvdb_open(const char* mp_name, const char* kvdb_name, struct hse_params* params) {
-    auto st = ::hse_kvdb_open(mp_name, params, &_handle);
+Status KVDBImpl::kvdb_open(const char* kvdb_home, const vector<string>& params) {
+    CStyleStrVec cVec{params};
+    auto st = ::hse_kvdb_open(kvdb_home, cVec.getCount(), cVec.getCVec(), &_handle);
     return Status(st);
 }
 
 Status KVDBImpl::kvdb_kvs_open(const char* kvs_name,
-                               struct hse_params* params,
+                               const vector<string>& params,
                                KVSHandle& kvs_out) {
+    CStyleStrVec cVec{params};
     struct hse_kvs* kvsH = nullptr;
-    auto st = ::hse_kvdb_kvs_open(_handle, kvs_name, params, &kvsH);
+    auto st = ::hse_kvdb_kvs_open(_handle, kvs_name, cVec.getCount(), cVec.getCVec(), &kvsH);
     kvs_out = (KVSHandle)kvsH;
     return st;
 }
@@ -112,8 +117,9 @@ Status KVDBImpl::kvdb_free_names(char** kvsv) {
     return Status();
 }
 
-Status KVDBImpl::kvdb_kvs_make(const char* kvs_name, struct hse_params* params) {
-    return Status(::hse_kvdb_kvs_make(_handle, kvs_name, params));
+Status KVDBImpl::kvdb_kvs_make(const char* kvs_name, const vector<string>& params) {
+    CStyleStrVec cVec{params};
+    return Status(::hse_kvdb_kvs_make(_handle, kvs_name, cVec.getCount(), cVec.getCVec()));
 }
 
 Status KVDBImpl::kvdb_kvs_drop(const char* kvs_name) {
@@ -352,14 +358,6 @@ Status KVDBImpl::kvdb_sync() {
     return Status{ret};
 }
 
-Status KVDBImpl::kvdb_params_from_file(struct hse_params* params, const string& filePath) {
-    return Status(::hse_params_from_file(params, filePath.c_str()));
-}
-
-Status KVDBImpl::kvdb_params_set(struct hse_params* params, const string& key, const string& val) {
-    return Status(::hse_params_set(params, key.c_str(), val.c_str()));
-};
-
 // The sub_txn ops below are used in lieu of not-txnal ops where snapshot isolation is not
 // required. This is so since we use only transaction enabled KVSes now.
 Status KVDBImpl::kvs_sub_txn_put(KVSHandle handle, const KVDBData& key, const KVDBData& val) {
@@ -411,4 +409,4 @@ Status KVDBImpl::kvs_sub_txn_prefix_delete(KVSHandle handle, const KVDBData& pre
 
     return ret;
 }
-}
+}  // namespace hse

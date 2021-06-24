@@ -68,7 +68,7 @@ public:
         }
 
         auto engine =
-            new KVDBEngine(params.dbpath + "/db", params.dur, formatVersion, params.readOnly);
+            new KVDBEngine(params.dbpath + "/hse", params.dur, formatVersion, params.readOnly);
 
         if (kvdbGlobalOptions.getMetricsEnabled()) {
             KVDBStat::enableStatsGlobally(true);
@@ -161,4 +161,4 @@ MONGO_INITIALIZER_WITH_PREREQUISITES(KVDBEngineInit, ("SetGlobalEnvironment"))
     getGlobalServiceContext()->registerStorageEngine(kKVDBEngineName, new KVDBFactory());
     return Status::OK();
 }
-}
+}  // namespace mongo

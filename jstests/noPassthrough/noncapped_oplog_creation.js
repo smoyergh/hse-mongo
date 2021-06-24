@@ -1,12 +1,4 @@
 /**
- *    SPDX-License-Identifier: AGPL-3.0-only
- *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
- *
- *    This code is derived from and modifies the MongoDB project.
- */
-
-/**
  * Test that the server returns an error response for operations that attempt to create a non-capped
  * oplog collection.
  */
@@ -15,13 +7,6 @@
 
     var dbpath = MongoRunner.dataPath + 'noncapped_oplog_creation';
     resetDbpath(dbpath);
-    if (jsTest.options().storageEngine == 'hse') {
-        resetKvdb(TestData.hse,
-                  TestData.mpool,
-                  TestData.vg,
-                  MongoRunner.toRealKvdbName(dbpath, {}),
-                  TestData.hseKvdbCParams);
-    }
 
     var conn = MongoRunner.runMongod({
         dbpath: dbpath,

@@ -1,11 +1,3 @@
-/**
- *    SPDX-License-Identifier: AGPL-3.0-only
- *
- *    Copyright (C) 2017-2020 Micron Technology, Inc.
- *
- *    This code is derived from and modifies the MongoDB project.
- */
-
 ToolTest = function(name, extraOptions) {
     this.name = name;
     this.options = extraOptions;
@@ -15,32 +7,8 @@ ToolTest = function(name, extraOptions) {
     this.dbpath = this.root + "/";
     this.ext = this.root + "_external/";
     this.extFile = this.root + "_external/a";
-    this.kvdbNamePrefix = MongoRunner.kvdbNamePrefix;
-    this.mpoolName = MongoRunner.mpoolName;
     resetDbpath(this.dbpath);
     resetDbpath(this.ext);
-
-    if (this.options === undefined) {
-        this.options = {};
-    }
-
-    var storageEngine = this.options.storageEngine || jsTestOptions().storageEngine;
-    if (storageEngine === "hse") {
-        this.options.storageEngine = 'hse';
-
-        var pathOpts = {port: this.port};
-
-        var _kvdbName = MongoRunner.toRealKvdbName("$kvdbPrefix-mongod-$port", pathOpts);
-        this.options.hseMpoolName = _kvdbName;
-
-        print("Resetting kvdb '" + this.options.hseMpoolName + "'");
-
-        resetKvdb(jsTestOptions().hse,
-                  jsTestOptions().mpool,
-                  jsTestOptions().vg,
-                  this.options.hseMpoolName,
-                  jsTestOptions().hseParams);
-    }
 };
 
 ToolTest.prototype.startDB = function(coll) {

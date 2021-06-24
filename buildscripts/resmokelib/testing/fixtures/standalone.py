@@ -14,7 +14,6 @@ from __future__ import absolute_import
 
 import os
 import os.path
-import subprocess
 import time
 
 import pymongo
@@ -63,30 +62,9 @@ class MongoDFixture(interface.Fixture):
         storage_engine = config.STORAGE_ENGINE
         if "storageEngine" in self.mongod_options:
             storage_engine = self.mongod_options["storageEngine"]
-
         if storage_engine == "hse":
-            assert config.VOLUME_GROUP
-            self._volume_group = config.VOLUME_GROUP
-
-            self._hse_executable = utils.default_if_none(
-                config.HSE_EXECUTABLE, config.DEFAULT_HSE_EXECUTABLE)
-            self._mpool_executable = utils.default_if_none(
-                config.MPOOL_EXECUTABLE, config.DEFAULT_MPOOL_EXECUTABLE)
-
-            if "hseMpoolName" not in self.mongod_options:
-                pfx = utils.default_if_none(
-                    config.HSE_MPOOL_NAME_PREFIX, config.DEFAULT_HSE_MPOOL_NAME_PREFIX)
-                mpname = "%s.job%d" % (pfx, self.job_num)
-            else:
-                mpname = self.mongod_options["hseMpoolName"]
-
-            self.mongod_options["hseMpoolName"] = mpname
             self.mongod_options["hseCollectionCompression"] = utils.default_if_none(
                 config.HSE_COLL_COMPR, config.DEFAULT_HSE_COLL_COMPR)
-
-            self._hse_mpool_name = mpname
-            self._hse_params = utils.default_if_none(
-                config.HSE_PARAMS, self.mongod_options.get("hseParams"))
 
         self.mongod = None
 
@@ -104,72 +82,6 @@ class MongoDFixture(interface.Fixture):
         if "port" not in self.mongod_options:
             self.mongod_options["port"] = core.network.PortAllocator.next_fixture_port(self.job_num)
         self.port = self.mongod_options["port"]
-
-        storage_engine = config.STORAGE_ENGINE
-        if "storageEngine" in self.mongod_options:
-            storage_engine = self.mongod_options["storageEngine"]
-
-        if storage_engine == 'hse' and not self.preserve_dbpath:
-            #
-            # NOTE: The following utilities must be configured for passwordless
-            #       sudo; see sudoers(5) man page and your /etc/sudoers config
-            #
-            #       - lvcreate
-            #       - lvremove
-            #       - lvs
-            #       - nf
-            #
-            mpname = self._hse_mpool_name
-            lvname = self._hse_mpool_name
-            lvpath = self._make_lv_path(self._volume_group, lvname)
-            lvsize = '50G'
-
-            self.logger.info("Resetting KVDB {}...".format(mpname))
-
-            if not os.path.exists(lvpath):
-                cmd = 'sudo lvcreate -y --size {} {} --name {}'.format(
-                    lvsize, self._volume_group, lvname
-                )
-                self.logger.info(cmd)
-                self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-            else:
-                try:
-                    cmd = 'sudo {} activate {}'.format(self._mpool_executable, mpname)
-                    self.logger.info(cmd)
-                    self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-
-                    cmd = 'sudo {} destroy {}'.format(self._mpool_executable, mpname)
-                    self.logger.info(cmd)
-                    self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-                except subprocess.CalledProcessError as e:
-                    if 'Cannot activate' not in e.output:
-                        raise
-
-            cmd = 'sudo {} create -f {} {} uid={} gid={}'.format(
-                self._mpool_executable, self._hse_mpool_name, lvpath, os.getuid(), os.getgid()
-            )
-            self.logger.info(cmd)
-            self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-
-            cmd = 'sudo {} activate {}'.format(self._mpool_executable, self._hse_mpool_name)
-            self.logger.info(cmd)
-            self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-
-            cmd = 'sudo {} kvdb create {}'.format(self._hse_executable, mpname)
-
-            if self._hse_params:
-                cmd += ' {}'.format(self._hse_params.replace(';', ' '))
-
-            done = False
-            while not done:
-                try:
-                    self.logger.info(cmd)
-                    self.logger.info(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT).decode().strip())
-                    done = True
-                except subprocess.CalledProcessError as e:
-                    if 'temporarily unavailable' not in e.output:
-                        raise
-                    time.sleep(1)
 
         mongod = core.programs.mongod_program(self.logger,
                                               executable=self.mongod_executable,
@@ -240,10 +152,6 @@ class MongoDFixture(interface.Fixture):
                                  exit_code)
 
         return success
-
-    @staticmethod
-    def _make_lv_path(vgname, lvname):
-        return "/dev/mapper/%s-%s" % (vgname.replace('-', '--'), lvname.replace('-', '--'))
 
     def is_running(self):
         return self.mongod is not None and self.mongod.poll() is None

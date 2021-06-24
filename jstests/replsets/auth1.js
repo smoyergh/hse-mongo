@@ -70,7 +70,6 @@ load("jstests/replsets/rslib.js");
         "keyFile": key1_600,
         noCleanData: true,
         dbpath: standaloneOptions.dbpath,
-        hseMpoolName: standaloneOptions.hseMpoolName
     });
     print("start 1 with keyFile");
     rs.start(1, {"keyFile": key1_600});
