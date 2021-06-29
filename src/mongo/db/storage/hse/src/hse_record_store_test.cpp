@@ -67,7 +67,6 @@ public:
 
         _counterManager.reset(new KVDBCounterManager(true));
         _durabilityManager.reset(new KVDBDurabilityManager(_db, false, 0));
-        _compparms = {};
     }
 
     ~KVDBRecordStoreHarnessHelper() {
@@ -89,8 +88,7 @@ public:
                                                   _largeKvs,
                                                   _prefix,
                                                   *_durabilityManager.get(),
-                                                  *_counterManager.get(),
-                                                  _compparms);
+                                                  *_counterManager.get());
     }
 
     std::unique_ptr<RecordStore> newCappedRecordStore(int64_t cappedMaxSize,
@@ -114,8 +112,7 @@ public:
                                                      _prefix,
                                                      *_durabilityManager.get(),
                                                      *_counterManager.get(),
-                                                     cappedMaxSize,
-                                                     _compparms);
+                                                     cappedMaxSize);
 
         } else {
             return stdx::make_unique<KVDBCappedRecordStore>(opCtx.get(),
@@ -128,8 +125,7 @@ public:
                                                             *_durabilityManager.get(),
                                                             *_counterManager.get(),
                                                             cappedMaxSize,
-                                                            cappedMaxDocs,
-                                                            _compparms);
+                                                            cappedMaxDocs);
         }
     }
 
@@ -224,7 +220,6 @@ private:
     std::unique_ptr<KVDBCounterManager> _counterManager;
     uint32_t _prefix;
     string _ident;
-    struct CompParms _compparms;
 };
 
 std::unique_ptr<HarnessHelper> newHarnessHelper() {
@@ -359,7 +354,6 @@ TEST(KVDBRecordStoreTest, Chunker) {
     string strings[num_values];
     RecordId locs[num_values];
     RecordData record;
-    struct CompParms comparms_comp = {ALGO_LZ4, 0, true};
 
     for (i = 0; i < num_values; i++)
         strings[i] = random_string(lengths[i] - 1);
@@ -368,10 +362,6 @@ TEST(KVDBRecordStoreTest, Chunker) {
         num_records = 0;
         length = 0;
 
-        if (test > 0) {
-            KVDBRecordStore* rrs = dynamic_cast<KVDBRecordStore*>(rs.get());
-            rrs->setCompParms(comparms_comp);
-        }
         {
             ServiceContext::UniqueOperationContext opCtx(harnessHelper->newOperationContext());
             {
@@ -1683,109 +1673,6 @@ TEST(KVDBRecordStoreTest, OplogBlock_ExceedCappedMaxSize) {
     }
 }
 
-TEST(KVDBRecordStoreTest, leb128) {
-    uint8_t buf[10];
-    uint32_t leb128_bytes;
-    uint64_t val;
-    int i;
-    hse::Status hseSt;
-
-    for (i = 0; i < 127; i++) {
-        val = i;
-        hseSt = hse::encodeLeb128(val, buf, 10, &leb128_bytes);
-        ASSERT_EQ(true, hseSt.ok());
-        ASSERT_EQ(1, static_cast<int>(leb128_bytes));
-
-        hseSt = hse::decodeLeb128(buf, 10, &val, &leb128_bytes);
-        ASSERT_EQ(true, hseSt.ok());
-        ASSERT_EQ(1, static_cast<int>(leb128_bytes));
-        ASSERT_EQ(i, static_cast<int>(val));
-    }
-
-    for (val = 1 << (8 - 1), i = 2; i < 8; i++, val <<= 8) {
-        uint64_t val1 = val;
-
-        hseSt = hse::encodeLeb128(val1, buf, 10, &leb128_bytes);
-        ASSERT_EQ(true, hseSt.ok());
-        ASSERT_EQ(i, static_cast<int>(leb128_bytes));
-        hseSt = hse::decodeLeb128(buf, 10, &val1, &leb128_bytes);
-        ASSERT_EQ(true, hseSt.ok());
-        ASSERT_EQ(i, static_cast<int>(leb128_bytes));
-        ASSERT_EQ(val1, val);
-
-        val1 = val - 1;
-        hseSt = hse::encodeLeb128(val1, buf, 10, &leb128_bytes);
-        ASSERT_EQ(true, hseSt.ok());
-        ASSERT_EQ(i == 2 ? i - 1 : i, static_cast<int>(leb128_bytes));
-        hseSt = hse::decodeLeb128(buf, 10, &val1, &leb128_bytes);
-        ASSERT_EQ(true, hseSt.ok());
-        ASSERT_EQ(i == 2 ? i - 1 : i, static_cast<int>(leb128_bytes));
-        ASSERT_EQ(val1, val - 1);
-    }
-}
-
-TEST(KVDBRecordStoreTest, compress) {
-    struct CompParms compparms = {};
-    KVDBData comp = {};
-    KVDBData unc = {};
-#define BUF_SIZE 1024
-    uint32_t buf[BUF_SIZE];
-    hse::Status hseSt;
-    uint32_t i;
-    uint32_t* ptr;
-    void* unc_buf;
-    size_t unc_len;
-
-    compparms.compalgo = ALGO_NONE;
-    hseSt = hse::compressdata(compparms, (const char*)buf, sizeof(buf), comp);
-    ASSERT_EQ(false, hseSt.ok());
-
-    for (i = 0; i < BUF_SIZE; i++)
-        buf[i] = i;
-
-    compparms.compalgo = ALGO_LZ4;
-    hseSt = hse::compressdata(compparms, (const char*)buf, sizeof(buf), comp);
-    ASSERT_EQ(true, hseSt.ok());
-
-    hseSt = hse::decompressdata(compparms, comp, 0, unc);
-    ASSERT_EQ(true, hseSt.ok());
-    ptr = (uint32_t*)unc.data();
-    for (i = 0; i < BUF_SIZE; i++, ptr++)
-        ASSERT_EQ(i, *ptr);
-
-
-    compparms.compminsize = sizeof(buf);
-    hseSt = hse::compressdata(compparms, (const char*)buf, sizeof(buf), comp);
-    ASSERT_EQ(true, hseSt.ok());
-
-    hseSt = hse::decompressdata(compparms, comp, 0, unc);
-    ASSERT_EQ(true, hseSt.ok());
-    ptr = (uint32_t*)unc.data();
-    for (i = 0; i < BUF_SIZE; i++, ptr++)
-        ASSERT_EQ(i, *ptr);
-
-
-    compparms.compminsize = 0;
-    hseSt = hse::compressdata(compparms, (const char*)buf, sizeof(buf), comp);
-    ASSERT_EQ(true, hseSt.ok());
-
-    hseSt = hse::decompressdata1(compparms, comp.data(), comp.len(), 0, &unc_buf, &unc_len);
-    ASSERT_EQ(true, hseSt.ok());
-    ptr = (uint32_t*)unc_buf;
-    for (i = 0; i < BUF_SIZE; i++, ptr++)
-        ASSERT_EQ(i, *ptr);
-
-
-    compparms.compminsize = sizeof(buf);
-    hseSt = hse::compressdata(compparms, (const char*)buf, sizeof(buf), comp);
-    ASSERT_EQ(true, hseSt.ok());
-
-    hseSt = hse::decompressdata1(compparms, comp.data(), comp.len(), 0, &unc_buf, &unc_len);
-    ASSERT_EQ(true, hseSt.ok());
-    ptr = (uint32_t*)unc_buf;
-    for (i = 0; i < BUF_SIZE; i++, ptr++)
-        ASSERT_EQ(i, *ptr);
-}
 
 // Verify that an oplog block isn't created if it would cause the logical representation of the
 // records to not be in increasing order.

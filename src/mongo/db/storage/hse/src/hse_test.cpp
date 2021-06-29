@@ -365,8 +365,7 @@ TEST_F(KVDBREGTEST, KvdbForwardFullScanTest) {
 
     // Begin a scan
     KVDBData prefix{};
-    const struct CompParms compparms {};
-    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, true, compparms);
+    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, true);
     ASSERT_FALSE(cursor == 0);
 
     // get
@@ -435,8 +434,7 @@ TEST_F(KVDBREGTEST, KvdbPrefixForwardScanTest) {
         KVDBData prefix = item.first;
         int numPrefixes = item.second;
 
-        const struct CompParms compparms {};
-        cursor = create_cursor(_kvsHandles[0], prefix, true, compparms);
+        cursor = create_cursor(_kvsHandles[0], prefix, true);
         ASSERT_FALSE(cursor == 0);
 
         int fCnt = 0;
@@ -517,8 +515,7 @@ TEST_F(KVDBREGTEST, KvdbNormalCursorSeekTest) {
 
     bool eof = false;
     KVDBData prefix{};
-    const struct CompParms compparms {};
-    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, true, compparms);
+    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, true);
     ASSERT_FALSE(cursor == 0);
 
     // Do a seek to added element.
@@ -602,8 +599,7 @@ TEST_F(KVDBREGTEST, KvdbPrefixCursorSeekTest) {
     // Begin a scan
     bool eof = false;
     KVDBData prefix{(const uint8_t*)"3", 1};
-    const struct CompParms compparms {};
-    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, true, compparms);
+    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, true);
     ASSERT_FALSE(cursor == 0);
 
     // Do a seek to added element.
@@ -668,8 +664,7 @@ TEST_F(KVDBREGTEST, KvdbReverseFullScanTest) {
     // Begin a scan
     bool eof = false;
     KVDBData prefix{};
-    const struct CompParms compparms {};
-    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, false, compparms);
+    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, false);
     ASSERT_FALSE(cursor == 0);
 
     // get
@@ -737,8 +732,7 @@ TEST_F(KVDBREGTEST, KvdbPrefixReverseScanTest) {
         KVDBData cKey{};
         KVDBData cVal{};
 
-        const struct CompParms compparms {};
-        hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, false, compparms);
+        hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, false);
         ASSERT_FALSE(cursor == 0);
 
         int fCnt = 0;
@@ -813,8 +807,7 @@ TEST_F(KVDBREGTEST, KvdbReverseCursorSeekTest) {
 
     bool eof = false;
     KVDBData prefix{};
-    const struct CompParms compparms {};
-    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, false, compparms);
+    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, false);
     ASSERT_FALSE(cursor == 0);
 
     // Do a seek to added element.
@@ -902,8 +895,7 @@ TEST_F(KVDBREGTEST, KvdbPrefixReverseCursorSeekTest) {
     KVDBData prefix{(const uint8_t*)"3", 1};
     bool eof = false;
 
-    const struct CompParms compparms {};
-    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, false, compparms);
+    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, false);
     ASSERT_FALSE(cursor == 0);
 
     // Do a seek to added element.
@@ -1026,8 +1018,7 @@ TEST_F(KVDBREGTEST, KvdbUpdateNoTxnTest) {
     ASSERT_EQUALS(0, st.getErrno());
 
     // create cursor
-    const struct CompParms compparms {};
-    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], pref, true, compparms);
+    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], pref, true);
     ASSERT_FALSE(cursor == 0);
 
     // iterate
@@ -1110,8 +1101,7 @@ TEST_F(KVDBREGTEST, KvdbUpdateTxnTest) {
 
 
     // create cursor
-    const struct CompParms compparms {};
-    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], pref, true, compparms);
+    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], pref, true);
     ASSERT_FALSE(cursor == 0);
 
     // iterate
@@ -1208,8 +1198,7 @@ TEST_F(KVDBREGTEST, KvdbDeleteKeyCursorTest) {
 
 
     // create cursor
-    const struct CompParms compparms {};
-    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], pref, true, compparms);
+    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], pref, true);
     ASSERT_FALSE(cursor == 0);
 
     // iterate
@@ -1247,7 +1236,7 @@ TEST_F(KVDBREGTEST, KvdbDeleteKeyCursorTest) {
     ASSERT_EQUALS(0, st.getErrno());
 
     // Recreate the cursor and iterate
-    cursor = create_cursor(_kvsHandles[0], pref, true, compparms);
+    cursor = create_cursor(_kvsHandles[0], pref, true);
     ASSERT_FALSE(cursor == 0);
 
     st = cursor->read(cKey, cVal, eof);
@@ -1293,8 +1282,7 @@ TEST_F(KVDBREGTEST, KvdbDeleteTxnCursorTest) {
 
 
     // create cursor
-    const struct CompParms compparms {};
-    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], pref, true, compparms);
+    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], pref, true);
     ASSERT_FALSE(cursor == 0);
 
     // iterate
@@ -1344,7 +1332,7 @@ TEST_F(KVDBREGTEST, KvdbDeleteTxnCursorTest) {
     delete txn;
 
     // Recreate the cursor and iterate
-    cursor = create_cursor(_kvsHandles[0], pref, true, compparms);
+    cursor = create_cursor(_kvsHandles[0], pref, true);
     ASSERT_FALSE(cursor == 0);
 
     st = cursor->read(cKey, cVal, eof);
@@ -1435,8 +1423,7 @@ TEST_F(KVDBREGTEST, KvdbPrefixDeleteTest) {
 
     // Do a scan
     bool eof = false;
-    const struct CompParms compparms {};
-    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, true, compparms);
+    hse::KvsCursor* cursor = create_cursor(_kvsHandles[0], prefix, true);
     ASSERT_FALSE(cursor == 0);
 
     KVDBData cKey{};
@@ -1451,7 +1438,7 @@ TEST_F(KVDBREGTEST, KvdbPrefixDeleteTest) {
     ASSERT_EQUALS(0, st.getErrno());
 
     // Do a scan
-    cursor = create_cursor(_kvsHandles[0], prefix, true, compparms);
+    cursor = create_cursor(_kvsHandles[0], prefix, true);
     ASSERT_FALSE(cursor == 0);
 
     st = cursor->read(cKey, cVal, eof);

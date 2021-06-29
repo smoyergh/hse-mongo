@@ -350,7 +350,7 @@ class JSTestCase(TestCase):
         global_vars["MongoRunner.dataPath"] = data_path
 
         if config.STORAGE_ENGINE == 'hse':
-            global_vars["MongoRunner.hseCollectionCompression"] = config.HSE_COLL_COMPR
+            global_vars["MongoRunner.hseCompression"] = config.HSE_COMPR
 
         test_data = global_vars.get("TestData", {}).copy()
         test_data["minPort"] = core.network.PortAllocator.min_test_port(fixture.job_num)

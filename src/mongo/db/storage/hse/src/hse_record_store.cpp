@@ -74,155 +74,12 @@ using mongo::BSONObjBuilder;
 using mongo::BSONType;
 using mongo::ErrorCodes;
 
-// Collection configuration namespace
-namespace collconf {
-
-mongo::Status parseOneOption(string left, string right, CompParms& compparms) {
-    std::stringstream ss;
-
-    if (left.compare("compalgo") == 0) {
-        if (right.compare("lz4") == 0)
-            compparms.compalgo = CompAlgo::ALGO_LZ4;
-        else if (right.compare("none") == 0)
-            compparms.compalgo = CompAlgo::ALGO_NONE;
-        else
-            // only lz4 supported for now
-            goto errout;
-    } else if (left.compare("compminsize") == 0) {
-        ss << right;
-        if (ss.fail())
-            goto errout;
-        ss >> std::dec >> compparms.compminsize;
-        if (ss.fail())
-            goto errout;
-    } else {
-        // unknown option
-        goto errout;
-    }
-    return mongo::Status::OK();
-
-errout:
-    return mongo::Status(mongo::ErrorCodes::FailedToParse, left + "=" + right);
-}
-
-// Reads/parses a list of options:
-// <option name>=<option value>,
-// and updates "comppparms".
-//
-mongo::Status collectionCfgString2compParms(const StringData& sd, struct CompParms& compparms) {
-    std::stringstream ss(sd.rawData());
-    std::string s;
-    size_t found;
-
-    compparms = {};
-    while (std::getline(ss, s, ',')) {
-        found = s.find("=");
-        if (found == string::npos)
-            return mongo::Status(mongo::ErrorCodes::FailedToParse, s);
-
-        mongo::Status st =
-            parseOneOption(s.substr(0, found), s.substr(found + 1, string::npos), compparms);
-        if (!st.isOK())
-            return st;
-    }
-    return mongo::Status::OK();
-}
-
-// Parses options from mongod cmdline or config file
-mongo::Status collectionOptions2compParms(const string algo,
-                                          const string compMinSize,
-                                          struct CompParms& compparms) {
-
-    if (algo == "lz4") {
-        compparms.compalgo = CompAlgo::ALGO_LZ4;
-    } else if (algo == "none") {
-        compparms.compalgo = CompAlgo::ALGO_NONE;
-    } else {
-        return mongo::Status(mongo::ErrorCodes::FailedToParse, string("invalid algo: ") + algo);
-    }
-
-    std::stringstream ss{compMinSize};
-    ss >> std::dec >> compparms.compminsize;
-    if (ss.fail()) {
-        return mongo::Status(mongo::ErrorCodes::FailedToParse,
-                             string("invalid compminsize: ") + compMinSize);
-    }
-
-    return mongo::Status::OK();
-}
-
-// options is coming from the create collection command line.
-// option is a BSON obj with one field/element whose name is "configString"
-// The value of this field is list options:
-// <option name>=<option value>,
-mongo::Status validateCollectionOptions(const BSONObj& options, CompParms& compparms) {
-
-    BSONForEach(elem, options) {
-        if (elem.fieldNameStringData() != "configString") {
-            return {ErrorCodes::InvalidOptions,
-                    mongoutils::str::stream() << '\'' << elem.fieldNameStringData() << '\''
-                                              << " should be field configString"};
-        }
-        if (elem.type() != BSONType::String) {
-            return {ErrorCodes::TypeMismatch, "'configString' must be a string."};
-        }
-        StringData config = elem.valueStringData();
-        if (config.size() != strlen(config.rawData())) {
-            return {ErrorCodes::FailedToParse, "malformed 'configString' value."};
-        }
-        mongo::Status st = collectionCfgString2compParms(config, compparms);
-        if (!st.isOK())
-            return st;
-    }
-    return mongo::Status::OK();
-}
-
-// Used to fail gracefully the access to a collection via a old connection binary that
-// does not understand how the collection was compressed (by a newer connector binary).
-#define COMPRESSION_VERSION 1
-
-// Append into the Ident+prefix metadata key/val the compression parameters.
-void compParms2Ident(BSONObjBuilder* configBuilder, CompParms& compparms) {
-    configBuilder->append("compversion", COMPRESSION_VERSION);
-    configBuilder->append("compalgo", static_cast<int32_t>(compparms.compalgo));
-    configBuilder->append("compminsize", static_cast<int32_t>(compparms.compminsize));
-}
-
-// Get the compression parameters from the Ident+prefix metadata key/val
-mongo::Status ident2compParms(const BSONObj& config, CompParms& compparms) {
-    int val;
-
-    compparms = {};  // Initialize to un compressed.
-
-    val = config.getIntField("compversion");
-    if (val == INT_MIN)
-        // "compversion" field absent
-        // old record store not compressed
-        return mongo::Status::OK();
-    if (val > COMPRESSION_VERSION)
-        return mongo::Status(mongo::ErrorCodes::UnsupportedFormat,
-                             "Connector compression version " +
-                                 std::to_string(COMPRESSION_VERSION) +
-                                 " in regards to compressed record store " + std::to_string(val));
-    val = config.getIntField("compalgo");
-    if (val != INT_MIN)
-        compparms.compalgo = static_cast<CompAlgo>(val);
-    val = config.getIntField("compminsize");
-    if (val != INT_MIN)
-        compparms.compminsize = val;
-
-    return mongo::Status::OK();
-}
-
-}  // collconf end
-
 namespace mongo {
 
 namespace {
 static const int RS_RETRIES_ON_CANCELED = 5;
 
 bool _getKey(OperationContext* opctx,
-             const struct CompParms& compparms,
              struct KVDBRecordStoreKey* key,
              const KVSHandle& baseKvs,
              const KVSHandle& chunkKvs,
@@ -234,10 +91,6 @@ bool _getKey(OperationContext* opctx,
     KVDBRecoveryUnit* ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opctx);
     unsigned int val_len;
     bool found;
-    unsigned long uncTotalLen;
-    unsigned int offset;
-    unsigned int off_comp;  // offset from beginning first chunk where the
-                            // compression headers start. May be 0 or 4.
 
     // read compressed first chunk
     KRSK_SET_SUFFIX(*key, loc.repr());
@@ -249,11 +102,7 @@ bool _getKey(OperationContext* opctx,
     if (!found)
         return false;
 
-    updateFraming(compparms, value);
-    uncTotalLen = value.getTotalLen();
-    offset = value.getOffset();
     val_len = _getValueLength(value);
-    off_comp = _getValueOffset(value);
 
     if (val_len > VALUE_META_THRESHOLD_LEN) {
         // The value spans multiple chunks so we will read it all into a large buffer
@@ -291,24 +140,10 @@ bool _getKey(OperationContext* opctx,
         }
 
         invariantHse(largeValue.len() == val_len + VALUE_META_SIZE);
-        invariantHse(value.getNumChunks() == chunk);
+        invariantHse(_getNumChunks(val_len) == chunk);
 
         value = largeValue;
     }
-
-    // If compressed, "value" contain the algo byte +
-    // leb128 bytes + compressed user value.
-    if (compparms.compdoit) {
-        // Decompress the value.
-        KVDBData unc{};
-
-        hse::decompressdata(compparms, value, off_comp, unc);
-
-        value = unc;  // No copy of the data, a move is done.
-    }
-    invariantHse(value.len() == offset + uncTotalLen);
-    // offset below will be used to pass the value to mongo
-    value.setFraming(uncTotalLen, val_len, 0, offset);
 
     return true;
 }
@@ -335,8 +170,7 @@ KVDBRecordStore::KVDBRecordStore(OperationContext* ctx,
                                  KVSHandle& largeKvs,
                                  uint32_t prefix,
                                  KVDBDurabilityManager& durabilityManager,
-                                 KVDBCounterManager& counterManager,
-                                 struct CompParms& compparms)
+                                 KVDBCounterManager& counterManager)
     : RecordStore(ns),
       _db(db),
       _colKvs(colKvs),
@@ -347,8 +181,7 @@ KVDBRecordStore::KVDBRecordStore(OperationContext* ctx,
       _ident(id.toString()),
       _dataSizeKeyKvs(KVDB_prefix + "datasize-" + _ident),
       _storageSizeKeyKvs(KVDB_prefix + "storagesize-" + _ident),
-      _numRecordsKeyKvs(KVDB_prefix + "numrecords-" + _ident),
-      _compparms(compparms) {
+      _numRecordsKeyKvs(KVDB_prefix + "numrecords-" + _ident) {
 
     _prefixValBE = htobe32(_prefixVal);
 
@@ -477,14 +310,13 @@ bool KVDBRecordStore::_baseFindRecord(OperationContext* opctx,
     bool found;
     unsigned int offset;
 
-    found = _getKey(opctx, this->_compparms, key, _colKvs, _largeKvs, loc, val, true);
+    found = _getKey(opctx, key, _colKvs, _largeKvs, loc, val, true);
 
     if (!found)
         return false;
 
-    offset = val.getOffset();
+    offset = _getValueOffset(val);
     uint64_t dataLen = val.len() - offset;
-    invariantHse(val.getTotalLen() == dataLen);
 
     // [HSE_REVISIT] The value is copied from KVDBData to RecordData.
     // Avoid the copy by reading into a pre-allocated SharedBuffer.
@@ -516,8 +348,7 @@ void KVDBRecordStore::_baseDeleteRecord(OperationContext* opctx,
 
     KVDBData oldValue{};
     bool found = false;
-    unsigned long _lenBytes =
-        _compparms.compdoit ? 1 + VALUE_META_SIZE + MAX_BYTES_LEB128 : VALUE_META_SIZE;
+    unsigned long _lenBytes = VALUE_META_SIZE;
 
     hse::Status st = ru->probeVlen(_colKvs, compatKey, oldValue, _lenBytes, found);
     invariantHseSt(st);
@@ -531,8 +362,8 @@ void KVDBRecordStore::_baseDeleteRecord(OperationContext* opctx,
         invariantHse(found);
     }
 
-    updateFraming(this->_compparms, oldValue);
-    int chunk, num_chunks = oldValue.getNumChunks();
+    int val_len = _getValueLength(oldValue);
+    int chunk, num_chunks = _getNumChunks(val_len);
     st = ru->del(_colKvs, compatKey);
     invariantHseSt(st);
 
@@ -550,7 +381,7 @@ void KVDBRecordStore::_baseDeleteRecord(OperationContext* opctx,
     }
 
     _changeNumRecords(opctx, -1);
-    _increaseDataStorageSizes(opctx, -oldValue.getTotalLen(), -oldValue.getTotalLenComp());
+    _increaseDataStorageSizes(opctx, -val_len, -val_len);
 }
 
 StatusWith<RecordId> KVDBRecordStore::insertRecord(OperationContext* opctx,
@@ -571,12 +402,11 @@ StatusWith<RecordId> KVDBRecordStore::_baseInsertRecord(OperationContext* opctx,
                                                         const char* data,
                                                         int len) {
     uint32_t num_chunks;
-    int len_comp;
 
-    hse::Status st = _putKey(opctx, key, loc, data, len, &num_chunks, &len_comp);
+    hse::Status st = _putKey(opctx, key, loc, data, len, &num_chunks);
     if (st.ok()) {
         _changeNumRecords(opctx, 1);
-        _increaseDataStorageSizes(opctx, len, len_comp);
+        _increaseDataStorageSizes(opctx, len, len);
     } else {
         return hseToMongoStatus(st);
     }
@@ -654,9 +484,7 @@ hse::Status KVDBRecordStore::_baseUpdateRecord(OperationContext* opctx,
 
     KVDBData oldValue{};
     bool found = false;
-    int new_len_comp;
-    unsigned long _lenBytes =
-        _compparms.compdoit ? 1 + VALUE_META_SIZE + MAX_BYTES_LEB128 : VALUE_META_SIZE;
+    unsigned long _lenBytes = VALUE_META_SIZE;
 
     // getMCo() reads the first chunk and does no de-compress it (if it was
     // compressed). In the case the value required several chunks, the
@@ -678,16 +506,15 @@ hse::Status KVDBRecordStore::_baseUpdateRecord(OperationContext* opctx,
         invariantHse(found);
     }
 
-    updateFraming(this->_compparms, oldValue);
-    oldLen = oldValue.getTotalLen();
+    oldLen = _getValueLength(oldValue);
 
     if (noLenChange && (len != oldLen)) {
         *lenChangeFailure = true;
         return hse::Status{EINVAL};
     }
-    old_nchunks = oldValue.getNumChunks();
+    old_nchunks = _getNumChunks(oldLen);
 
-    st = _putKey(opctx, key, loc, data, len, &new_nchunks, &new_len_comp);
+    st = _putKey(opctx, key, loc, data, len, &new_nchunks);
     if (!st.ok())
         return st;
 
@@ -704,7 +531,7 @@ hse::Status KVDBRecordStore::_baseUpdateRecord(OperationContext* opctx,
         invariantHseSt(st);
     }
 
-    _increaseDataStorageSizes(opctx, len - oldLen, new_len_comp - oldValue.getTotalLenComp());
+    _increaseDataStorageSizes(opctx, len - oldLen, len - oldLen);
 
     // HSE_REVISIT - updateRecord currently treated as a whole app write for accounting.
     _hseAppBytesWrittenCounter.add(len);
@@ -730,7 +557,7 @@ StatusWith<RecordData> KVDBRecordStore::updateWithDamages(
 std::unique_ptr<SeekableRecordCursor> KVDBRecordStore::getCursor(OperationContext* opctx,
                                                                  bool forward) const {
     return stdx::make_unique<KVDBRecordStoreCursor>(
-        opctx, _db, _colKvs, _largeKvs, _prefixVal, forward, this->_compparms);
+        opctx, _db, _colKvs, _largeKvs, _prefixVal, forward);
 };
 
 void KVDBRecordStore::waitForAllEarlierOplogWritesToBeVisible(OperationContext* txn) const {
@@ -858,44 +685,18 @@ void KVDBRecordStore::_resetDataStorageSizes(OperationContext* opctx) {
     ru->resetCounter(_storageSizeKeyID, &_storageSize);
 }
 
-// In the case the value is compressed and is larger than one chunck:
-//  - the overall length of the uncompressed value is placed at the beginning
-//    of the first chunk.
-//  - it is followed by the compressed value.
-// "len_comp" is the size of the whole value (all chunks) as placed on media. Does not includes the
-// 4 bytes length
-// header. If compression is on, includes the compression headers and the compressed value.
-// If compression is off "len_comp" is equal to "len_unc".
 hse::Status KVDBRecordStore::_putKey(OperationContext* opctx,
                                      struct KVDBRecordStoreKey* key,
                                      const RecordId& loc,
-                                     const char* data_unc,
-                                     const int len_unc,
-                                     unsigned int* num_chunks,
-                                     int* len_comp) {
+                                     const char* data,
+                                     const int len,
+                                     unsigned int* num_chunks) {
     __attribute__((aligned(16))) struct KVDBRecordStoreKey chunkKey;
     KVDBRecoveryUnit* ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opctx);
-    const uint8_t* data;
-    int len;
-    KVDBData comp{};
 
     KRSK_SET_SUFFIX(*key, loc.repr());
 
     KVDBData compatKey{key->data, KRSK_KEY_LEN(*key)};
-
-    if (this->_compparms.compdoit) {
-
-        // Compress the value.
-        hse::compressdata(this->_compparms, data_unc, len_unc, comp);
-
-        // Substitute the uncompressed data with the compressed data.
-        data = comp.data();
-        len = comp.len();
-    } else {
-        data = (const uint8_t*)data_unc;
-        len = len_unc;
-    }
-    *len_comp = len;
 
     if (len < VALUE_META_THRESHOLD_LEN) {
         KVDBData val{(uint8_t*)data, (unsigned long)len};
@@ -954,7 +755,7 @@ RecordId KVDBRecordStore::_getLastId() {
     KVDBData compatKey{(uint8_t*)&_prefixValBE, sizeof(_prefixValBE)};
 
     // create a reverse cursor
-    KvsCursor* cursor = new KvsCursor(_colKvs, compatKey, false, 0, this->_compparms);
+    KvsCursor* cursor = new KvsCursor(_colKvs, compatKey, false, 0);
 
     // get the last element, whatever it is
     KVDBData elKey{};
@@ -998,10 +799,8 @@ KVDBCappedRecordStore::KVDBCappedRecordStore(OperationContext* ctx,
                                              KVDBDurabilityManager& durabilityManager,
                                              KVDBCounterManager& counterManager,
                                              int64_t cappedMaxSize,
-                                             int64_t cappedMaxDocs,
-                                             struct CompParms& compparms)
-    : KVDBRecordStore(
-          ctx, ns, id, db, colKvs, largeKvs, prefix, durabilityManager, counterManager, compparms),
+                                             int64_t cappedMaxDocs)
+    : KVDBRecordStore(ctx, ns, id, db, colKvs, largeKvs, prefix, durabilityManager, counterManager),
       _cappedMaxSize(cappedMaxSize),
       _cappedMaxSizeSlack(std::min(cappedMaxSize / 10, int64_t(16 * 1024 * 1024))),
       _cappedMaxDocs(cappedMaxDocs),
@@ -1066,7 +865,7 @@ Status KVDBCappedRecordStore::updateRecord(OperationContext* opctx,
 std::unique_ptr<SeekableRecordCursor> KVDBCappedRecordStore::getCursor(OperationContext* opctx,
                                                                        bool forward) const {
     return stdx::make_unique<KVDBCappedRecordStoreCursor>(
-        opctx, _db, _colKvs, _largeKvs, _prefixVal, forward, *_cappedVisMgr.get(), _compparms);
+        opctx, _db, _colKvs, _largeKvs, _prefixVal, forward, *_cappedVisMgr.get());
 };
 
 void KVDBCappedRecordStore::temp_cappedTruncateAfter(OperationContext* opctx,
@@ -1127,25 +926,24 @@ Status KVDBCappedRecordStore::_cappedDeleteCallbackHelper(OperationContext* opct
     if (!_cappedCallback)
         return Status::OK();
 
-    if (oldValue.getNumChunks()) {
+    int oldValLen = _getValueLength(oldValue);
+    if (_getNumChunks(oldValLen)) {
         // Read all chunks.
 
         KRSK_CLEAR(key);
         _setPrefix(&key, newestOld);
 
-        bool found =
-            _getKey(opctx, this->_compparms, &key, _colKvs, _largeKvs, newestOld, oldValue, true);
+        bool found = _getKey(opctx, &key, _colKvs, _largeKvs, newestOld, oldValue, true);
         invariantHse(found);
     }
 
-    offset = oldValue.getOffset();
-    invariantHse(oldValue.getTotalLen() == oldValue.len() - offset);
+    offset = _getValueOffset(oldValue);
 
     uassertStatusOK(_cappedCallback->aboutToDeleteCapped(
         opctx,
         newestOld,
         RecordData(reinterpret_cast<const char*>(oldValue.data() + offset),
-                   oldValue.getTotalLen() - offset)));
+                   oldValue.len() - offset)));
 
     return Status::OK();
 }
@@ -1170,7 +968,7 @@ Status KVDBCappedRecordStore::_baseCappedDeleteAsNeeded(OperationContext* opctx,
     int64_t numRecords = _numRecords.load() + realRecoveryUnit->getDeltaCounter(_numRecordsKeyID);
 
     int64_t sizeOverCap = (dataSize > _cappedMaxSize) ? dataSize - _cappedMaxSize : 0;
-    int64_t sizeSaved = 0, sizeSavedComp = 0;
+    int64_t sizeSaved = 0;
     int64_t docsOverCap = 0, docsRemoved = 0;
     BSONObj emptyBson;
 
@@ -1192,14 +990,14 @@ Status KVDBCappedRecordStore::_baseCappedDeleteAsNeeded(OperationContext* opctx,
         map<KVDBData, unsigned int> keysToDelete;
         KVDBData prefixKey{(uint8_t*)&_prefixValBE, sizeof(_prefixValBE)};
 
-        st = ru->beginScan(_colKvs, prefixKey, true, &cursor, this->_compparms);
+        st = ru->beginScan(_colKvs, prefixKey, true, &cursor);
         invariantHseSt(st);
 
         while ((sizeSaved < sizeOverCap || docsRemoved < docsOverCap) && (docsRemoved < 20000)) {
             KVDBData elKey{};
             KVDBData elVal{};
             bool eof = false;
-            st = cursor->read(elKey, elVal, eof);  // that updates the framing info
+            st = cursor->read(elKey, elVal, eof);
             invariantHseSt(st);
 
             if (eof)
@@ -1221,10 +1019,9 @@ Status KVDBCappedRecordStore::_baseCappedDeleteAsNeeded(OperationContext* opctx,
             ++docsRemoved;
             KVDBData oldValue = elVal;
 
-            sizeSaved += elVal.getTotalLen();
-            sizeSavedComp += elVal.getTotalLenComp();
+            sizeSaved += _getValueLength(elVal);
             _cappedDeleteCallbackHelper(opctx, oldValue, newestOld);
-            keysToDelete[elKey.clone()] = elVal.getNumChunks();
+            keysToDelete[elKey.clone()] = _getNumChunks(_getValueLength(elVal));
         }
 
         st = ru->endScan(cursor);
@@ -1261,7 +1058,7 @@ Status KVDBCappedRecordStore::_baseCappedDeleteAsNeeded(OperationContext* opctx,
 
         if (docsRemoved > 0) {
             _changeNumRecords(opctx, -docsRemoved);
-            _increaseDataStorageSizes(opctx, -sizeSaved, -sizeSavedComp);
+            _increaseDataStorageSizes(opctx, -sizeSaved, -sizeSaved);
             wuow.commit();
         }
     } catch (const WriteConflictException& wce) {
@@ -1340,8 +1137,7 @@ KVDBOplogStore::KVDBOplogStore(OperationContext* opctx,
                                uint32_t prefix,
                                KVDBDurabilityManager& durabilityManager,
                                KVDBCounterManager& counterManager,
-                               int64_t cappedMaxSize,
-                               struct CompParms& compparms)
+                               int64_t cappedMaxSize)
     : KVDBCappedRecordStore(opctx,
                             ns,
                             id,
@@ -1352,8 +1148,7 @@ KVDBOplogStore::KVDBOplogStore(OperationContext* opctx,
                             durabilityManager,
                             counterManager,
                             cappedMaxSize,
-                            -1,
-                            compparms) {
+                            -1) {
 
     _durabilityManager.setOplogVisibilityManager(_cappedVisMgr.get());
 
@@ -1466,15 +1261,8 @@ Status KVDBOplogStore::updateRecord(OperationContext* opctx,
 
 std::unique_ptr<SeekableRecordCursor> KVDBOplogStore::getCursor(OperationContext* opctx,
                                                                 bool forward) const {
-    return stdx::make_unique<KVDBOplogStoreCursor>(opctx,
-                                                   _db,
-                                                   _colKvs,
-                                                   _largeKvs,
-                                                   _prefixVal,
-                                                   forward,
-                                                   *_cappedVisMgr.get(),
-                                                   _opBlkMgr,
-                                                   _compparms);
+    return stdx::make_unique<KVDBOplogStoreCursor>(
+        opctx, _db, _colKvs, _largeKvs, _prefixVal, forward, *_cappedVisMgr.get(), _opBlkMgr);
 };
 
 void KVDBOplogStore::waitForAllEarlierOplogWritesToBeVisible(OperationContext* opctx) const {
@@ -1538,7 +1326,7 @@ boost::optional<RecordId> KVDBOplogStore::oplogStartHack(OperationContext* opctx
 
     KVDBData compatKey{(const uint8_t*)&olScanKey, sizeof(olScanKey)};
     KvsCursor* cursor = 0;
-    st = ru->beginScan(_colKvs, compatKey, true, &cursor, this->_compparms);
+    st = ru->beginScan(_colKvs, compatKey, true, &cursor);
     invariantHseSt(st);
 
     bool eof = false;
@@ -1681,15 +1469,13 @@ KVDBRecordStoreCursor::KVDBRecordStoreCursor(OperationContext* opctx,
                                              KVSHandle& colKvs,
                                              KVSHandle& largeKvs,
                                              uint32_t prefix,
-                                             bool forward,
-                                             const struct CompParms& compparms)
+                                             bool forward)
     : _opctx(opctx),
       _db(db),
       _colKvs(colKvs),
       _largeKvs(largeKvs),
       _prefixVal(prefix),
-      _forward(forward),
-      _compparms(compparms) {
+      _forward(forward) {
     _prefixValBE = htobe32(_prefixVal);
     if (_forward)
         _lastPos = RecordId(0);
@@ -1749,13 +1535,12 @@ boost::optional<Record> KVDBRecordStoreCursor::seekExact(const RecordId& id) {
     bool found = false;
     unsigned int offset;
 
-    found = _getKey(_opctx, this->_compparms, &key, _colKvs, _largeKvs, id, _seekVal, true);
+    found = _getKey(_opctx, &key, _colKvs, _largeKvs, id, _seekVal, true);
     if (!found)
         return {};
 
-    offset = _seekVal.getOffset();
+    offset = _getValueOffset(_seekVal);
     unsigned int dataLen = _seekVal.len() - offset;
-    invariantHse(_seekVal.getTotalLen() == dataLen);
 
     _eof = false;
     _lastPos = id;
@@ -1825,21 +1610,21 @@ boost::optional<Record> KVDBRecordStoreCursor::_curr(bool use_txn) {
     }
 
     _lastPos = loc;
-    if (elVal.getNumChunks()) {
+    int valLen = _getValueLength(elVal);
+    if (_getNumChunks(valLen)) {
         // The value is "large", so we switch to the get interface to read its contents
         KRSK_CLEAR(key);
         _krskSetPrefixFromKey(key, elKey);
-        found =
-            _getKey(_opctx, this->_compparms, &key, _colKvs, _largeKvs, loc, _largeVal, use_txn);
+        found = _getKey(_opctx, &key, _colKvs, _largeKvs, loc, _largeVal, use_txn);
         invariantHse(found);
         elVal = _largeVal;
     }
 
-    offset = elVal.getOffset();
+    offset = _getValueOffset(elVal);
 
     int dataLen = elVal.len() - offset;
 
-    invariantHse(elVal.getTotalLen() == static_cast<unsigned int>(dataLen));
+    invariantHse(_getValueLength(elVal) == static_cast<unsigned int>(dataLen));
 
     _hseAppBytesReadCounter.add(dataLen);
 
@@ -1853,7 +1638,7 @@ KvsCursor* KVDBRecordStoreCursor::_getMCursor() {
     if (!_cursorValid) {
         KVDBData compatKey{(uint8_t*)&_prefixValBE, sizeof(_prefixValBE)};
 
-        st = ru->beginScan(_colKvs, compatKey, _forward, &_mCursor, this->_compparms);
+        st = ru->beginScan(_colKvs, compatKey, _forward, &_mCursor);
         invariantHseSt(st);
         _cursorValid = true;
         _needSeek =
@@ -1896,9 +1681,8 @@ KVDBCappedRecordStoreCursor::KVDBCappedRecordStoreCursor(OperationContext* opctx
                                                          KVSHandle& largeKvs,
                                                          uint32_t prefix,
                                                          bool forward,
-                                                         KVDBCappedVisibilityManager& cappedVisMgr,
-                                                         const struct CompParms& compparms)
-    : KVDBRecordStoreCursor(opctx, db, colKvs, largeKvs, prefix, forward, compparms),
+                                                         KVDBCappedVisibilityManager& cappedVisMgr)
+    : KVDBRecordStoreCursor(opctx, db, colKvs, largeKvs, prefix, forward),
       _cappedVisMgr(cappedVisMgr) {}
 
 KVDBCappedRecordStoreCursor::~KVDBCappedRecordStoreCursor() {}
@@ -1984,10 +1768,8 @@ KVDBOplogStoreCursor::KVDBOplogStoreCursor(OperationContext* opctx,
                                            uint32_t prefix,
                                            bool forward,
                                            KVDBCappedVisibilityManager& cappedVisMgr,
-                                           shared_ptr<KVDBOplogBlockManager> opBlkMgr,
-                                           const struct CompParms& compparms)
-    : KVDBCappedRecordStoreCursor(
-          opctx, db, colKvs, largeKvs, prefix, forward, cappedVisMgr, compparms),
+                                           shared_ptr<KVDBOplogBlockManager> opBlkMgr)
+    : KVDBCappedRecordStoreCursor(opctx, db, colKvs, largeKvs, prefix, forward, cappedVisMgr),
       _readUntilForOplog(RecordId()),
       _opBlkMgr{opBlkMgr} {
     _hseOplogCursorCreateCounter.add();
@@ -2022,12 +1804,12 @@ boost::optional<Record> KVDBOplogStoreCursor::seekExact(const RecordId& id) {
 
     // An oplog cursor must be able to see everything committed so far. Use an unbound get.
     // There may already be an active txn in this recovery unit. Do not bind to it.
-    found = _getKey(_opctx, this->_compparms, &key, _colKvs, _largeKvs, id, _seekVal, false);
+    found = _getKey(_opctx, &key, _colKvs, _largeKvs, id, _seekVal, false);
     if (!found)
         return {};
 
-    offset = _seekVal.getOffset();
-    invariantHse(_seekVal.getTotalLen() == _seekVal.len() - offset);
+    offset = _getValueOffset(_seekVal);
+    invariantHse(_getValueLength(_seekVal) == _seekVal.len() - offset);
 
     _eof = false;
     _lastPos = id;
@@ -2095,7 +1877,7 @@ KvsCursor* KVDBOplogStoreCursor::_getMCursor() {
 
         // We must update _oplogReadUntil before we create or update a cursor.
         // An oplog cursor must be unbound in order to see everything committed so far.
-        st = ru->beginOplogScan(_colKvs, compatKey, _forward, &_mCursor, this->_compparms);
+        st = ru->beginOplogScan(_colKvs, compatKey, _forward, &_mCursor);
         invariantHseSt(st);
         _cursorValid = true;
         _needSeek =

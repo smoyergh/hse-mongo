@@ -32,7 +32,7 @@ DEFAULT_MONGOS_EXECUTABLE = os.path.join(os.curdir, "mongos")
 DEFAULT_DBPATH_PREFIX = os.path.normpath("/data/db")
 
 # Default compression
-DEFAULT_HSE_COLL_COMPR = "lz4"
+DEFAULT_HSE_COMPR = "lz4"
 
 # Subdirectory under the dbpath prefix that contains directories with data files of mongod's started
 # by resmoke.py.
@@ -83,8 +83,8 @@ DEFAULTS = {
     "wiredTigerCollectionConfigString": None,
     "wiredTigerEngineConfigString": None,
     "wiredTigerIndexConfigString": None,
-    "hseCollectionCompression": None,
-    "hseCollectionCompressionMinBytes": None,
+    "hseCompression": None,
+    "hseCompressionMinBytes": None,
     "continueOnCrash": False,
 }
 

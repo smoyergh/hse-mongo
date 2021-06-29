@@ -66,12 +66,8 @@ int FIB_LEN = 6;
 // KVDB interface
 namespace hse {
 
-KvsCursor* create_cursor(KVSHandle kvs,
-                         KVDBData& prefix,
-                         bool forward,
-                         const struct CompParms& compparms,
-                         ClientTxn* lnkd_txn) {
-    return new KvsCursor(kvs, prefix, forward, lnkd_txn, compparms);
+KvsCursor* create_cursor(KVSHandle kvs, KVDBData& prefix, bool forward, ClientTxn* lnkd_txn) {
+    return new KvsCursor(kvs, prefix, forward, lnkd_txn);
 }
 
 void KvsCursor::_kvs_cursor_create(ClientTxn* lnkd_txn) {
@@ -120,11 +116,7 @@ void KvsCursor::_kvs_cursor_create(ClientTxn* lnkd_txn) {
     }
 }
 
-KvsCursor::KvsCursor(KVSHandle handle,
-                     KVDBData& prefix,
-                     bool forward,
-                     ClientTxn* lnkd_txn,
-                     const struct CompParms& compparms)
+KvsCursor::KvsCursor(KVSHandle handle, KVDBData& prefix, bool forward, ClientTxn* lnkd_txn)
     : _kvs((struct hse_kvs*)handle),
       _pfx(prefix),
       _forward(forward),
@@ -137,12 +129,7 @@ KvsCursor::KvsCursor(KVSHandle handle,
       _kvs_seek_key(0),
       _kvs_seek_klen(0),
       _kvs_val(0),
-      _kvs_vlen(0),
-      _kvs_num_chunks(0),
-      _offset(0),
-      _total_len(0),
-      _kvs_total_len_comp(0),
-      _compparms(compparms) {
+      _kvs_vlen(0) {
     _kvs_cursor_create(lnkd_txn);
 }
 
@@ -226,7 +213,6 @@ Status KvsCursor::read(KVDBData& key, KVDBData& val, bool& eof) {
     if (!eof) {
         key = KVDBData((const uint8_t*)_kvs_key, (int)_kvs_klen);
         val = KVDBData((const uint8_t*)_kvs_val, (int)_kvs_vlen);
-        val.setFraming(_total_len, _kvs_total_len_comp, _kvs_num_chunks, _offset);
     }
 
     return 0;
@@ -246,38 +232,6 @@ int KvsCursor::_read_kvs(bool& eof) {
     _hseKvsCursorReadLatency.end(lt);
 
     eof = _eof;
-    if (st.ok() && !_eof) {
-        unsigned int off_comp;
-
-        computeFraming((const uint8_t*)_kvs_val,
-                       _kvs_vlen,
-                       this->_compparms,
-                       &_total_len,
-                       &_kvs_total_len_comp,
-                       &_kvs_num_chunks,
-                       &_offset,
-                       &off_comp);
-
-        // If the value is across several chunks, it is not possible to
-        // decompress the first chunk only. Because the compression of the
-        // whole value is done before the chunking.
-        if (this->_compparms.compdoit && !_kvs_num_chunks) {
-            void* kvs_val;
-            size_t kvs_len;
-
-            st = decompressdata1(
-                this->_compparms, _kvs_val, _kvs_vlen, off_comp, &kvs_val, &kvs_len);
-            if (st.ok()) {
-                _kvs_val = kvs_val;
-                _kvs_vlen = kvs_len;
-                // Free the old _kvs_val buffer and attach the new one to _uncompressed_val.
-                _uncompressed_val.reset(static_cast<unsigned char*>(kvs_val));
-            } else {
-                return EILSEQ;
-            }
-        }
-    }
-
     return st.getErrno();
 }
 

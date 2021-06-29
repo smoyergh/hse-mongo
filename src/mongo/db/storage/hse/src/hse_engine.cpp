@@ -129,30 +129,16 @@ Status KVDBEngine::createRecordStore(OperationContext* opCtx,
                                      const CollectionOptions& options) {
     BSONObjBuilder configBuilder;
     KVDBIdentType iType = NamespaceString::oplog(ns) ? KVDBIdentType::OPLOG : KVDBIdentType::COLL;
-    CompParms compparms = {};
 
-    // Get the compression options from mongodb for this recordstore.
     // The options are in a BSON whose name is "hse".
     BSONObj engine = options.storageEngine.getObjectField("hse");
 
-    if (engine.isEmpty()) {
-        // If no compression option where provided at the time of the
-        // collection creation, use the global options.
-        Status st = collconf::collectionOptions2compParms(
-            kvdbGlobalOptions.getCollectionCompressionStr(),
-            kvdbGlobalOptions.getCollectionCompressionMinBytesStr(),
-            compparms);
-        if (!st.isOK())
-            return st;
 
-    } else {
-        // The collection creation is passing some storage engine options.
-        Status st = collconf::validateCollectionOptions(engine, compparms);
-        if (!st.isOK())
-            return st;
+    if (!engine.isEmpty()) {
+        // HSE_REVIST: TBD when we have put options for compression.
     }
 
-    return _createIdent(opCtx, ident, iType, compparms, &configBuilder);
+    return _createIdent(opCtx, ident, iType, &configBuilder);
 }
 
 std::unique_ptr<RecordStore> KVDBEngine::getRecordStore(OperationContext* opCtx,
@@ -166,22 +152,11 @@ std::unique_ptr<RecordStore> KVDBEngine::getRecordStore(OperationContext* opCtx,
 
     KVDBDurabilityManager& durRef = *(_durabilityManager.get());
     KVDBCounterManager& counterRef = *(_counterManager.get());
-    struct CompParms compparms = {};
 
-
-    // The compression parameters are stored in the connector metadata BSON
-    // keyed with "meta-"<ident>. Get them from there.
-    Status st = collconf::ident2compParms(config, compparms);
-    if (!st.isOK())
-        //  This binary doesn't understand how the record store was compressed
-        return std::unique_ptr<RecordStore>{};
-
-    // Determine if this recordstore is compressed or not
-    hse::compressneeded(NamespaceString::oplog(ns), compparms);
 
     if (!colOpts.capped) {
         recordStore = stdx::make_unique<KVDBRecordStore>(
-            opCtx, ns, ident, _db, _mainKvs, _largeKvs, prefix, durRef, counterRef, compparms);
+            opCtx, ns, ident, _db, _mainKvs, _largeKvs, prefix, durRef, counterRef);
     } else {
         int64_t cappedMaxSize = colOpts.cappedSize ? colOpts.cappedSize : 4096;
         int64_t cappedMaxDocs = colOpts.cappedMaxDocs ? colOpts.cappedMaxDocs : -1;
@@ -197,8 +172,7 @@ std::unique_ptr<RecordStore> KVDBEngine::getRecordStore(OperationContext* opCtx,
                                                                    durRef,
                                                                    counterRef,
                                                                    cappedMaxSize,
-                                                                   cappedMaxDocs,
-                                                                   compparms);
+                                                                   cappedMaxDocs);
         } else {
             invariantHse(colOpts.capped);
             std::unique_ptr<KVDBOplogStore> oplogRs =
@@ -211,8 +185,7 @@ std::unique_ptr<RecordStore> KVDBEngine::getRecordStore(OperationContext* opCtx,
                                                   prefix,
                                                   durRef,
                                                   counterRef,
-                                                  cappedMaxSize,
-                                                  compparms);
+                                                  cappedMaxSize);
 
             _oplogBlkMgr = oplogRs->getOplogBlkMgr();
             recordStore = std::move(oplogRs);
@@ -231,12 +204,11 @@ Status KVDBEngine::createSortedDataInterface(OperationContext* opCtx,
                                              StringData ident,
                                              const IndexDescriptor* desc) {
     BSONObjBuilder configBuilder;
-    CompParms compparms = {};  // Indexes are not compressed.
     KVDBIdentType iType = desc->unique() ? KVDBIdentType::UNIQINDEX : KVDBIdentType::STDINDEX;
 
     // let index add its own config things
     KVDBIdxBase::generateConfig(&configBuilder, _formatVersion, desc->version());
-    return _createIdent(opCtx, ident, iType, compparms, &configBuilder);
+    return _createIdent(opCtx, ident, iType, &configBuilder);
 }
 
 SortedDataInterface* KVDBEngine::getSortedDataInterface(OperationContext* opCtx,
@@ -493,14 +465,23 @@ void KVDBEngine::_prepareConfig() {
         _kvdbCParams.push_back("storage.staging.path=" + kvdbGlobalOptions.getStagingPathStr());
     }
 
+    string vCompr = kvdbGlobalOptions.getCompressionStr();
+    string vComprMinBytes = kvdbGlobalOptions.getCompressionMinBytesStr();
+
     _kvdbRParams.push_back("txn_timeout=8589934591");
     _kvdbRParams.push_back("dur_intvl_ms=" + std::to_string(ms));
 
     _mainKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
     _mainKvsRParams.push_back("transactions_enable=1");
+    _mainKvsRParams.push_back("value_compression=" + vCompr);
+    _mainKvsRParams.push_back("vcompmin=" + vComprMinBytes);
+
 
     _largeKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
     _largeKvsRParams.push_back("transactions_enable=1");
+    _largeKvsRParams.push_back("value_compression=" + vCompr);
+    _largeKvsRParams.push_back("vcompmin=" + vComprMinBytes);
+
 
     _oplogKvsCParams.push_back("pfx_len=" + std::to_string(OPLOG_PFX_LEN));
     _oplogKvsCParams.push_back("fanout=" + std::to_string(OPLOG_FANOUT));
@@ -515,10 +496,14 @@ void KVDBEngine::_prepareConfig() {
     _uniqIdxKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
     _uniqIdxKvsCParams.push_back("sfx_len=" + std::to_string(DEFAULT_SFX_LEN));
     _uniqIdxKvsRParams.push_back("transactions_enable=1");
+    _uniqIdxKvsRParams.push_back("value_compression=" + vCompr);
+    _uniqIdxKvsRParams.push_back("vcompmin=" + vComprMinBytes);
 
     _stdIdxKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
     _stdIdxKvsCParams.push_back("sfx_len=" + std::to_string(STDIDX_SFX_LEN));
     _stdIdxKvsRParams.push_back("transactions_enable=1");
+    _stdIdxKvsRParams.push_back("value_compression=" + vCompr);
+    _stdIdxKvsRParams.push_back("vcompmin=" + vComprMinBytes);
 }
 
 void KVDBEngine::_setupDb() {
@@ -552,9 +537,8 @@ uint32_t KVDBEngine::_getMaxPrefixInKvs(KVSHandle& kvs) {
 
     // create a reverse cursor
     KvsCursor* cursor;
-    KVDBData kPrefix{(uint8_t*)"", 0};      // no prefix
-    const struct CompParms compparms = {};  // ignoring compression , since we just need key
-    cursor = new KvsCursor(kvs, kPrefix, false, 0, compparms);
+    KVDBData kPrefix{(uint8_t*)"", 0};  // no prefix
+    cursor = new KvsCursor(kvs, kPrefix, false, 0);
     invariantHse(cursor != 0);
 
     KVDBData key{};
@@ -614,8 +598,7 @@ void KVDBEngine::_loadMaxPrefix() {
     KVDBData kPrefix{(uint8_t*)kMetadataPrefix.c_str(), kMetadataPrefix.size()};
     KvsCursor* cursor;
 
-    const struct CompParms compparms = {};  // connector metadata is not compressed.
-    cursor = new KvsCursor(_mainKvs, kPrefix, true, 0, compparms);
+    cursor = new KvsCursor(_mainKvs, kPrefix, true, 0);
     invariantHse(cursor != 0);
 
     KVDBData key{};
@@ -676,7 +659,6 @@ void KVDBEngine::_cleanShutdown() {
 Status KVDBEngine::_createIdent(OperationContext* opCtx,
                                 StringData ident,
                                 KVDBIdentType type,
-                                CompParms& compparms,
                                 BSONObjBuilder* configBuilder) {
     BSONObj config;
     uint32_t prefix = 0;
@@ -690,8 +672,6 @@ Status KVDBEngine::_createIdent(OperationContext* opCtx,
         prefix = ++_maxPrefix;
         configBuilder->append("prefix", static_cast<int32_t>(prefix));
         configBuilder->append("type", static_cast<int32_t>(type));
-        // Add the compression parameters in the connector metadata.
-        collconf::compParms2Ident(configBuilder, compparms);
 
         config = std::move(configBuilder->obj());
     }

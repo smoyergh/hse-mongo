@@ -57,7 +57,6 @@
 #include "hse_recovery_unit.h"
 #include "hse_util.h"
 
-using hse::CompParms;
 using hse::DEFAULT_PFX_LEN;
 using hse::KVDB;
 using hse::KVDBNotImplementedError;
@@ -68,18 +67,6 @@ using mongo::BSONObj;
 using mongo::BSONObjBuilder;
 using mongo::StringData;
 
-namespace collconf {
-
-mongo::Status parseOneOption(string& left, string& right, CompParms& compparms);
-mongo::Status collectionCfgString2compParms(const StringData& sd, struct CompParms& compparms);
-mongo::Status collectionOptions2compParms(const string algo,
-                                          const string compMinSize,
-                                          struct CompParms& compparms);
-mongo::Status validateCollectionOptions(const BSONObj& options, CompParms& compparms);
-void compParms2Ident(BSONObjBuilder* configBuilder, CompParms& compparms);
-mongo::Status ident2compParms(const BSONObj& config, CompParms& compparms);
-
-}  // collconf end
 
 namespace mongo {
 
@@ -111,8 +98,7 @@ public:
                     KVSHandle& largeKvs,
                     uint32_t prefix,
                     KVDBDurabilityManager& durabilityManager,
-                    KVDBCounterManager& counterManager,
-                    struct CompParms& compparms);
+                    KVDBCounterManager& counterManager);
 
     virtual ~KVDBRecordStore();
 
@@ -217,14 +203,6 @@ public:
         return Status::OK();
     }
 
-    virtual const struct CompParms* getCompParms(void) const {
-        return &(this->_compparms);
-    }
-
-    virtual void setCompParms(CompParms& compparms) {
-        _compparms = compparms;
-    }
-
     void updateCounters();  // write counters to kvdb
     void loadCounters();    // read counters from kvdb
 
@@ -267,8 +245,7 @@ protected:
                         const RecordId& loc,
                         const char* data,
                         const int len,
-                        unsigned int* num_chunks,
-                        int* len_comp);
+                        unsigned int* num_chunks);
 
     virtual RecordId _getLastId();
 
@@ -338,8 +315,6 @@ protected:
     // only after the new record store is visible to the connector.
     bool _overTaken{false};
 
-    struct CompParms _compparms;
-
     char _pad[128];
 
     AtomicInt64 _nextIdNum;
@@ -373,8 +348,7 @@ public:
                           KVDBDurabilityManager& durabilityManager,
                           KVDBCounterManager& counterManager,
                           int64_t cappedMaxSize,
-                          int64_t cappedMaxDocs,
-                          struct CompParms& compparms);
+                          int64_t cappedMaxDocs);
 
     virtual ~KVDBCappedRecordStore();
 
@@ -462,8 +436,7 @@ public:
                    uint32_t prefix,
                    KVDBDurabilityManager& durabilityManager,
                    KVDBCounterManager& counterManager,
-                   int64_t cappedMaxSize,
-                   struct CompParms& compparms);
+                   int64_t cappedMaxSize);
 
     virtual ~KVDBOplogStore();
 
@@ -576,8 +549,7 @@ public:
                           KVSHandle& colKvs,
                           KVSHandle& largeKvs,
                           uint32_t prefix,
-                          bool forward,
-                          const struct CompParms& compparms);
+                          bool forward);
 
     virtual ~KVDBRecordStoreCursor();
 
@@ -631,8 +603,6 @@ protected:
     KVDBData _seekVal{};
     KVDBData _largeVal{};
     RecordId _lastPos{};
-
-    struct CompParms _compparms;
 };
 
 class KVDBCappedRecordStoreCursor : public KVDBRecordStoreCursor {
@@ -643,8 +613,7 @@ public:
                                 KVSHandle& largeKvs,
                                 uint32_t prefix,
                                 bool forward,
-                                KVDBCappedVisibilityManager& cappedVisMgr,
-                                const struct CompParms& compparms);
+                                KVDBCappedVisibilityManager& cappedVisMgr);
 
     virtual ~KVDBCappedRecordStoreCursor();
 
@@ -677,8 +646,7 @@ public:
                          uint32_t prefix,
                          bool forward,
                          KVDBCappedVisibilityManager& cappedVisMgr,
-                         shared_ptr<KVDBOplogBlockManager> opBlkMgr,
-                         const struct CompParms& compparms);
+                         shared_ptr<KVDBOplogBlockManager> opBlkMgr);
 
     virtual ~KVDBOplogStoreCursor();
 
