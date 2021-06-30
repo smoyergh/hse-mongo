@@ -472,7 +472,7 @@ boost::optional<IndexKeyEntry> KVDBIdxStdCursor::_pointGet(const BSONObj& key,
     pkey.append(_query.getBuffer(), _query.getSize());
     KVDBData pfx{(const uint8_t*)pkey.c_str(), pkey.size()};
 
-    _mKey.createOwned(HSE_KVS_KLEN_MAX);
+    _mKey.createOwned(HSE_KVS_KEY_LEN_MAX);
     _mVal.createOwned(KeyString::TypeBits::kMaxBytesNeeded + 1);
 
     auto st = ru->prefixGet(_idxKvs, pfx, _mKey, _mVal, found);
@@ -502,7 +502,7 @@ bool KVDBIdxStdCursor::_needCursorAfterUpdate() {
 
     KVDBData pfx{(const uint8_t*)pkey.c_str(), pkey.size()};
     KVDBData k, v;
-    k.createOwned(HSE_KVS_KLEN_MAX);
+    k.createOwned(HSE_KVS_KEY_LEN_MAX);
 
     auto st = ru->prefixGet(_idxKvs, pfx, k, v, found);
     invariantHseSt(st);

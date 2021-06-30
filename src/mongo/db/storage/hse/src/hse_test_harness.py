@@ -51,7 +51,7 @@ import sys
 
 from subprocess import Popen, PIPE
 
-_HSEBIN = '/opt/hse-1/bin/hse1'
+_HSEBIN = '/opt/hse/bin/hse'
 _KVDB_HOME = '/var/tmp/mongo-ut-kvdbs/kvdb1'
 _DEVICE_LIST = []
 

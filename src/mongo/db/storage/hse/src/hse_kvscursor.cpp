@@ -53,8 +53,6 @@ using hse_stat::_hseKvsCursorCreateLatency;
 using hse_stat::_hseKvsCursorCreateCounter;
 using hse_stat::_hseKvsCursorReadLatency;
 using hse_stat::_hseKvsCursorReadCounter;
-using hse_stat::_hseKvsCursorUpdateLatency;
-using hse_stat::_hseKvsCursorUpdateCounter;
 using hse_stat::_hseKvsCursorDestroyLatency;
 using hse_stat::_hseKvsCursorDestroyCounter;
 
@@ -71,22 +69,16 @@ KvsCursor* create_cursor(KVSHandle kvs, KVDBData& prefix, bool forward, ClientTx
 }
 
 void KvsCursor::_kvs_cursor_create(ClientTxn* lnkd_txn) {
-    struct hse_kvdb_opspec opspec;
     int retries = 0;
+    int flags = 0;
     unsigned long long sleepTime = 0;
+    struct hse_kvdb_txn *kvdb_txn = nullptr;
 
-    HSE_KVDB_OPSPEC_INIT(&opspec);
+    if (lnkd_txn)
+        kvdb_txn = lnkd_txn->get_kvdb_txn();
 
-    if (lnkd_txn) {
-        // the client is requesting a bound cursor
-        opspec.kop_flags |= HSE_KVDB_KOP_FLAG_BIND_TXN;
-        opspec.kop_flags |= HSE_KVDB_KOP_FLAG_STATIC_VIEW;
-        opspec.kop_txn = lnkd_txn->get_kvdb_txn();
-    }
-
-    if (!_forward) {
-        opspec.kop_flags |= HSE_KVDB_KOP_FLAG_REVERSE;
-    }
+    if (!_forward)
+        flags |= HSE_FLAG_CURSOR_REVERSE;
 
     /* [HSE_REVISIT] This loop retries indefinitely on an EAGAIN. */
     while (true) {
@@ -102,7 +94,7 @@ void KvsCursor::_kvs_cursor_create(ClientTxn* lnkd_txn) {
         _hseKvsCursorCreateCounter.add();
         auto lt = _hseKvsCursorCreateLatency.begin();
         Status st = Status{
-            ::hse_kvs_cursor_create(_kvs, &opspec, (const void*)_pfx.data(), _pfx.len(), &_cursor)};
+            ::hse_kvs_cursor_create(_kvs, flags, kvdb_txn, (const void*)_pfx.data(), _pfx.len(), &_cursor)};
         _hseKvsCursorCreateLatency.end(lt);
         if (st.ok())
             break;
@@ -141,25 +133,7 @@ KvsCursor::~KvsCursor() {
 }
 
 Status KvsCursor::update(ClientTxn* lnkd_txn) {
-    struct hse_kvdb_opspec opspec;
-
-    HSE_KVDB_OPSPEC_INIT(&opspec);
-    if (!_forward) {
-        opspec.kop_flags |= HSE_KVDB_KOP_FLAG_REVERSE;
-    }
-
-    if (lnkd_txn) {
-        opspec.kop_flags |= HSE_KVDB_KOP_FLAG_BIND_TXN;
-        opspec.kop_flags |= HSE_KVDB_KOP_FLAG_STATIC_VIEW;
-        opspec.kop_txn = lnkd_txn->get_kvdb_txn();
-    }
-
-    _hseKvsCursorUpdateCounter.add();
-    auto lt = _hseKvsCursorUpdateLatency.begin();
-    Status st = Status{::hse_kvs_cursor_update(_cursor, &opspec)};
-    _hseKvsCursorUpdateLatency.end(lt);
-    if (st.ok())
-        return st;
+    Status st{};
 
     // Recreating cursor and seeking to last point. Copy out key before destroying the cursor.
     // Skip a key after seek if the last op was a read.
@@ -169,7 +143,7 @@ Status KvsCursor::update(ClientTxn* lnkd_txn) {
     auto seekKey = KVDBData((const uint8_t*)skey, (int)sklen, true);
 
     _hseKvsCursorDestroyCounter.add();
-    lt = _hseKvsCursorDestroyLatency.begin();
+    auto lt = _hseKvsCursorDestroyLatency.begin();
     ::hse_kvs_cursor_destroy(_cursor);
     _hseKvsCursorDestroyLatency.end(lt);
 

@@ -113,9 +113,9 @@ bool _getKey(OperationContext* opctx,
 
         // Allocate space and copy the first chunk just read into the larger buffer.
         largeValue.createOwned(val_len + VALUE_META_SIZE);
-        st = largeValue.copy(value.data(), HSE_KVS_VLEN_MAX);
+        st = largeValue.copy(value.data(), HSE_KVS_VALUE_LEN_MAX);
         invariantHse(st.ok());
-        invariantHse(largeValue.len() == HSE_KVS_VLEN_MAX);
+        invariantHse(largeValue.len() == HSE_KVS_VALUE_LEN_MAX);
 
         uint32_t chunk = 0;
 
@@ -730,8 +730,8 @@ hse::Status KVDBRecordStore::_putKey(OperationContext* opctx,
         KRSK_SET_CHUNK(chunkKey, chunk);
 
         unsigned int chunk_len = (unsigned int)len - written;
-        if (chunk_len > HSE_KVS_VLEN_MAX)
-            chunk_len = HSE_KVS_VLEN_MAX;
+        if (chunk_len > HSE_KVS_VALUE_LEN_MAX)
+            chunk_len = HSE_KVS_VALUE_LEN_MAX;
 
         KVDBData compatKey{chunkKey.data, KRSK_KEY_LEN(chunkKey)};
         KVDBData val{(uint8_t*)data + written, chunk_len};

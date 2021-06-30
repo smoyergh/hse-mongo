@@ -57,7 +57,7 @@ namespace {
 // atomic and hence lives all alone in its own cache line.
 static union alignas(128) { AtomicUInt64 nextSnapshotId{1}; };
 
-thread_local unique_ptr<uint8_t[]> tlsReadBuf{new uint8_t[HSE_KVS_VLEN_MAX]};
+thread_local unique_ptr<uint8_t[]> tlsReadBuf{new uint8_t[HSE_KVS_VALUE_LEN_MAX]};
 }
 
 /* Start  KVDBRecoveryUnit */
@@ -216,9 +216,9 @@ hse::Status KVDBRecoveryUnit::_get(
 
     // Allocate a new buffer if none exists, or if the owned buffer
     // isn't an incomplete chunked buffer (with room to copy more).
-    if (val.getAllocLen() <= HSE_KVS_VLEN_MAX || val.getAllocLen() == val.len()) {
+    if (val.getAllocLen() <= HSE_KVS_VALUE_LEN_MAX || val.getAllocLen() == val.len()) {
         invariantHse(tlsReadBuf);
-        val.setReadBuf(tlsReadBuf.get(), HSE_KVS_VLEN_MAX);
+        val.setReadBuf(tlsReadBuf.get(), HSE_KVS_VALUE_LEN_MAX);
     }
 
     return _kvdb.kvs_get(h, use_txn ? _txn : nullptr, key, val, found);

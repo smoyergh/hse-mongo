@@ -348,8 +348,8 @@ TEST(KVDBRecordStoreTest, Chunker) {
     const int num_values = 5;
     unsigned int lengths[num_values] = {VALUE_META_THRESHOLD_LEN - 1,
                                         VALUE_META_THRESHOLD_LEN,
-                                        HSE_KVS_VLEN_MAX,
-                                        HSE_KVS_VLEN_MAX * 2,
+                                        HSE_KVS_VALUE_LEN_MAX,
+                                        HSE_KVS_VALUE_LEN_MAX * 2,
                                         16 * 1024 * 1024};
     string strings[num_values];
     RecordId locs[num_values];

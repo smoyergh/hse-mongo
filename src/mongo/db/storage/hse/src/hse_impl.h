@@ -64,7 +64,7 @@ public:
         return _handle;
     }
 
-    virtual Status kvdb_get_names(unsigned int* count, char*** kvs_list);
+    virtual Status kvdb_get_names(size_t* count, char*** kvs_list);
 
     virtual Status kvdb_free_names(char** kvsv);
 
