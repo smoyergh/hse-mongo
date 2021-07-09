@@ -46,20 +46,20 @@
 #include <thread>
 
 using namespace std;
-using mongo::warning;
 using hse::Status;
+using mongo::warning;
 
-using hse_stat::_hseKvsCursorCreateLatency;
 using hse_stat::_hseKvsCursorCreateCounter;
-using hse_stat::_hseKvsCursorReadLatency;
-using hse_stat::_hseKvsCursorReadCounter;
-using hse_stat::_hseKvsCursorDestroyLatency;
+using hse_stat::_hseKvsCursorCreateLatency;
 using hse_stat::_hseKvsCursorDestroyCounter;
+using hse_stat::_hseKvsCursorDestroyLatency;
+using hse_stat::_hseKvsCursorReadCounter;
+using hse_stat::_hseKvsCursorReadLatency;
 
 namespace {
 int RETRY_FIB_SEQ_EAGAIN[] = {1, 2, 3, 5, 8, 13};
 int FIB_LEN = 6;
-}
+}  // namespace
 
 // KVDB interface
 namespace hse {
@@ -72,7 +72,7 @@ void KvsCursor::_kvs_cursor_create(ClientTxn* lnkd_txn) {
     int retries = 0;
     int flags = 0;
     unsigned long long sleepTime = 0;
-    struct hse_kvdb_txn *kvdb_txn = nullptr;
+    struct hse_kvdb_txn* kvdb_txn = nullptr;
 
     if (lnkd_txn)
         kvdb_txn = lnkd_txn->get_kvdb_txn();
@@ -93,8 +93,8 @@ void KvsCursor::_kvs_cursor_create(ClientTxn* lnkd_txn) {
 
         _hseKvsCursorCreateCounter.add();
         auto lt = _hseKvsCursorCreateLatency.begin();
-        Status st = Status{
-            ::hse_kvs_cursor_create(_kvs, flags, kvdb_txn, (const void*)_pfx.data(), _pfx.len(), &_cursor)};
+        Status st = Status{::hse_kvs_cursor_create(
+            _kvs, flags, kvdb_txn, (const void*)_pfx.data(), _pfx.len(), &_cursor)};
         _hseKvsCursorCreateLatency.end(lt);
         if (st.ok())
             break;
@@ -216,4 +216,4 @@ Status KvsCursor::save() {
 Status KvsCursor::restore() {
     return 0;
 }
-}
+}  // namespace hse

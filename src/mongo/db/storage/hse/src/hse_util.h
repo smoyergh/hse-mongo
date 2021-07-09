@@ -48,7 +48,7 @@ using mongo::RecordId;
 namespace mongo {
 class KVDBOplogBlockManager;
 class KVDBRecoveryUnit;
-}
+}  // namespace mongo
 
 namespace hse {
 
@@ -241,12 +241,12 @@ inline mongo::Status hseToMongoStatus(const Status& status, const char* prefix =
     } while (false)
 
 
-#define SUB_TXN_OP_RETRY_LOOP_BEGIN               \
-    do {                                          \
-        ClientTxn cTxn{_handle};                  \
-        int retries = 0;                          \
-        while (retries < SUB_TXN_MAX_RETRIES) {   \
-            cTxn.begin();                         \
+#define SUB_TXN_OP_RETRY_LOOP_BEGIN             \
+    do {                                        \
+        ClientTxn cTxn{_handle};                \
+        int retries = 0;                        \
+        while (retries < SUB_TXN_MAX_RETRIES) { \
+            cTxn.begin();                       \
             do
 
 

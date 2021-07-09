@@ -147,7 +147,7 @@ bool _getKey(OperationContext* opctx,
 
     return true;
 }
-}
+}  // namespace
 
 //
 // Implementation of record store classes
@@ -2138,4 +2138,4 @@ void KVDBCappedInsertChange::rollback() {
 //
 // End Implementation of KVDBCappedInsertChange
 //
-}
+}  // namespace mongo

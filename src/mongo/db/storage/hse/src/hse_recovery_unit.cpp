@@ -58,7 +58,7 @@ namespace {
 static union alignas(128) { AtomicUInt64 nextSnapshotId{1}; };
 
 thread_local unique_ptr<uint8_t[]> tlsReadBuf{new uint8_t[HSE_KVS_VALUE_LEN_MAX]};
-}
+}  // namespace
 
 /* Start  KVDBRecoveryUnit */
 KVDBRecoveryUnit::KVDBRecoveryUnit(KVDB& kvdb,
@@ -417,4 +417,4 @@ void KVDBRecoveryUnit::_ensureTxn() {
 }
 
 /* End  KVDBRecoveryUnit */
-}
+}  // namespace mongo

@@ -111,7 +111,7 @@ string makePrefixedKey(const string& prefix, const KeyString& encodedKey) {
     key.append(encodedKey.getBuffer(), encodedKey.getSize());
     return key;
 }
-}
+}  // namespace
 
 /* Start KVDBIdxCursorBase */
 KVDBIdxCursorBase::KVDBIdxCursorBase(OperationContext* opctx,

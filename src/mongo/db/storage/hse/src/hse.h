@@ -80,8 +80,7 @@ public:
         stringstream ss{};
         char buf[300];
         hse_strerror(_err, buf, sizeof(buf));
-        ss << "HSE Error: " << buf << " - #"
-           << this->getErrno() << endl;
+        ss << "HSE Error: " << buf << " - #" << this->getErrno() << endl;
         return ss.str();
     }
 
