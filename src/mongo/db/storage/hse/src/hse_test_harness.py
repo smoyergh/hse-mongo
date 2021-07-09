@@ -130,7 +130,7 @@ def run_test(pwd, test):
     cmdargs = ['MONGO_UT_KVDB_HOME=%s %s/%s' % (_KVDB_HOME, pwd, test), '>>', fname, '2>&1']
     exit_code = _run_cmd(cmdargs, logfile)
 
-    cmdargs = ['%s -C %s kvdb destroy' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
+    cmdargs = ['%s -C %s kvdb drop' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
     logfile.close()
