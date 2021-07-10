@@ -57,12 +57,8 @@ def parse_args():
     default_tarfile = os.path.join(
         MONGO_ROOT, 'hse-mongodb-linux-x86_64-%s.tgz' % VERSION
     )
-    default_hse_header = os.path.join(
-        '/opt/hse-1', 'include', 'hse-1'
-    )
-    default_hse_lib = os.path.join(
-        '/opt/hse-1', 'lib64'
-    )
+    default_hse_header = '/opt/hse/include/hse-2'
+    default_hse_lib = '/opt/hse/lib64'
 
     parser = argparse.ArgumentParser()
 

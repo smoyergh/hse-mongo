@@ -46,8 +46,8 @@
 extern "C" {
 #endif
 
+#define HSE_EXPERIMENTAL
 #include <hse/hse.h>
-#include <hse/hse_experimental.h>
 
 #ifdef __cplusplus
 }
@@ -79,8 +79,8 @@ public:
     string toString() const {
         stringstream ss{};
         char buf[300];
-        ss << "HSE Error: " << hse_err_to_string(_err, buf, sizeof(buf), 0) << " - #"
-           << this->getErrno() << endl;
+        hse_strerror(_err, buf, sizeof(buf));
+        ss << "HSE Error: " << buf << " - #" << this->getErrno() << endl;
         return ss.str();
     }
 
@@ -272,7 +272,7 @@ public:
 
     virtual struct hse_kvdb* kvdb_handle() = 0;
 
-    virtual Status kvdb_get_names(unsigned int* count, char*** kvs_list) = 0;
+    virtual Status kvdb_get_names(size_t* count, char*** kvs_list) = 0;
 
     virtual Status kvdb_free_names(char** kvsv) = 0;
 

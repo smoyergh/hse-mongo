@@ -51,7 +51,7 @@ import sys
 
 from subprocess import Popen, PIPE
 
-_HSEBIN = '/opt/hse-1/bin/hse1'
+_HSEBIN = '/opt/hse/bin/hse'
 _KVDB_HOME = '/var/tmp/mongo-ut-kvdbs/kvdb1'
 _DEVICE_LIST = []
 
@@ -130,7 +130,7 @@ def run_test(pwd, test):
     cmdargs = ['MONGO_UT_KVDB_HOME=%s %s/%s' % (_KVDB_HOME, pwd, test), '>>', fname, '2>&1']
     exit_code = _run_cmd(cmdargs, logfile)
 
-    cmdargs = ['%s -C %s kvdb destroy' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
+    cmdargs = ['%s -C %s kvdb drop' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
     logfile.close()

@@ -48,14 +48,14 @@ using mongo::RecordId;
 namespace mongo {
 class KVDBOplogBlockManager;
 class KVDBRecoveryUnit;
-}
+}  // namespace mongo
 
 namespace hse {
 
 class KvsCursor;
 
 static const int VALUE_META_SIZE = 4;
-static const int VALUE_META_THRESHOLD_LEN = HSE_KVS_VLEN_MAX - VALUE_META_SIZE;
+static const int VALUE_META_THRESHOLD_LEN = HSE_KVS_VALUE_LEN_MAX - VALUE_META_SIZE;
 
 static const std::string KVDB_prefix = string("\0\0\0\0", 4);
 
@@ -241,15 +241,12 @@ inline mongo::Status hseToMongoStatus(const Status& status, const char* prefix =
     } while (false)
 
 
-#define SUB_TXN_OP_RETRY_LOOP_BEGIN               \
-    do {                                          \
-        struct hse_kvdb_opspec opspec;            \
-        ClientTxn cTxn{_handle};                  \
-        HSE_KVDB_OPSPEC_INIT(&opspec);            \
-        int retries = 0;                          \
-        while (retries < SUB_TXN_MAX_RETRIES) {   \
-            cTxn.begin();                         \
-            opspec.kop_txn = cTxn.get_kvdb_txn(); \
+#define SUB_TXN_OP_RETRY_LOOP_BEGIN             \
+    do {                                        \
+        ClientTxn cTxn{_handle};                \
+        int retries = 0;                        \
+        while (retries < SUB_TXN_MAX_RETRIES) { \
+            cTxn.begin();                       \
             do
 
 
@@ -338,7 +335,7 @@ static inline unsigned int _getValueLength(const KVDBData& value) {
 }
 
 static inline unsigned int _getNumChunks(const int len) {
-    return (len + VALUE_META_SIZE - 1) / HSE_KVS_VLEN_MAX;
+    return (len + VALUE_META_SIZE - 1) / HSE_KVS_VALUE_LEN_MAX;
 }
 
 hse::Status _cursorRead(mongo::KVDBRecoveryUnit* ru,

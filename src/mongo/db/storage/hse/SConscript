@@ -135,7 +135,7 @@ def configure(conf, env):
 configure(None, env)
 
 HSE_LIBARRAY = [
-    'hse-1',
+    'hse-2',
 ]
 
 
@@ -159,7 +159,7 @@ env.Library(
         'src/hse_counter_manager.cpp',
         'src/hse_durability_manager.cpp',
         'src/hse_stats.cpp',
-        'src/hse_util.cpp',        
+        'src/hse_util.cpp',
     ],
     LIBDEPS=[
         '$BUILD_DIR/mongo/base',

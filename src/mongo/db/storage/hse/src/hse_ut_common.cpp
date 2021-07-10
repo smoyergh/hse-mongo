@@ -87,7 +87,7 @@ void KVDBTestSuiteFixture::reset() {
 
     // delete all kvses
     char** kvsList = nullptr;
-    unsigned int count = 0;
+    size_t count = 0;
 
     hse::Status st = _db.kvdb_get_names(&count, &kvsList);
     ASSERT_EQUALS(0, st.getErrno());

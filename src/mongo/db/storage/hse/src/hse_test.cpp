@@ -47,7 +47,7 @@ using namespace hse;
 
 namespace {
 
-int MAX_KEY_SIZE = HSE_KVS_KLEN_MAX;
+int MAX_KEY_SIZE = HSE_KVS_KEY_LEN_MAX;
 int MAX_VAL_SIZE = 2048;
 
 int MAX_DB_SIZE = 256;
@@ -212,7 +212,7 @@ Status getcoUtil(KVDB& kvdb,
                  bool& found) {
 
     found = false;
-    val.createOwned(HSE_KVS_VLEN_MAX);
+    val.createOwned(HSE_KVS_VALUE_LEN_MAX);
     return kvdb.kvs_get(kvsHandle, txn, key, val, found);
 }
 }  // namespace
