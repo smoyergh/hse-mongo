@@ -42,6 +42,10 @@
 #include <string>
 #include <vector>
 
+/* HSE runtime home is inteded to be the same as the KVDB home for the purposes
+ * of the HSE connector.
+ */
+
 #ifdef __cplusplus
 extern "C" {
 #endif

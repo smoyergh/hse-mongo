@@ -507,9 +507,6 @@ void KVDBEngine::_prepareConfig() {
 }
 
 void KVDBEngine::_setupDb() {
-    auto st = hse::init();
-    invariantHseSt(st);
-
     namespace fs = boost::filesystem;
     fs::path dbHomePath(_dbHome);
     if (fs::create_directory(dbHomePath))
@@ -517,6 +514,9 @@ void KVDBEngine::_setupDb() {
                         fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exe);
 
     _prepareConfig();
+
+    auto st = hse::init(_dbHome);
+    invariantHseSt(st);
 
     _open_kvdb(_dbHome, _kvdbCParams, _kvdbRParams);
 

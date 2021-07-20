@@ -70,8 +70,8 @@ using hse::CStyleStrVec;
 // KVDB interface
 namespace hse {
 
-Status init() {
-    return Status(::hse_init(0, NULL));
+Status init(const string& home) {
+    return Status(::hse_init(home.c_str(), 0, NULL));
 }
 
 Status fini() {
