@@ -61,7 +61,7 @@ to the standard storage configuration options, as in the following example.
 
     # Standard options
     storage:
-      dbPath: /var/lib/mongo/myDB
+      dbPath: /var/lib/mongo
       journal:
         enabled: true
         commitIntervalMs: 100
@@ -93,8 +93,8 @@ to the standard storage configuration options, as in the following example.
 
 ## MongoDB Data Storage
 
-All MongoDB data is stored in an HSE KVDB.  The parameter `dbPath` specifies
-the MongoDB data directory.  The first time `mongod` starts it creates
+The MongoDB configuration option `dbPath` specifies the MongoDB data directory.
+All MongoDB data is stored in an HSE KVDB.  The first time `mongod` starts it creates
 a KVDB with home directory `<dbPath>/hse` and capacity media class
 `<dbPath>/hse/capacity`.
 
@@ -118,5 +118,6 @@ This version of MongoDB with HSE does not support the following:
 * `fsync` administration command with the lock option, or the
 corresponding `fsyncUnlock` command
 * Read concern "majority"
-* SSL
-
+* `storage.directoryPerDB` configuration value of `true`
+* SSL on some platforms, including RHEL 8 and Ubuntu 18.04, which is unrelated
+to HSE
