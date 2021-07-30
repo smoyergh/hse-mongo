@@ -103,6 +103,10 @@ or added later, via the command-line option `--hseStagingPath` or the
 mongod.conf option `storage.hse.stagingPath`.  If the staging media class
 already exists, these options have no effect.
 
+> **Notice**:  In this HSE 2.0 release candidate the staging media class
+> must be configured the first time `mongod` starts, it cannot be added
+> later.  This limitation will be removed for the final HSE 2.0 release.
+
 
 ## Running MongoDB with HSE
 
