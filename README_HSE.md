@@ -10,24 +10,46 @@ The information provided here is specific to using MongoDB with HSE.
 
 ## Installing HSE
 
-Clone the [hse repo](https://github.com/hse-project/hse)
-and follow the documentation in `README.md` to build and install HSE.
+Clone the [`hse`](https://github.com/hse-project/hse) repo
+and follow the documentation in
+[`README.md`](https://github.com/hse-project/hse/blob/master/README.md)
+to build and install HSE.
 
 You must use HSE version 2.0 or higher.
 
 
 ## Installing MongoDB Dependencies
 
-> TODO: This needs consideration.  The goal is that contributors will
-> port to many platforms and distros, and it is impractical to identify
-> all the resulting dependencies.  What Alex and I discussed as an idea
-> is to provide a list for a few distros (e.g, RHEL 8, Ubuntu 18), and let
-> users figure it out for their specific platform from there.
+Depending on your platform, you may need to install dependencies to
+build MongoDB.  The build tools required are:
+
+* One of GCC 5.3.0 or newer or Clang 3.4 or newer
+* Python 2.7
+* SCons 2.3
+
+You may also need to install certain libraries.  Below are representative
+examples to help you determine what is needed for your particular platform.
+
+### RHEL 8
+
+    $ sudo dnf install python2-pip gcc-toolset-9 libuuid-devel lz4 lz4-devel openssl-devel openssl-devel numactl libpcap libpcap-devel golang-1.11.13 createrepo rpmdevtools
+    $ sudo alternatives --set python /usr/bin/python2
+    $ pip2 install --user scons
+
+### Ubuntu 18.04
+
+    $ sudo apt-get install debhelper rpm golang libpcap-dev
+
+
+> TODO: Validate if this is the minimum list needed for a vanilla
+> RHEL 8 and Ubuntu 18.04 build with scons.  E.g., we can probably
+> eliminate rpmdevtools, rpm, createrepo, and maybe others.
+
 
 
 ## Installing MongoDB with HSE
 
-Clone the [hse-mongo repo](https://github.com/hse-project/hse-mongo)
+Clone the [`hse-mongo`](https://github.com/hse-project/hse-mongo) repo
 and checkout the latest release tag.  Releases are named `rA.B.C.D.E-hse` where
 
 * `A.B.C` is the MongoDB version (e.g., 3.4.17)
@@ -39,12 +61,12 @@ For example
     $ cd hse-mongo
     $ git checkout rA.B.C.D.E-hse
 
-Build with the following command
+Build with the following command, which assumes HSE is installed in
+directory `/opt/hse`:
 
-    $ hse-packaging/build.py --clean
+    $ scons --disable-warnings-as-errors CPPPATH=/opt/hse/include/hse-2 LIBPATH=/opt/hse/lib64 mongod mongos mongo
 
-
-> TODO: Change to native Scons build?  Document manual install?
+The resulting binaries are stored in directory `./build/opt/mongo`.
 
 
 ## Configuring MongoDB Options
@@ -68,15 +90,16 @@ to the standard storage configuration options, as in the following example.
 
     # Use Heterogeneous-memory Storage Engine (HSE). This is the default.
       engine: hse
-      hse:
 
-    # Uncomment to customize compression for HSE.
+    # Uncomment the following to customize HSE configuration options
+    #  hse:
+
     # Allowable compression types are "lz4" or "none". Default is "lz4".
     # Minimum document size to compress in bytes.  Default is zero (0).
     #    compression: none
     #    compressionMinBytes: 0
 
-    # Uncomment to create the optional staging media class.  Default is none.
+    # Create the optional staging media class.  Default is none.
     #    stagingPath:
 
     # Recommended oplog size for HSE when using replica sets.
@@ -94,8 +117,8 @@ to the standard storage configuration options, as in the following example.
 ## MongoDB Data Storage
 
 The MongoDB configuration option `dbPath` specifies the MongoDB data directory.
-All MongoDB data is stored in an HSE KVDB.  The first time `mongod` starts it creates
-a KVDB with home directory `<dbPath>/hse` and capacity media class
+All MongoDB data is stored in an HSE KVDB.  The first time `mongod` starts
+it creates a KVDB with home directory `<dbPath>/hse` and capacity media class
 `<dbPath>/hse/capacity`.
 
 A staging media class can be configured at the time the KVDB is created,
@@ -119,5 +142,5 @@ This version of MongoDB with HSE does not support the following:
 corresponding `fsyncUnlock` command
 * Read concern "majority"
 * `storage.directoryPerDB` configuration value of `true`
-* SSL on some platforms, including RHEL 8 and Ubuntu 18.04, which is unrelated
-to HSE
+* SSL on some platforms, which is unrelated to HSE.  E.g., RHEL 8 and
+Ubuntu 18.04.
