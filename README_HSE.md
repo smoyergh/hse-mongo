@@ -20,8 +20,8 @@ You must use HSE version 2.0 or higher.
 
 ## Installing MongoDB Dependencies
 
-Depending on your platform, you may need to install dependencies to
-build MongoDB.  The build tools required are:
+You may need to install certain tools to build MongoDB on your platform.
+For example, building MongoDB requires:
 
 * One of GCC 5.3.0 or newer or Clang 3.4 or newer
 * Python 2.7
@@ -43,7 +43,8 @@ examples to help you determine what is needed for your particular platform.
 
 > TODO: Validate if this is the minimum list needed for a vanilla
 > RHEL 8 and Ubuntu 18.04 build with scons.  E.g., we can probably
-> eliminate rpmdevtools, rpm, createrepo, and maybe others.
+> eliminate rpmdevtools, rpm, createrepo, and maybe others, but there
+> could be other packages we need to add.
 
 
 
