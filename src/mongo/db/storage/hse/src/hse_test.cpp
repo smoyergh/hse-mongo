@@ -1462,17 +1462,11 @@ TEST_F(KVDBREGTEST, KvdbTransactionTest) {
     st = txn->commit();
     ASSERT_EQUALS(0, st.getErrno());
 
-    st = txn->commit();
-    ASSERT_EQUALS(EINVAL, st.getErrno());
-
     st = txn->begin();
     ASSERT_EQUALS(0, st.getErrno());
 
     st = txn->abort();
     ASSERT_EQUALS(0, st.getErrno());
-
-    st = txn->commit();
-    ASSERT_EQUALS(EINVAL, st.getErrno());
 
     delete txn;
 }
