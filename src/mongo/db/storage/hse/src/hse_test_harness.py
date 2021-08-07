@@ -51,9 +51,8 @@ import sys
 
 from subprocess import Popen, PIPE
 
-_HSEBIN = '/opt/hse/bin/hse'
-_KVDB_HOME = '/var/tmp/mongo-ut-kvdbs/kvdb1'
-_DEVICE_LIST = []
+_HSEBIN = ''
+_KVDB_HOME = ''
 
 def check_for_tests(pwd, tests):
     missing = list()
@@ -75,43 +74,26 @@ def _run_cmd(cmdargs, logfile):
 def test_setup(pwd):
     fname = '%s/setup.out' % (pwd)
     logfile = open(fname, 'w')
-    devlist_str = ' '.join(_DEVICE_LIST)
 
-    harness_vg = 'harness_vg'
-    harness_lv = 'harness_lv'
-
-    cmdargs = [ 'umount %s && rmdir %s' % (_KVDB_HOME,_KVDB_HOME), '>>', fname, '2>&1']
+    cmdargs = ['%s -C %s kvdb drop' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
-    cmdargs = [ 'vgremove -y %s' % (harness_vg), '>>', fname, '2>&1']
-    _run_cmd(cmdargs, logfile)
-    for dev in _DEVICE_LIST:
-        cmdargs = [ 'pvcreate %s' % (dev), '>>', fname, '2>&1']
-        _run_cmd(cmdargs, logfile)
-    cmdargs = [ 'vgcreate %s %s' % (harness_vg, devlist_str), '>>', fname, '2>&1']
+    cmdargs = [ 'mkdir -p  %s' % (_KVDB_HOME), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
-    cmdargs = [ 'lvcreate -y -l 100%FREE --stripes {} --name {} {}'.format(len(_DEVICE_LIST), harness_lv, harness_vg), '>>', fname, '2>&1']
-    _run_cmd(cmdargs, logfile)
-
-    cmdargs = [ 'mkfs -t ext4 -F /dev/%s/%s' % (harness_vg, harness_lv), '>>', fname, '2>&1']
-    _run_cmd(cmdargs, logfile)
-
-    cmdargs = [ 'mkdir -p %s && mount -onoatime /dev/%s/%s %s' % (_KVDB_HOME, harness_vg, harness_lv, _KVDB_HOME), '>>', fname, '2>&1']
-    _run_cmd(cmdargs, logfile)
-
+    cmdargs = [ '%s -C %s kvdb create' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
+    exit_code = _run_cmd(cmdargs, logfile)
+    if exit_code != 0:
+        return exit_code
+    
     logfile.close()
+    return exit_code
 
 def test_teardown(pwd):
     fname = '%s/teardown.out' % (pwd)
     logfile = open(fname, 'w')
 
-    harness_vg = 'harness_vg'
-
-    cmdargs = [ 'umount %s && rmdir %s' % (_KVDB_HOME, _KVDB_HOME), '>>', fname, '2>&1']
-    _run_cmd(cmdargs, logfile)
-
-    cmdargs = [ 'vgremove -y %s' % (harness_vg), '>>', fname, '2>&1']
+    cmdargs = ['%s -C %s kvdb drop' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
     logfile.close()
@@ -122,16 +104,8 @@ def run_test(pwd, test):
 
     exit_code = 0
 
-    cmdargs = [ '%s -C %s kvdb create' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
-    exit_code = _run_cmd(cmdargs, logfile)
-    if exit_code != 0:
-        return exit_code
-
     cmdargs = ['MONGO_UT_KVDB_HOME=%s %s/%s' % (_KVDB_HOME, pwd, test), '>>', fname, '2>&1']
     exit_code = _run_cmd(cmdargs, logfile)
-
-    cmdargs = ['%s -C %s kvdb drop' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
-    _run_cmd(cmdargs, logfile)
 
     logfile.close()
 
@@ -158,7 +132,7 @@ def parse_output(pwd, test):
 
 
 if __name__ == '__main__':
-    usage = "Usage: hse_test_harness build_number hse_bin_path kvdb_home device1 device2 ..."
+    usage = "Usage: hse_test_harness build_number hse_bin_path kvdb_home"
 
     if len(sys.argv) < 4:
         print("Error:  incorrect number of arguments!", file=sys.stderr)
@@ -168,7 +142,6 @@ if __name__ == '__main__':
     build_number = sys.argv[1]
     _HSEBIN = sys.argv[2]
     _KVDB_HOME = sys.argv[3]
-    _DEVICE_LIST = sys.argv[4:]
 
     pwd = os.getcwd()
 
@@ -185,7 +158,10 @@ if __name__ == '__main__':
 
     exit_status = 0
 
-    test_setup(pwd)
+    exit_status = test_setup(pwd)
+    if exit_status != 0:
+        print("Error: test_setup failed!", file=sys.stderr)
+        sys.exit(exit_status)
 
     for t in tests:
         exit_status += int(run_test(pwd, t))
