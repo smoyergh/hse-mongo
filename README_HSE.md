@@ -59,7 +59,7 @@ For example
 
 Build MongoDB with HSE as follows.
 
-    $ scons --disable-warnings-as-errors CPPPATH=/opt/hse/include/hse-2 LIBPATH=/opt/hse/lib64 mongod mongos mongo
+    $ scons -j $(nproc) --disable-warnings-as-errors CPPPATH=/opt/hse/include/hse-2 LIBPATH=/opt/hse/lib64 mongod mongos mongo
 
 The resulting binaries are stored in directory `./build/opt/mongo`.
 
