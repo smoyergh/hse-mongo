@@ -143,3 +143,11 @@ corresponding `fsyncUnlock` command
 * `storage.directoryPerDB` configuration value of `true`
 * SSL on some platforms, which is unrelated to HSE.  E.g., RHEL 8 and
 Ubuntu 18.04.
+
+
+## Storage and Benchmarking Tips
+
+Please see the HSE [project documentation](https://hse-project.github.io/)
+for information on configuring HSE storage and running benchmarks.
+It contains important details on HSE file system requirements, configuration
+options, performance tuning, and best practices for benchmarking.
