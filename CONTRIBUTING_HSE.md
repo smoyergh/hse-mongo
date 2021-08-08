@@ -12,6 +12,6 @@ to any repo in the HSE project.
 
 ## Information on Contributing to this Repo
 
-> TODO: Add build instructions for test tools and tests.  Also document
-> how to test in a way that mimics what is done on each PR.  Contributors
-> should be encouraged to run those same tests prior to submitted a PR.
+Please limit your changes to files in the `hse-mongo/src/mongo/db/storage/hse`
+directory.  We have not modified the MongoDB database itself, only added
+support for HSE.

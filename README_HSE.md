@@ -20,32 +20,27 @@ You must use HSE version 2.0 or higher.
 
 ## Installing MongoDB Dependencies
 
-You may need to install certain tools to build MongoDB on your platform.
-For example, building MongoDB requires:
+Depending on your Linux distribution and environment, you may need to
+install additional packages to build MongoDB.
+For example, building MongoDB requires
 
-* One of GCC 5.3.0 or newer or Clang 3.4 or newer
+* GCC 5.3.0 (or newer) or Clang 3.4 (or newer)
 * Python 2.7
 * SCons 2.3
 
-You may also need to install certain libraries.  Below are representative
-examples to help you determine what is needed for your particular platform.
+To help you with this process, below are examples of the packages required
+for several common Linux distributions.  These are **in addition to**
+the packages required to build HSE.
 
-### RHEL 8
+### RHEL 8 Packages
 
-    $ sudo dnf install python2-pip gcc-toolset-9 libuuid-devel lz4 lz4-devel openssl-devel openssl-devel numactl libpcap libpcap-devel golang-1.11.13 createrepo rpmdevtools
+    $ sudo dnf install lz4-devel
     $ sudo alternatives --set python /usr/bin/python2
     $ pip2 install --user scons
 
-### Ubuntu 18.04
+### Ubuntu 18.04 Packages
 
-    $ sudo apt-get install debhelper rpm golang libpcap-dev
-
-
-> TODO: Validate if this is the minimum list needed for a vanilla
-> RHEL 8 and Ubuntu 18.04 build with scons.  E.g., we can probably
-> eliminate rpmdevtools, rpm, createrepo, and maybe others, but there
-> could be other packages we need to add.
-
+    $ sudo apt install scons liblz4-dev
 
 
 ## Installing MongoDB with HSE
@@ -62,12 +57,15 @@ For example
     $ cd hse-mongo
     $ git checkout rA.B.C.D.E-hse
 
-Build with the following command, which assumes HSE is installed in
-directory `/opt/hse`:
+Build MongoDB with HSE as follows.
 
     $ scons --disable-warnings-as-errors CPPPATH=/opt/hse/include/hse-2 LIBPATH=/opt/hse/lib64 mongod mongos mongo
 
 The resulting binaries are stored in directory `./build/opt/mongo`.
+
+> The `CPPPATH` and `LIBPATH` paths depend on both where you installed HSE
+> and your Linux distribution.  You need to locate these directories to
+> set these variables correctly.
 
 
 ## Configuring MongoDB Options
