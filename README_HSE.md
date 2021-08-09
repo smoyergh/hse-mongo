@@ -34,13 +34,17 @@ the packages required to build HSE.
 
 ### RHEL 8 Packages
 
-    $ sudo dnf install lz4-devel
-    $ sudo alternatives --set python /usr/bin/python2
-    $ pip2 install --user scons
+```shell
+$ sudo dnf install lz4-devel
+$ sudo alternatives --set python /usr/bin/python2
+$ pip2 install --user scons
+```
 
 ### Ubuntu 18.04 Packages
 
-    $ sudo apt install scons liblz4-dev
+```shell
+$ sudo apt install scons liblz4-dev
+```
 
 
 ## Installing MongoDB with HSE
@@ -53,13 +57,17 @@ and checkout the latest release tag.  Releases are named `rA.B.C.D.E-hse` where
 
 For example
 
-    $ git clone https://github.com/hse-project/hse-mongo.git
-    $ cd hse-mongo
-    $ git checkout rA.B.C.D.E-hse
+```shell
+$ git clone https://github.com/hse-project/hse-mongo.git
+$ cd hse-mongo
+$ git checkout rA.B.C.D.E-hse
+```
 
 Build MongoDB with HSE as follows.
 
-    $ scons -j $(nproc) --disable-warnings-as-errors CPPPATH=/opt/hse/include/hse-2 LIBPATH=/opt/hse/lib64 mongod mongos mongo
+```shell
+$ scons -j $(nproc) --disable-warnings-as-errors CPPPATH=/opt/hse/include/hse-2 LIBPATH=/opt/hse/lib64 mongod mongos mongo
+```
 
 The resulting binaries are stored in directory `./build/opt/mongo`.
 
@@ -80,38 +88,39 @@ which are reflected in `mongod --help`.
 These HSE options are also supported in `mongod.conf`, in addition
 to the standard storage configuration options, as in the following example.
 
-    # Standard options
-    storage:
-      dbPath: /var/lib/mongo
-      journal:
-        enabled: true
-        commitIntervalMs: 100
+```yaml
+# Standard options
+storage:
+  dbPath: /var/lib/mongo
+  journal:
+    enabled: true
+    commitIntervalMs: 100
 
-    # Use Heterogeneous-memory Storage Engine (HSE). This is the default.
-      engine: hse
+# Use Heterogeneous-memory Storage Engine (HSE). This is the default.
+  engine: hse
 
-    # Uncomment the following to customize HSE configuration options
-    #  hse:
+# Uncomment the following to customize HSE configuration options
+#  hse:
 
-    # Allowable compression types are "lz4" or "none". Default is "lz4".
-    # Minimum document size to compress in bytes.  Default is zero (0).
-    #    compression: none
-    #    compressionMinBytes: 0
+# Allowable compression types are "lz4" or "none". Default is "lz4".
+# Minimum document size to compress in bytes.  Default is zero (0).
+#    compression: none
+#    compressionMinBytes: 0
 
-    # Create the optional staging media class.  Default is none.
-    #    stagingPath:
+# Create the optional staging media class.  Default is none.
+#    stagingPath:
 
-    # Recommended oplog size for HSE when using replica sets.
-    replication:
-      oplogSizeMB: 32000
-      replSetName: rs1
+# Recommended oplog size for HSE when using replica sets.
+replication:
+  oplogSizeMB: 32000
+  replSetName: rs1
 
-    # Recommended query and other parameters for HSE
-    setParameter:
-      internalQueryExecYieldIterations: 100000
-      internalQueryExecYieldPeriodMS: 1000
-      replWriterThreadCount: 64
-
+# Recommended query and other parameters for HSE
+setParameter:
+  internalQueryExecYieldIterations: 100000
+  internalQueryExecYieldPeriodMS: 1000
+  replWriterThreadCount: 64
+```
 
 ## MongoDB Data Storage
 
