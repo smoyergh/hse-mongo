@@ -1,0 +1,63 @@
+name: Validate Builds
+
+on:
+  push:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  build_ubuntu:
+    runs-on: ubuntu-18.04
+
+    steps:
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install build-essential libbsd-dev gettext autopoint autoconf bison libtool pkg-config openjdk-8-jdk libmicrohttpd-dev liburcu-dev libyaml-dev liblz4-dev curl python3-setuptools
+        sudo apt-get install libmongoc-1.0-0 libbson-1.0-0 libssl-dev libsasl2-dev
+        python3 -m pip install --user setuptools_rust wheel
+        python3 -m pip install --user poetry
+        python -m pip install --user scons
+
+    - uses: actions/checkout@v2
+      with:
+        repository: bhaveshvasandani/workflows
+        ref: hsemaster-fix-shell
+        path: hse
+
+    - name: Build and install hse
+      run: |
+        cd hse
+        poetry install
+        sed -i.bak "s,ssh://git@bitbucket.micron.com/hse/hse-python.git,https://${{ secrets.GH_TOKEN }}@github.com/bhaveshvasandani/hse-python.git,g" subprojects/hse-python.wrap
+        poetry run meson builddir -Dycsb=true -Dinstall-tools=true -Dinstall-configs=true
+        poetry run meson install -C builddir --destdir="${{ runner.temp }}/hse"
+
+    - uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: hse-build-artifact
+        path: hse/builddir/meson-logs/
+
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Build mongo
+      run: |
+        scons -j$(nproc) --dbg=off --opt=on CPPPATH=${{ runner.temp }}/hse/opt/hse/include/hse-2 LIBPATH=${{ runner.temp }}/hse/opt/hse/lib/x86_64-linux-gnu --disable-warnings-as-errors hse_unit_tests
+
+    - name: Run Unit tests
+      run: |
+        cd build/opt/mongo/db/storage/hse
+        mkdir ./kvdb_home_test
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${{ runner.temp }}/hse/opt/hse/lib/x86_64-linux-gnu
+        ./hse_test_harness.py ${{ github.run_id }} ${{ runner.temp }}/hse/opt/hse/bin/hse2 $(realpath ./kvdb_home_test)
+
+    - name: Archive unit test output files
+      uses: actions/upload-artifact@v2
+      with:
+        name: hse-unit-test-output-artifact
+        path: build/opt/mongo/db/storage/hse/*out
+
