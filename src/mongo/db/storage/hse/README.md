@@ -76,6 +76,16 @@ The resulting binaries are stored in directory `./build/opt/mongo`.
 > and your Linux distribution.  You need to locate these directories to
 > set these variables correctly.
 
+Build and run unit tests as follows.
+
+```shell
+$ scons -j$(nproc) --dbg=off --opt=on CPPPATH=/opt/hse/include/hse-2 LIBPATH=/opt/hse/lib64 --disable-warnings-as-errors hse_unit_tests
+$ cd build/opt/mongo/db/storage/hse
+$ mkdir kvdb_home_test
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/hse/lib64
+$ ./hse_test_harness.py 0 /opt/hse/bin/hse2 $(realpath ./kvdb_home_test)
+```
+
 
 ## Configuring MongoDB Options
 
