@@ -7,5 +7,5 @@
 #### Verified checks?
 Have the checks completed?
 - [ ] mongod binaries build
-- [ ] hse harness script passes
+- [ ] hse_test_harness.py passes
 - [ ] All commits are signed off
