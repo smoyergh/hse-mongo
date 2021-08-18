@@ -69,3 +69,19 @@ jobs:
 
     - name: Validate Clang format
       run: ./buildscripts/clang_format.py lint
+
+  checkoss:
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: check for license
+      run: |
+        src/mongo/db/storage/hse/checkoss "${{ runner.temp }}" ./
+
+    - uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: checkoss-errors
+        path: "${{ runner.temp }}"
