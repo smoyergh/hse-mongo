@@ -141,8 +141,8 @@ public:
         vector<string> cParams{};
         vector<string> rParams{};
 
-        cParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
-        rParams.push_back("transactions_enable=1");
+        cParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
+        rParams.push_back("transactions.enabled=true");
 
         hse::Status hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), cParams);
         invariantHseSt(hseSt);
@@ -163,7 +163,7 @@ public:
         invariantHseSt(hseSt);
 
         cParams.clear();
-        cParams.push_back("pfx_len=" + std::to_string(OPLOG_PFX_LEN));
+        cParams.push_back("prefix.length=" + std::to_string(OPLOG_PFX_LEN));
 
         hseSt = _db.kvdb_kvs_make(_oplogKvsName.c_str(), cParams);
         invariantHseSt(hseSt);
