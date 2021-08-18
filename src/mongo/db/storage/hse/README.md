@@ -2,6 +2,7 @@
 
 This fork of MongoDB&reg; integrates HSE with MongoDB 3.4.17.  The goal is
 to demonstrate the benefits of HSE within a real-world storage application.
+This version of MongoDB is not intended for production environments.
 
 The reader is assumed to be familiar with configuring and running MongoDB,
 as well as HSE concepts and terminology.
@@ -129,14 +130,10 @@ All MongoDB data is stored in an HSE KVDB.  The first time `mongod` starts
 it creates a KVDB with home directory `<dbPath>/hse` and capacity media class
 `<dbPath>/hse/capacity`.
 
-A staging media class can be configured at the time the KVDB is created,
-or added later, via the command-line option `--hseStagingPath` or the
-mongod.conf option `storage.hse.stagingPath`.  If the staging media class
-already exists, these options have no effect.
-
-> **Notice**:  In this HSE 2.0 release candidate the staging media class
-> must be configured the first time `mongod` starts, it cannot be added
-> later.  This limitation will be removed for the final HSE 2.0 release.
+An optional staging media class can be configured at the time `mongod` creates
+a KVDB.  The staging media class directory can be specified via the
+command-line option `--hseStagingPath` or the mongod.conf option
+`storage.hse.stagingPath`.
 
 
 ## Running MongoDB with HSE
