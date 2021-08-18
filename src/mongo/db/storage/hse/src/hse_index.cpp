@@ -823,7 +823,7 @@ void KVDBUniqIdx::unindex(OperationContext* opctx,
     auto ru = KVDBRecoveryUnit::getKVDBRecoveryUnit(opctx);
 
     hse::Status hseSt{};
-    // We do blind unindexing of records for efficiency. However, when duplicates
+    // We do unindexing of records blindly for efficiency. However, when duplicates
     // are allowed in unique indexes, confirm that the recordid matches the element
     // we are removing.
     if (!dupsAllowed && !_partial) {

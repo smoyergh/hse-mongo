@@ -143,7 +143,7 @@ public:
     /**
      * Initializes a background job to remove excess documents in the oplog collections.
      * This applies to the capped collections in the local.oplog.* namespaces (specifically
-     * local.oplog.rs for replica sets and local.oplog.$main for master/slave replication).
+     * local.oplog.rs for replica sets and local.oplog.$main for primary/secondary replication).
      * Returns true if a background job is running for the namespace.
      */
     static bool initOplogStoreThread(StringData ns);
