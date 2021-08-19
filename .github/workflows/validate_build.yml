@@ -78,10 +78,4 @@ jobs:
 
     - name: check for license
       run: |
-        src/mongo/db/storage/hse/checkoss "${{ runner.temp }}" ./
-
-    - uses: actions/upload-artifact@v2
-      if: failure()
-      with:
-        name: checkoss-errors
-        path: "${{ runner.temp }}"
+        src/mongo/db/storage/hse/checkoss
