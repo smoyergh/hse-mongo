@@ -36,15 +36,15 @@ the packages required to build HSE.
 ### RHEL 8 Packages
 
 ```shell
-$ sudo dnf install lz4-devel
-$ sudo alternatives --set python /usr/bin/python2
-$ pip2 install --user scons
+sudo dnf install lz4-devel
+sudo alternatives --set python /usr/bin/python2
+pip2 install --user scons
 ```
 
 ### Ubuntu 18.04 Packages
 
 ```shell
-$ sudo apt install scons liblz4-dev
+sudo apt install scons liblz4-dev
 ```
 
 
@@ -59,15 +59,15 @@ and checkout the latest release tag.  Releases are named `rA.B.C.D.E-hse` where
 For example
 
 ```shell
-$ git clone https://github.com/hse-project/hse-mongo.git
-$ cd hse-mongo
-$ git checkout rA.B.C.D.E-hse
+git clone https://github.com/hse-project/hse-mongo.git
+cd hse-mongo
+git checkout rA.B.C.D.E-hse
 ```
 
 Build MongoDB with HSE as follows.
 
 ```shell
-$ scons -j $(nproc) --disable-warnings-as-errors CPPPATH=/opt/hse/include/hse-2 LIBPATH=/opt/hse/lib64 mongod mongos mongo
+scons -j $(nproc) --disable-warnings-as-errors CPPPATH=/opt/hse/include/hse-2 LIBPATH=/opt/hse/lib64 mongod mongos mongo
 ```
 
 The resulting binaries are stored in directory `./build/opt/mongo`.
@@ -79,11 +79,11 @@ The resulting binaries are stored in directory `./build/opt/mongo`.
 Build and run unit tests as follows.
 
 ```shell
-$ scons -j$(nproc) --dbg=off --opt=on CPPPATH=/opt/hse/include/hse-2 LIBPATH=/opt/hse/lib64 --disable-warnings-as-errors hse_unit_tests
-$ cd build/opt/mongo/db/storage/hse
-$ mkdir kvdb_home_test
-$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/hse/lib64
-$ ./hse_test_harness.py 0 /opt/hse/bin/hse $(realpath ./kvdb_home_test)
+scons -j$(nproc) --dbg=off --opt=on CPPPATH=/opt/hse/include/hse-2 LIBPATH=/opt/hse/lib64 --disable-warnings-as-errors hse_unit_tests
+cd build/opt/mongo/db/storage/hse
+mkdir kvdb_home_test
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/hse/lib64
+./hse_test_harness.py 0 /opt/hse/bin/hse $(realpath ./kvdb_home_test)
 ```
 
 ## Configuring MongoDB Options
