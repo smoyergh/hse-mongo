@@ -61,7 +61,7 @@ jobs:
         path: build/opt/mongo/db/storage/hse/*out
 
   clang_format:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     steps:
 
@@ -71,7 +71,7 @@ jobs:
       run: ./buildscripts/clang_format.py lint
 
   checkoss:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
