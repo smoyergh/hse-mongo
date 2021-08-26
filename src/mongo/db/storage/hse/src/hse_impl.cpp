@@ -139,8 +139,7 @@ Status KVDBImpl::kvs_put(KVSHandle handle,
 
     _hseKvsPutCounter.add();
     auto lt = _hseKvsPutLatency.begin();
-    Status ret{
-        ::hse_kvs_put(kvs, HSE_FLAG_NONE, kvdb_txn, key.data(), key.len(), val.data(), val.len())};
+    Status ret{::hse_kvs_put(kvs, 0, kvdb_txn, key.data(), key.len(), val.data(), val.len())};
     _hseKvsPutLatency.end(lt);
     return ret;
 }
@@ -151,7 +150,7 @@ Status KVDBImpl::kvs_put(KVSHandle handle, const KVDBData& key, const KVDBData& 
     _hseKvsPutCounter.add();
     auto lt = _hseKvsPutLatency.begin();
     Status ret{::hse_kvs_put(
-        kvs, HSE_FLAG_PUT_PRIORITY, nullptr, key.data(), key.len(), val.data(), val.len())};
+        kvs, HSE_KVS_PUT_PRIO, nullptr, key.data(), key.len(), val.data(), val.len())};
     _hseKvsPutLatency.end(lt);
     return ret;
 }
@@ -165,7 +164,7 @@ Status KVDBImpl::kvs_get(
     _hseKvsGetCounter.add();
     auto lt = _hseKvsGetLatency.begin();
     Status ret{::hse_kvs_get(kvs,
-                             HSE_FLAG_NONE,
+                             0,
                              kvdb_txn,
                              (const void*)key.data(),
                              key.len(),
@@ -187,7 +186,7 @@ Status KVDBImpl::kvs_probe_len(
     _hseKvsGetCounter.add();
     auto lt = _hseKvsGetLatency.begin();
     Status ret{::hse_kvs_get(kvs,
-                             HSE_FLAG_NONE,
+                             0,
                              kvdb_txn,
                              (const void*)key.data(),
                              key.len(),
@@ -211,7 +210,7 @@ Status KVDBImpl::kvs_prefix_probe(KVSHandle handle,
 
     size_t klen, vlen;
     int ret = ::hse_kvs_prefix_probe(kvs,
-                                     HSE_FLAG_NONE,
+                                     0,
                                      kvdb_txn,
                                      (const void*)prefix.data(),
                                      prefix.len(),
@@ -242,8 +241,8 @@ Status KVDBImpl::kvs_probe_key(KVSHandle handle, ClientTxn* txn, const KVDBData&
     // treating this kvs_get as a probe wrt metrics
     _hseKvsProbeCounter.add();
     auto lt = _hseKvsProbeLatency.begin();
-    int ret = ::hse_kvs_get(
-        kvs, HSE_FLAG_NONE, kvdb_txn, (const void*)key.data(), key.len(), &found, 0, 0, &valLen);
+    int ret =
+        ::hse_kvs_get(kvs, 0, kvdb_txn, (const void*)key.data(), key.len(), &found, 0, 0, &valLen);
     _hseKvsProbeLatency.end(lt);
     if (EMSGSIZE == ret) {
         ret = 0;
@@ -258,7 +257,7 @@ Status KVDBImpl::kvs_delete(KVSHandle handle, ClientTxn* txn, const KVDBData& ke
 
     _hseKvsDeleteCounter.add();
     auto lt = _hseKvsDeleteLatency.begin();
-    Status ret{::hse_kvs_delete(kvs, HSE_FLAG_NONE, kvdb_txn, key.data(), key.len())};
+    Status ret{::hse_kvs_delete(kvs, 0, kvdb_txn, key.data(), key.len())};
     _hseKvsDeleteLatency.end(lt);
 
     return ret;
@@ -270,8 +269,7 @@ Status KVDBImpl::kvs_prefix_delete(KVSHandle handle, ClientTxn* txn, const KVDBD
 
     _hseKvsPrefixDeleteCounter.add();
     auto lt = _hseKvsPrefixDeleteLatency.begin();
-    Status ret{::hse_kvs_prefix_delete(
-        kvs, HSE_FLAG_NONE, kvdb_txn, prefix.data(), prefix.len(), nullptr)};
+    Status ret{::hse_kvs_prefix_delete(kvs, 0, kvdb_txn, prefix.data(), prefix.len(), nullptr)};
     _hseKvsPrefixDeleteLatency.end(lt);
 
     return ret;
@@ -284,8 +282,8 @@ Status KVDBImpl::kvs_iter_delete(KVSHandle handle, ClientTxn* txn, const KVDBDat
 
     _hseKvsCursorCreateCounter.add();
     auto lt = _hseKvsCursorCreateLatency.begin();
-    unsigned long ret = ::hse_kvs_cursor_create(
-        kvs, HSE_FLAG_NONE, kvdb_txn, prefix.data(), prefix.len(), &lCursor);
+    unsigned long ret =
+        ::hse_kvs_cursor_create(kvs, 0, kvdb_txn, prefix.data(), prefix.len(), &lCursor);
     _hseKvsCursorCreateLatency.end(lt);
     if (ret) {
         return Status{ret};
@@ -307,7 +305,7 @@ Status KVDBImpl::kvs_iter_delete(KVSHandle handle, ClientTxn* txn, const KVDBDat
             break;
         }
 
-        ret = ::hse_kvs_delete(kvs, HSE_FLAG_NONE, kvdb_txn, lKey, lKeyLen);
+        ret = ::hse_kvs_delete(kvs, 0, kvdb_txn, lKey, lKeyLen);
         if (ret) {
             break;
         }
@@ -327,7 +325,7 @@ Status KVDBImpl::kvdb_sync() {
     if (_handle) {
         _hseKvdbSyncCounter.add();
         auto lt = _hseKvdbSyncLatency.begin();
-        ret = ::hse_kvdb_sync(_handle, HSE_FLAG_NONE);
+        ret = ::hse_kvdb_sync(_handle, 0);
         _hseKvdbSyncLatency.end(lt);
     }
 
@@ -344,7 +342,7 @@ Status KVDBImpl::kvs_sub_txn_put(KVSHandle handle, const KVDBData& key, const KV
         _hseKvsPutCounter.add();
         auto lt = _hseKvsPutLatency.begin();
         ret = Status{::hse_kvs_put(
-            kvs, HSE_FLAG_NONE, cTxn.get_kvdb_txn(), key.data(), key.len(), val.data(), val.len())};
+            kvs, 0, cTxn.get_kvdb_txn(), key.data(), key.len(), val.data(), val.len())};
         _hseKvsPutLatency.end(lt);
     }
     SUB_TXN_OP_RETRY_LOOP_END(ret)
@@ -359,8 +357,7 @@ Status KVDBImpl::kvs_sub_txn_delete(KVSHandle handle, const KVDBData& key) {
     SUB_TXN_OP_RETRY_LOOP_BEGIN {
         _hseKvsDeleteCounter.add();
         auto lt = _hseKvsDeleteLatency.begin();
-        ret = Status{
-            ::hse_kvs_delete(kvs, HSE_FLAG_NONE, cTxn.get_kvdb_txn(), key.data(), key.len())};
+        ret = Status{::hse_kvs_delete(kvs, 0, cTxn.get_kvdb_txn(), key.data(), key.len())};
         _hseKvsDeleteLatency.end(lt);
     }
     SUB_TXN_OP_RETRY_LOOP_END(ret)
@@ -377,7 +374,7 @@ Status KVDBImpl::kvs_sub_txn_prefix_delete(KVSHandle handle, const KVDBData& pre
         _hseKvsPrefixDeleteCounter.add();
         auto lt = _hseKvsPrefixDeleteLatency.begin();
         ret = Status{::hse_kvs_prefix_delete(
-            kvs, HSE_FLAG_NONE, cTxn.get_kvdb_txn(), prefix.data(), prefix.len(), nullptr)};
+            kvs, 0, cTxn.get_kvdb_txn(), prefix.data(), prefix.len(), nullptr)};
         _hseKvsPrefixDeleteLatency.end(lt);
     }
     SUB_TXN_OP_RETRY_LOOP_END(ret)

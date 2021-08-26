@@ -78,7 +78,7 @@ void KvsCursor::_kvs_cursor_create(ClientTxn* lnkd_txn) {
         kvdb_txn = lnkd_txn->get_kvdb_txn();
 
     if (!_forward)
-        flags |= HSE_FLAG_CURSOR_REVERSE;
+        flags |= HSE_CURSOR_CREATE_REV;
 
     /* [HSE_REVISIT] This loop retries indefinitely on an EAGAIN. */
     while (true) {
