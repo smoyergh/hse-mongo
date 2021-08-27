@@ -64,6 +64,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '2.x'
 
     - uses: actions/checkout@v2
 
