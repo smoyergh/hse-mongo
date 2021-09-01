@@ -469,41 +469,41 @@ void KVDBEngine::_prepareConfig() {
     string vComprMinBytes = kvdbGlobalOptions.getCompressionMinBytesStr();
 
     _kvdbRParams.push_back("txn_timeout=8589934591");
-    _kvdbRParams.push_back("dur_intvl_ms=" + std::to_string(ms));
+    _kvdbRParams.push_back("durability.interval=" + std::to_string(ms));
 
-    _mainKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
-    _mainKvsRParams.push_back("transactions_enable=1");
-    _mainKvsRParams.push_back("value_compression=" + vCompr);
-    _mainKvsRParams.push_back("vcompmin=" + vComprMinBytes);
-
-
-    _largeKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
-    _largeKvsRParams.push_back("transactions_enable=1");
-    _largeKvsRParams.push_back("value_compression=" + vCompr);
-    _largeKvsRParams.push_back("vcompmin=" + vComprMinBytes);
+    _mainKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
+    _mainKvsRParams.push_back("transactions.enabled=true");
+    _mainKvsRParams.push_back("compression.value.algorithm=" + vCompr);
+    _mainKvsRParams.push_back("compression.value.min_length=" + vComprMinBytes);
 
 
-    _oplogKvsCParams.push_back("pfx_len=" + std::to_string(OPLOG_PFX_LEN));
+    _largeKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
+    _largeKvsRParams.push_back("transactions.enabled=true");
+    _largeKvsRParams.push_back("compression.value.algorithm=" + vCompr);
+    _largeKvsRParams.push_back("compression.value.min_length=" + vComprMinBytes);
+
+
+    _oplogKvsCParams.push_back("prefix.length=" + std::to_string(OPLOG_PFX_LEN));
     _oplogKvsCParams.push_back("fanout=" + std::to_string(OPLOG_FANOUT));
     _oplogKvsCParams.push_back("kvs_ext01=1");
-    _oplogKvsRParams.push_back("transactions_enable=1");
+    _oplogKvsRParams.push_back("transactions.enabled=true");
 
-    _oplogLargeKvsCParams.push_back("pfx_len=" + std::to_string(OPLOG_PFX_LEN));
+    _oplogLargeKvsCParams.push_back("prefix.length=" + std::to_string(OPLOG_PFX_LEN));
     _oplogLargeKvsCParams.push_back("fanout=" + std::to_string(OPLOG_FANOUT));
     _oplogLargeKvsCParams.push_back("kvs_ext01=1");
-    _oplogLargeKvsRParams.push_back("transactions_enable=1");
+    _oplogLargeKvsRParams.push_back("transactions.enabled=true");
 
-    _uniqIdxKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
-    _uniqIdxKvsCParams.push_back("sfx_len=" + std::to_string(DEFAULT_SFX_LEN));
-    _uniqIdxKvsRParams.push_back("transactions_enable=1");
-    _uniqIdxKvsRParams.push_back("value_compression=" + vCompr);
-    _uniqIdxKvsRParams.push_back("vcompmin=" + vComprMinBytes);
+    _uniqIdxKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
+    _uniqIdxKvsCParams.push_back("suffix.length=" + std::to_string(DEFAULT_SFX_LEN));
+    _uniqIdxKvsRParams.push_back("transactions.enabled=true");
+    _uniqIdxKvsRParams.push_back("compression.value.algorithm=" + vCompr);
+    _uniqIdxKvsRParams.push_back("compression.value.min_length=" + vComprMinBytes);
 
-    _stdIdxKvsCParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
-    _stdIdxKvsCParams.push_back("sfx_len=" + std::to_string(STDIDX_SFX_LEN));
-    _stdIdxKvsRParams.push_back("transactions_enable=1");
-    _stdIdxKvsRParams.push_back("value_compression=" + vCompr);
-    _stdIdxKvsRParams.push_back("vcompmin=" + vComprMinBytes);
+    _stdIdxKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
+    _stdIdxKvsCParams.push_back("suffix.length=" + std::to_string(STDIDX_SFX_LEN));
+    _stdIdxKvsRParams.push_back("transactions.enabled=true");
+    _stdIdxKvsRParams.push_back("compression.value.algorithm=" + vCompr);
+    _stdIdxKvsRParams.push_back("compression.value.min_length=" + vComprMinBytes);
 }
 
 void KVDBEngine::_setupDb() {

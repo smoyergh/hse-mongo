@@ -225,8 +225,8 @@ protected:
         // ASSERT_EQ(0, _db._testGetMaxIdx());
         vector<string> makeParams{};
         vector<string> openParams{};
-        makeParams.push_back("pfx_len=" + std::to_string(DEFAULT_PFX_LEN));
-        openParams.push_back("transactions_enable=" + std::to_string(1));
+        makeParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
+        openParams.push_back("transactions.enabled=true");
 
 
         // Create all the kvses
