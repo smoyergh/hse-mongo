@@ -75,17 +75,17 @@ def test_setup(pwd):
     fname = '%s/setup.out' % (pwd)
     logfile = open(fname, 'w')
 
-    cmdargs = ['%s -C %s kvdb drop' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
+    cmdargs = ['%s kvdb drop %s' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
     cmdargs = [ 'mkdir -p  %s' % (_KVDB_HOME), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
-    cmdargs = [ '%s -C %s kvdb create' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
+    cmdargs = [ '%s kvdb create %s' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
     exit_code = _run_cmd(cmdargs, logfile)
     if exit_code != 0:
         return exit_code
-    
+
     logfile.close()
     return exit_code
 
@@ -93,7 +93,7 @@ def test_teardown(pwd):
     fname = '%s/teardown.out' % (pwd)
     logfile = open(fname, 'w')
 
-    cmdargs = ['%s -C %s kvdb drop' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
+    cmdargs = ['%s kvdb drop %s' % (_HSEBIN, _KVDB_HOME), '>>', fname, '2>&1']
     _run_cmd(cmdargs, logfile)
 
     logfile.close()
