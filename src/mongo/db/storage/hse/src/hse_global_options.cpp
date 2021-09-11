@@ -55,6 +55,9 @@ const bool KVDBGlobalOptions::kDefaultEnableMetrics = false;
 // Default staging path is empty.
 const std::string KVDBGlobalOptions::kDefaultStagingPathStr{};
 
+// Default config path is empty.
+const std::string KVDBGlobalOptions::kDefaultConfigPathStr{};
+
 
 KVDBGlobalOptions kvdbGlobalOptions;
 
@@ -80,6 +83,10 @@ const std::string enableMetricsOptStr = modName + "EnableMetrics";
 // HSE staging path
 const std::string stagingPathCfgStr = cfgStrPrefix + "stagingPath";
 const std::string stagingPathOptStr = modName + "StagingPath";
+
+// HSE config path
+const std::string configPathCfgStr = cfgStrPrefix + "configPath";
+const std::string configPathOptStr = modName + "ConfigPath";
 
 }  // namespace
 
@@ -115,6 +122,10 @@ Status KVDBGlobalOptions::add(moe::OptionSection* options) {
             stagingPathCfgStr, stagingPathOptStr, moe::String, "path for staging media class")
         .setDefault(moe::Value(kDefaultStagingPathStr));
 
+    kvdbOptions
+        .addOptionChaining(configPathCfgStr, configPathOptStr, moe::String, "path for config file")
+        .setDefault(moe::Value(kDefaultConfigPathStr));
+
     return options->addSection(kvdbOptions);
 }
 
@@ -146,6 +157,11 @@ Status KVDBGlobalOptions::store(const moe::Environment& params,
         log() << "Staging path str: " << kvdbGlobalOptions._stagingPathStr;
     }
 
+    if (params.count(configPathCfgStr)) {
+        kvdbGlobalOptions._configPathStr = params[configPathCfgStr].as<std::string>();
+        log() << "Config path str: " << kvdbGlobalOptions._configPathStr;
+    }
+
     return Status::OK();
 }
 
@@ -171,6 +187,10 @@ int KVDBGlobalOptions::getForceLag() const {
 
 std::string KVDBGlobalOptions::getStagingPathStr() const {
     return _stagingPathStr;
+}
+
+std::string KVDBGlobalOptions::getConfigPathStr() const {
+    return _configPathStr;
 }
 
 
