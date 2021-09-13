@@ -469,7 +469,7 @@ void KVDBEngine::_prepareConfig() {
     string vComprMinBytes = kvdbGlobalOptions.getCompressionMinBytesStr();
 
     _kvdbRParams.push_back("txn_timeout=8589934591");
-    _kvdbRParams.push_back("durability.interval=" + std::to_string(ms));
+    _kvdbRParams.push_back("durability.interval_ms=" + std::to_string(ms));
 
     _mainKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
     _mainKvsRParams.push_back("transactions.enabled=true");
@@ -515,8 +515,14 @@ void KVDBEngine::_setupDb() {
 
     _prepareConfig();
 
-    auto st = hse::init(_dbHome);
-    invariantHseSt(st);
+    const std::string configPath = kvdbGlobalOptions.getConfigPathStr();
+    if (configPath.empty()) {
+        auto st = hse::init();
+        invariantHseSt(st);
+    } else {
+        auto st = hse::init(configPath);
+        invariantHseSt(st);
+    }
 
     _open_kvdb(_dbHome, _kvdbCParams, _kvdbRParams);
 

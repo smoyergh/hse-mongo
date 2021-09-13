@@ -48,7 +48,8 @@ public:
           _compressionMinBytesStr{kDefaultCompressionMinBytesStr},
           _enableMetrics{kDefaultEnableMetrics},
           _crashSafeCounters{false},
-          _stagingPathStr{kDefaultStagingPathStr} {}
+          _stagingPathStr{kDefaultStagingPathStr},
+          _configPathStr{kDefaultConfigPathStr} {}
 
     Status add(moe::OptionSection* options);
     Status store(const moe::Environment& params, const std::vector<std::string>& args);
@@ -61,6 +62,7 @@ public:
     bool getCrashSafeCounters() const;
     int getForceLag() const;
     std::string getStagingPathStr() const;
+    std::string getConfigPathStr() const;
 
 private:
     static const int kDefaultForceLag;
@@ -68,6 +70,7 @@ private:
     static const std::string kDefaultCompressionMinBytesStr;
     static const bool kDefaultEnableMetrics;
     static const std::string kDefaultStagingPathStr;
+    static const std::string kDefaultConfigPathStr;
 
     int _forceLag;
 
@@ -76,6 +79,7 @@ private:
     bool _enableMetrics;
     bool _crashSafeCounters;
     std::string _stagingPathStr;
+    std::string _configPathStr;
 };
 
 extern KVDBGlobalOptions kvdbGlobalOptions;

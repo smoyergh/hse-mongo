@@ -43,6 +43,8 @@ using namespace std;
 // KVDB interface
 namespace hse {
 
+Status init();
+
 Status init(const string& home);
 
 Status fini();

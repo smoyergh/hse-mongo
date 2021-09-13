@@ -47,7 +47,7 @@ KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
         _kvdbHome = envStr;
     }
 
-    hse::Status st = hse::init(_kvdbHome);
+    hse::Status st = hse::init();
     ASSERT_EQUALS(0, st.getErrno());
 
     int err{0};
@@ -75,7 +75,7 @@ KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
 
 void KVDBTestSuiteFixture::reset() {
     if (_dbClosed) {
-        hse::Status st = hse::init(_kvdbHome);
+        hse::Status st = hse::init();
         ASSERT_EQUALS(0, st.getErrno());
 
         vector<string> params{};
@@ -102,7 +102,7 @@ void KVDBTestSuiteFixture::reset() {
 
 KVDBTestSuiteFixture::~KVDBTestSuiteFixture() {
     if (_dbClosed) {
-        hse::Status st = hse::init(_kvdbHome);
+        hse::Status st = hse::init();
         ASSERT_EQUALS(0, st.getErrno());
 
         vector<string> params{};
