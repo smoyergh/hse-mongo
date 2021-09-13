@@ -349,9 +349,11 @@ class CStyleStrVec {
 public:
     CStyleStrVec(const vector<string>& strVec) {
         _count = strVec.size();
-        _srcV = new const char*[_count];
-        for (int i = 0; i < _count; i++) {
-            _srcV[i] = strVec[i].c_str();
+        if (_count > 0) {
+            _srcV = new const char*[_count];
+            for (int i = 0; i < _count; i++) {
+                _srcV[i] = strVec[i].c_str();
+            }
         }
     }
 
