@@ -273,7 +273,7 @@ Status KVDBImpl::kvs_prefix_delete(KVSHandle handle, ClientTxn* txn, const KVDBD
 
     _hseKvsPrefixDeleteCounter.add();
     auto lt = _hseKvsPrefixDeleteLatency.begin();
-    Status ret{::hse_kvs_prefix_delete(kvs, 0, kvdb_txn, prefix.data(), prefix.len(), nullptr)};
+    Status ret{::hse_kvs_prefix_delete(kvs, 0, kvdb_txn, prefix.data(), prefix.len())};
     _hseKvsPrefixDeleteLatency.end(lt);
 
     return ret;
@@ -377,8 +377,8 @@ Status KVDBImpl::kvs_sub_txn_prefix_delete(KVSHandle handle, const KVDBData& pre
     SUB_TXN_OP_RETRY_LOOP_BEGIN {
         _hseKvsPrefixDeleteCounter.add();
         auto lt = _hseKvsPrefixDeleteLatency.begin();
-        ret = Status{::hse_kvs_prefix_delete(
-            kvs, 0, cTxn.get_kvdb_txn(), prefix.data(), prefix.len(), nullptr)};
+        ret = Status{
+            ::hse_kvs_prefix_delete(kvs, 0, cTxn.get_kvdb_txn(), prefix.data(), prefix.len())};
         _hseKvsPrefixDeleteLatency.end(lt);
     }
     SUB_TXN_OP_RETRY_LOOP_END(ret)
