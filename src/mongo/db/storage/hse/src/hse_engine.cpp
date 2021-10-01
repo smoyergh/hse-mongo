@@ -456,6 +456,7 @@ void KVDBEngine::_open_kvs(const string& kvs,
 void KVDBEngine::_prepareConfig() {
     unsigned int ms = DUR_LAG;
 
+
     if (isDurable()) {
         if (storageGlobalParams.journalCommitIntervalMs > 0)
             ms = storageGlobalParams.journalCommitIntervalMs;
@@ -465,6 +466,8 @@ void KVDBEngine::_prepareConfig() {
         _kvdbCParams.push_back("storage.staging.path=" + kvdbGlobalOptions.getStagingPathStr());
     }
 
+    string pfxPivot = kvdbGlobalOptions.getOptimizeForCollectionCountStr() == "low" ? "1" : "2";
+
     string vCompr = kvdbGlobalOptions.getCompressionStr();
     string vComprMinBytes = kvdbGlobalOptions.getCompressionMinBytesStr();
 
@@ -472,12 +475,14 @@ void KVDBEngine::_prepareConfig() {
     _kvdbRParams.push_back("durability.interval_ms=" + std::to_string(ms));
 
     _mainKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
+    _mainKvsCParams.push_back("prefix.pivot=" + pfxPivot);
     _mainKvsRParams.push_back("transactions.enabled=true");
     _mainKvsRParams.push_back("compression.value.algorithm=" + vCompr);
     _mainKvsRParams.push_back("compression.value.min_length=" + vComprMinBytes);
 
 
     _largeKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
+    _largeKvsCParams.push_back("prefix.pivot=" + pfxPivot);
     _largeKvsRParams.push_back("transactions.enabled=true");
     _largeKvsRParams.push_back("compression.value.algorithm=" + vCompr);
     _largeKvsRParams.push_back("compression.value.min_length=" + vComprMinBytes);
@@ -495,12 +500,14 @@ void KVDBEngine::_prepareConfig() {
 
     _uniqIdxKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
     _uniqIdxKvsCParams.push_back("suffix.length=" + std::to_string(DEFAULT_SFX_LEN));
+    _uniqIdxKvsCParams.push_back("prefix.pivot=" + pfxPivot);
     _uniqIdxKvsRParams.push_back("transactions.enabled=true");
     _uniqIdxKvsRParams.push_back("compression.value.algorithm=" + vCompr);
     _uniqIdxKvsRParams.push_back("compression.value.min_length=" + vComprMinBytes);
 
     _stdIdxKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
     _stdIdxKvsCParams.push_back("suffix.length=" + std::to_string(STDIDX_SFX_LEN));
+    _stdIdxKvsCParams.push_back("prefix.pivot=" + pfxPivot);
     _stdIdxKvsRParams.push_back("transactions.enabled=true");
     _stdIdxKvsRParams.push_back("compression.value.algorithm=" + vCompr);
     _stdIdxKvsRParams.push_back("compression.value.min_length=" + vComprMinBytes);
