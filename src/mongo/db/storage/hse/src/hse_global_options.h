@@ -46,6 +46,7 @@ public:
         : _forceLag{kDefaultForceLag},
           _compressionStr{kDefaultCompressionStr},
           _compressionMinBytesStr{kDefaultCompressionMinBytesStr},
+          _optimizeForCollectionCountStr{kDefaultOptimizeForCollectionCountStr},
           _enableMetrics{kDefaultEnableMetrics},
           _crashSafeCounters{false},
           _stagingPathStr{kDefaultStagingPathStr},
@@ -56,6 +57,7 @@ public:
 
     std::string getCompressionStr() const;
     std::string getCompressionMinBytesStr() const;
+    std::string getOptimizeForCollectionCountStr() const;
 
 
     bool getMetricsEnabled() const;
@@ -68,6 +70,7 @@ private:
     static const int kDefaultForceLag;
     static const std::string kDefaultCompressionStr;
     static const std::string kDefaultCompressionMinBytesStr;
+    static const std::string kDefaultOptimizeForCollectionCountStr;
     static const bool kDefaultEnableMetrics;
     static const std::string kDefaultStagingPathStr;
     static const std::string kDefaultConfigPathStr;
@@ -76,6 +79,7 @@ private:
 
     std::string _compressionStr;
     std::string _compressionMinBytesStr;
+    std::string _optimizeForCollectionCountStr;
     bool _enableMetrics;
     bool _crashSafeCounters;
     std::string _stagingPathStr;

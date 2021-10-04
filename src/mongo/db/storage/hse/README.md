@@ -94,6 +94,7 @@ which are reflected in `mongod --help`.
 * `--hseStagingPath` is the directory path for the optional staging media class; default is none
 * `--hseCompression` is the compression algorithm applied (`lz4` or `none`); default is `lz4`
 * `--hseCompressionMinBytes` is the min document size in bytes to compress; default is `0`
+* `--hseOptimizeForCollectionCount` optimizes the storage engine for `low` or `high` collection counts; default is `high`
 
 These HSE options are also supported in `mongod.conf`, in addition
 to the standard storage configuration options, as in the following example.
@@ -119,6 +120,11 @@ storage:
 
 # Create the optional staging media class.  Default is none.
 #    stagingPath:
+
+# Optimize performance based on collection counts. Allowable values
+# are "high" or "low". Default is "high".
+#    optimizeForCollectionCount: low
+
 
 # Recommended oplog size for HSE when using replica sets.
 replication:
