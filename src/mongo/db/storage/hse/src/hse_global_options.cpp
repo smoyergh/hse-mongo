@@ -49,7 +49,7 @@ const int KVDBGlobalOptions::kDefaultForceLag = 0;
 // Collection options
 const std::string KVDBGlobalOptions::kDefaultCompressionStr = "lz4";
 const std::string KVDBGlobalOptions::kDefaultCompressionMinBytesStr = "0";
-const std::string KVDBGlobalOptions::kDefaultOptimizeForCollectionCountStr = "high";
+const std::string KVDBGlobalOptions::kDefaultOptimizeForCollectionCountStr = "low";
 
 const bool KVDBGlobalOptions::kDefaultEnableMetrics = false;
 
