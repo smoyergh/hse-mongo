@@ -206,7 +206,8 @@ inline string arrayToHexStr(const char* ar, int len) {
     std::stringstream ss;
     ss << std::hex;
     for (int i = 0; i < len; ++i)
-        ss << std::setw(2) << std::setfill('0') << (int)ar[i];
+        ss << std::setfill('0') << std::setw(2) << (0xff & (unsigned int)ar[i]);
+
     return ss.str();
 }
 
