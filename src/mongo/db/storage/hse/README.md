@@ -27,24 +27,41 @@ For example, building MongoDB requires
 
 * GCC 5.3.0 (or newer) or Clang 3.4 (or newer)
 * Python 2.7
-* SCons 2.3
+* SCons 2.3 (or newer)
 
 To help you with this process, below are examples of the packages required
 for several common Linux distributions.  These are **in addition to**
 the packages required to build HSE.
 
+### pip2 Command
+
+The examples below use `pip2` to install a version of `scons` that can
+build MongoDB 3.4.17.  If `pip2` is not available as a package for your
+platform, you can install it as follows.
+
+```shell
+curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
+sudo python2 get-pip.py
+```
+
 ### RHEL 8 Packages
 
 ```shell
 sudo dnf install lz4-devel
+sudo alternatives --install /usr/bin/python python /usr/bin/python2 100
 sudo alternatives --set python /usr/bin/python2
 pip2 install --user scons
+export PATH=$HOME/.local/bin:$PATH
 ```
 
 ### Ubuntu 18.04 Packages
 
 ```shell
-sudo apt install scons liblz4-dev
+sudo apt install liblz4-dev
+sudo update-alternatives --install /usr/bin/python python /usr/bin/python2 100
+sudo update-alternatives --set python /usr/bin/python2
+pip2 install --user scons
+export PATH=$HOME/.local/bin:$PATH
 ```
 
 
