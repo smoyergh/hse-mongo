@@ -121,12 +121,8 @@ struct KVDBRecordStoreKey {
 #define KRSK_CLEAR(key) \
     { memset(&((key)), 0, sizeof(struct KVDBRecordStoreKey)); }
 
-#define KRSK_SET_OL_SCAN_KEY(key, pfx, blk)                        \
-    {                                                              \
-        const uint32_t pfxbe = htobe32(((uint32_t)(pfx)));         \
-        const uint32_t blkbe = htobe32(((uint32_t)(blk)));         \
-        (key) = (((uint64_t)(blkbe)) << 32UL | ((uint64_t)pfxbe)); \
-    }
+#define KRSK_SET_OL_SCAN_KEY(key, pfx, blk) \
+    { (key) = htobe64(((uint64_t)(pfx)) << 32UL | ((uint64_t)blk)); }
 
 #define KRSK_SET_PREFIX(key, pfx)                                             \
     {                                                                         \
