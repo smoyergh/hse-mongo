@@ -50,8 +50,9 @@
 extern "C" {
 #endif
 
-#define HSE_EXPERIMENTAL
 #include <hse/hse.h>
+
+#include <hse/experimental.h>
 
 #ifdef __cplusplus
 }
