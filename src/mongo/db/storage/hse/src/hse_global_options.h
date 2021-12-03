@@ -50,6 +50,7 @@ public:
           _enableMetrics{kDefaultEnableMetrics},
           _crashSafeCounters{false},
           _stagingPathStr{kDefaultStagingPathStr},
+          _pmemPathStr{kDefaultPmemPathStr},
           _configPathStr{kDefaultConfigPathStr} {}
 
     Status add(moe::OptionSection* options);
@@ -64,6 +65,7 @@ public:
     bool getCrashSafeCounters() const;
     int getForceLag() const;
     std::string getStagingPathStr() const;
+    std::string getPmemPathStr() const;
     std::string getConfigPathStr() const;
 
 private:
@@ -73,6 +75,7 @@ private:
     static const std::string kDefaultOptimizeForCollectionCountStr;
     static const bool kDefaultEnableMetrics;
     static const std::string kDefaultStagingPathStr;
+    static const std::string kDefaultPmemPathStr;
     static const std::string kDefaultConfigPathStr;
 
     int _forceLag;
@@ -83,6 +86,7 @@ private:
     bool _enableMetrics;
     bool _crashSafeCounters;
     std::string _stagingPathStr;
+    std::string _pmemPathStr;
     std::string _configPathStr;
 };
 

@@ -56,6 +56,9 @@ const bool KVDBGlobalOptions::kDefaultEnableMetrics = false;
 // Default staging path is empty.
 const std::string KVDBGlobalOptions::kDefaultStagingPathStr{};
 
+// Default pmem path is empty.
+const std::string KVDBGlobalOptions::kDefaultPmemPathStr{};
+
 // Default config path is empty.
 const std::string KVDBGlobalOptions::kDefaultConfigPathStr{};
 
@@ -86,6 +89,10 @@ const std::string enableMetricsOptStr = modName + "EnableMetrics";
 // HSE staging path
 const std::string stagingPathCfgStr = cfgStrPrefix + "stagingPath";
 const std::string stagingPathOptStr = modName + "StagingPath";
+
+// HSE pmem path
+const std::string pmemPathCfgStr = cfgStrPrefix + "pmemPath";
+const std::string pmemPathOptStr = modName + "PmemPath";
 
 // HSE config path
 const std::string configPathCfgStr = cfgStrPrefix + "configPath";
@@ -133,6 +140,10 @@ Status KVDBGlobalOptions::add(moe::OptionSection* options) {
         .setDefault(moe::Value(kDefaultStagingPathStr));
 
     kvdbOptions
+        .addOptionChaining(pmemPathCfgStr, pmemPathOptStr, moe::String, "path for pmem media class")
+        .setDefault(moe::Value(kDefaultPmemPathStr));
+
+    kvdbOptions
         .addOptionChaining(configPathCfgStr, configPathOptStr, moe::String, "path for config file")
         .setDefault(moe::Value(kDefaultConfigPathStr));
 
@@ -174,6 +185,11 @@ Status KVDBGlobalOptions::store(const moe::Environment& params,
         log() << "Staging path str: " << kvdbGlobalOptions._stagingPathStr;
     }
 
+    if (params.count(pmemPathCfgStr)) {
+        kvdbGlobalOptions._pmemPathStr = params[pmemPathCfgStr].as<std::string>();
+        log() << "Pmem path str: " << kvdbGlobalOptions._pmemPathStr;
+    }
+
     if (params.count(configPathCfgStr)) {
         kvdbGlobalOptions._configPathStr = params[configPathCfgStr].as<std::string>();
         log() << "Config path str: " << kvdbGlobalOptions._configPathStr;
@@ -208,6 +224,10 @@ int KVDBGlobalOptions::getForceLag() const {
 
 std::string KVDBGlobalOptions::getStagingPathStr() const {
     return _stagingPathStr;
+}
+
+std::string KVDBGlobalOptions::getPmemPathStr() const {
+    return _pmemPathStr;
 }
 
 std::string KVDBGlobalOptions::getConfigPathStr() const {

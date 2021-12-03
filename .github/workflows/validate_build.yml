@@ -14,10 +14,9 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install build-essential libbsd-dev gettext autopoint autoconf bison libtool pkg-config openjdk-8-jdk libmicrohttpd-dev liburcu-dev libyaml-dev liblz4-dev curl python3-setuptools
+        sudo apt-get install build-essential ninja-build libbsd-dev gettext autopoint autoconf bison libtool pkg-config openjdk-8-jdk libmicrohttpd-dev liburcu-dev libyaml-dev liblz4-dev curl python3-setuptools
         sudo apt-get install libmongoc-1.0-0 libbson-1.0-0 libssl-dev libsasl2-dev
-        python3 -m pip install --user setuptools_rust wheel
-        python3 -m pip install --user poetry
+        sudo python3 -m pip install meson Cython
         python -m pip install --user scons
 
     - uses: actions/checkout@v2
@@ -29,9 +28,8 @@ jobs:
     - name: Build and install hse
       run: |
         cd hse
-        poetry install
-        poetry run meson builddir -Dycsb=true -Dinstall-tools=true -Dinstall-configs=true
-        poetry run meson install -C builddir --destdir="${{ runner.temp }}/hse"
+        meson builddir
+        meson install -C builddir --destdir="${{ runner.temp }}/hse"
 
     - uses: actions/upload-artifact@v2
       if: failure()

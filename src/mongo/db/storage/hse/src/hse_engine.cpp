@@ -466,6 +466,10 @@ void KVDBEngine::_prepareConfig() {
         _kvdbCParams.push_back("storage.staging.path=" + kvdbGlobalOptions.getStagingPathStr());
     }
 
+    if (!kvdbGlobalOptions.getPmemPathStr().empty()) {
+        _kvdbCParams.push_back("storage.pmem.path=" + kvdbGlobalOptions.getPmemPathStr());
+    }
+
     string pfxPivot = kvdbGlobalOptions.getOptimizeForCollectionCountStr() == "low" ? "1" : "2";
 
     string vCompr = kvdbGlobalOptions.getCompressionStr();
