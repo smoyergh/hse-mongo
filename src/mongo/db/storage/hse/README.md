@@ -108,7 +108,8 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/hse/lib64
 MongoDB with HSE adds the following command-line options to `mongod`,
 which are reflected in `mongod --help`.
 
-* `--hseStagingPath` is the directory path for the optional staging media class; default is none
+* `--hseStagingPath` is the directory path for the staging media class; default is none
+* `--hsePmemPath` is the directory path for the pmem media class; default is none
 * `--hseCompression` is the compression algorithm applied (`lz4` or `none`); default is `lz4`
 * `--hseCompressionMinBytes` is the min document size in bytes to compress; default is `0`
 * `--hseOptimizeForCollectionCount` optimizes the storage engine for `low` or `high` collection counts; default is `low`
@@ -135,8 +136,11 @@ storage:
 #    compression: none
 #    compressionMinBytes: 0
 
-# Create the optional staging media class.  Default is none.
+# Create the KVDB with a staging media class.  Default is none.
 #    stagingPath:
+
+# Create the KVDB with a pmem media class.  Default is none.
+#    pmemPath:
 
 # Optimize performance based on collection counts. Allowable values
 # are "low" or "high". Default is "low".
@@ -158,14 +162,22 @@ setParameter:
 ## MongoDB Data Storage
 
 The MongoDB configuration option `dbPath` specifies the MongoDB data directory.
-All MongoDB data is stored in an HSE KVDB.  The first time `mongod` starts
-it creates a KVDB with home directory `<dbPath>/hse` and capacity media class
-`<dbPath>/hse/capacity`.
+All MongoDB data is stored in an HSE KVDB.
+The first time `mongod` starts it creates a KVDB with home directory
+`<dbPath>/hse`.
 
-An optional staging media class can be configured at the time `mongod` creates
-a KVDB.  The staging media class directory can be specified via the
-command-line option `--hseStagingPath` or the mongod.conf option
-`storage.hse.stagingPath`.
+If `<dbPath>/hse` is in a file system on block storage, then `mongod` creates
+a capacity media class for the KVDB at `<dbPath>/hse/capacity`.
+In this case, a staging or pmem media class can also be configured for the
+KVDB by specifying one or both of the command-line options `--hseStagingPath`
+or `--hsePmemPath`, or the `mongod.conf` options `storage.hse.stagingPath` or
+`storage.hse.pmemPath`.
+
+If `<dbPath>/hse` is in a DAX-enabled file system on persistent memory, then
+`mongod` creates a pmem media class for the KVDB at `<dbPath>/hse/pmem`
+by default, or as specified by the command-line option `--hsePmemPath` or the
+`mongod.conf` option `storage.hse.pmemPath`.
+In this case, it is an error to specify a staging media class for the KVDB.
 
 
 ## Running MongoDB with HSE
