@@ -31,8 +31,13 @@
  *    exception statement from all source files in the program, then also delete
  *    it in the license file.
  */
+
+#define MONGO_LOG_DEFAULT_COMPONENT ::mongo::logger::LogComponent::kStorage
+
 #include "mongo/db/storage/journal_listener.h"
 #include "mongo/platform/basic.h"
+#include "mongo/stdx/memory.h"
+#include "mongo/util/log.h"
 #include "mongo/util/scopeguard.h"
 
 #include "hse.h"
@@ -40,6 +45,7 @@
 #include "hse_record_store.h"
 #include "hse_util.h"
 
+using hse::DUR_LAG;
 using hse::KVDB;
 using hse::KVDBData;
 
@@ -55,7 +61,13 @@ KVDBDurabilityManager::KVDBDurabilityManager(hse::KVDB& db, bool durable, int fo
       _forceLag(forceLag),
       _durable(durable),
       _oplogVisibilityManager(nullptr),
-      _journalListener(&NoOpJournalListener::instance) {}
+      _journalListener(&NoOpJournalListener::instance) {
+
+    if (_durable) {
+        _journalFlusher = stdx::make_unique<KVDBJournalFlusher>(*this);
+        _journalFlusher->go();
+    }
+}
 
 void KVDBDurabilityManager::setJournalListener(JournalListener* jl) {
     std::lock_guard<std::mutex> lock(_journalListenerMutex);
@@ -108,9 +120,7 @@ void KVDBDurabilityManager::sync() {
     _syncMutex.lock();
     _numSyncs++;
     _syncMutex.unlock();
-
-    // Notify all waitUntilDurable threads that a sync just completed.
-    _syncDoneCV.notify_all();
+    _syncDoneCV.notify_all();  // Notify all waitUntilDurable threads that a sync just completed.
 
     _journalListener->onDurable(token);
 }
@@ -123,19 +133,93 @@ void KVDBDurabilityManager::waitUntilDurable() {
         return;
 
     stdx::unique_lock<stdx::mutex> lk(_syncMutex);
-    const auto waitingFor = _numSyncs;
-
-    _syncDoneCV.wait(lk, [&] { return _shuttingDown.load() || (_numSyncs > waitingFor + 1); });
+    const auto waitFor = _numSyncs + 1;
+    _journalFlusher->notifyFlusher();
+    _syncDoneCV.wait(lk, [&] { return (_numSyncs > waitFor) || _shuttingDown.load(); });
 }
 
 void KVDBDurabilityManager::prepareForShutdown() {
     // make sure no threads are waiting on syncs.
     this->sync();
     _shuttingDown.store(true);
+    _syncDoneCV.notify_all();
+
     while (_numWaits.load()) {
-        sleepmillis(50);
+        sleepmillis(1);
+    }
+
+    if (_journalFlusher) {
+        _journalFlusher->shutdown();
+        _journalFlusher.reset();
     }
 }
 
 /* End KVDBDurabilityManager */
+
+/* Start KVDBJournalFlusher */
+KVDBJournalFlusher::KVDBJournalFlusher(KVDBDurabilityManager& durabilityManager)
+    : BackgroundJob(false /* deleteSelf */),
+      _durabilityManager(durabilityManager),
+      _flushPending(false) {}
+
+std::string KVDBJournalFlusher::name() const {
+    return "KVDBJournalFlusher";
 }
+
+void KVDBJournalFlusher::notifyFlusher() {
+    {
+        stdx::unique_lock<stdx::mutex> lk(_jFlushMutex);
+        _flushPending = true;
+    }
+    _jFlushCV.notify_one();
+}
+
+void KVDBJournalFlusher::run() {
+    Client::initThread(name().c_str());
+
+    uint64_t now_ms, last_ms, lag_ms;
+    unsigned int commit_ms = DUR_LAG;
+
+    LOG(1) << "starting " << name() << " thread";
+
+    if (storageGlobalParams.journalCommitIntervalMs > 0)
+        commit_ms = storageGlobalParams.journalCommitIntervalMs;
+    now_ms = last_ms = lag_ms = 0;
+
+    while (!_shuttingDown.load()) {
+        now_ms = std::chrono::duration_cast<milliseconds>(steady_clock::now().time_since_epoch())
+                     .count();
+        lag_ms = (now_ms > last_ms) ? now_ms - last_ms : 0;
+
+        if (lag_ms < commit_ms) {
+            stdx::unique_lock<stdx::mutex> lk(_jFlushMutex);
+            _jFlushCV.wait_until(
+                lk, steady_clock::now() + std::chrono::milliseconds(commit_ms - lag_ms), [&] {
+                    return _flushPending || _shuttingDown.load();
+                });
+            _flushPending = false;
+        }
+
+        if (_shuttingDown.load())
+            break;
+
+        try {
+            last_ms =
+                std::chrono::duration_cast<milliseconds>(steady_clock::now().time_since_epoch())
+                    .count();
+            _durabilityManager.sync();
+        } catch (const UserException& e) {
+            invariantHse(e.getCode() == ErrorCodes::ShutdownInProgress);
+        }
+    }
+    LOG(1) << "stopping " << name() << " thread";
+}
+
+void KVDBJournalFlusher::shutdown() {
+    _shuttingDown.store(true);
+    this->notifyFlusher();
+    wait();
+}
+/* End KVDBJournalFlusher */
+
+}  // namespace mongo

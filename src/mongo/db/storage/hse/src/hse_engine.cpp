@@ -106,11 +106,6 @@ KVDBEngine::KVDBEngine(const std::string& path, bool durable, int formatVersion,
     _durabilityManager.reset(
         new KVDBDurabilityManager(_db, _durable, kvdbGlobalOptions.getForceLag()));
 
-    if (_durable) {
-        _journalFlusher = stdx::make_unique<KVDBJournalFlusher>(*_durabilityManager.get());
-        _journalFlusher->go();
-    }
-
     // init thread for rate calc
     KVDBStatRate::init();
 }
@@ -656,10 +651,6 @@ void KVDBEngine::_loadMaxPrefix() {
 }
 
 void KVDBEngine::_cleanShutdown() {
-    if (_journalFlusher) {
-        _journalFlusher->shutdown();
-        _journalFlusher.reset();
-    }
     _durabilityManager->prepareForShutdown();
     _durabilityManager.reset();
 
@@ -726,52 +717,4 @@ KVDBIdentType KVDBEngine::_extractType(const BSONObj& config) {
 
 /* End KVDBEngine */
 
-/* Start KVDBJournalFlusher */
-KVDBJournalFlusher::KVDBJournalFlusher(KVDBDurabilityManager& durabilityManager)
-    : BackgroundJob(false /* deleteSelf */), _durabilityManager(durabilityManager) {}
-
-std::string KVDBJournalFlusher::name() const {
-    return "KVDBJournalFlusher";
-}
-
-void KVDBJournalFlusher::run() {
-    Client::initThread(name().c_str());
-
-    uint64_t lsync_ms, now_ms, dur_ms;
-    lsync_ms = now_ms = dur_ms = 0;
-    unsigned int ms = DUR_LAG;
-
-    LOG(1) << "starting " << name() << " thread";
-
-    if (storageGlobalParams.journalCommitIntervalMs > 0)
-        ms = storageGlobalParams.journalCommitIntervalMs;
-
-    while (!_shuttingDown.load()) {
-        now_ms = std::chrono::duration_cast<milliseconds>(system_clock::now().time_since_epoch())
-                     .count();
-
-        dur_ms = (now_ms > lsync_ms) ? now_ms - lsync_ms : 0;
-        if (dur_ms < ms) {
-            sleepmillis(ms - dur_ms);
-            continue;
-        }
-
-        try {
-            lsync_ms =
-                std::chrono::duration_cast<milliseconds>(system_clock::now().time_since_epoch())
-                    .count();
-            _durabilityManager.sync();
-        } catch (const UserException& e) {
-            invariantHse(e.getCode() == ErrorCodes::ShutdownInProgress);
-        }
-    }
-    LOG(1) << "stopping " << name() << " thread";
-}
-
-void KVDBJournalFlusher::shutdown() {
-    _shuttingDown.store(true);
-    wait();
-}
-
-/* End KVDBJournalFlusher */
 }  // namespace mongo

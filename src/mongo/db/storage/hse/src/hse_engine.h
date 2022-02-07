@@ -45,7 +45,6 @@
 #include "mongo/base/disallow_copying.h"
 #include "mongo/bson/ordering.h"
 #include "mongo/db/storage/kv/kv_engine.h"
-#include "mongo/util/background.h"
 #include "mongo/util/string_map.h"
 
 
@@ -68,21 +67,6 @@ enum KVDBIdentType {
     STDINDEX,   // Standard index
     UNIQINDEX,  // Unique index
     OPLOG       // Oplog
-};
-
-class KVDBJournalFlusher : public BackgroundJob {
-public:
-    explicit KVDBJournalFlusher(KVDBDurabilityManager& durabilityManager);
-
-    virtual string name() const;
-
-    virtual void run();
-
-    void shutdown();
-
-private:
-    KVDBDurabilityManager& _durabilityManager;
-    std::atomic<bool> _shuttingDown{false};  // NOLINT
 };
 
 class KVDBEngine final : public KVEngine {
@@ -236,8 +220,6 @@ private:
     std::unique_ptr<KVDBDurabilityManager> _durabilityManager;
     // CounterManages manages counters like numRecords and dataSize for record stores
     std::unique_ptr<KVDBCounterManager> _counterManager;
-
-    std::unique_ptr<KVDBJournalFlusher> _journalFlusher;  // Depends on _durabilityManager
 
     std::shared_ptr<KVDBOplogBlockManager> _oplogBlkMgr{};
 };

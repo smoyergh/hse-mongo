@@ -37,6 +37,7 @@
 #include "mongo/platform/atomic_word.h"
 #include "mongo/platform/basic.h"
 #include "mongo/stdx/condition_variable.h"
+#include "mongo/util/background.h"
 
 #include "hse.h"
 
@@ -44,6 +45,7 @@ namespace mongo {
 
 class JournalListener;
 class KVDBCappedVisibilityManager;
+class KVDBJournalFlusher;
 
 class KVDBDurabilityManager {
     MONGO_DISALLOW_COPYING(KVDBDurabilityManager);
@@ -81,12 +83,35 @@ private:
     // Notified when we commit to the journal.
     JournalListener* _journalListener;
 
+    std::unique_ptr<KVDBJournalFlusher> _journalFlusher;
+
     // Protects _journalListener.
     std::mutex _journalListenerMutex;
 
     // Protects _numSyncs.
     mutable std::mutex _syncMutex;
     mutable stdx::condition_variable _syncDoneCV;
+};
+
+class KVDBJournalFlusher : public BackgroundJob {
+public:
+    explicit KVDBJournalFlusher(KVDBDurabilityManager& durabilityManager);
+
+    virtual string name() const;
+
+    virtual void run();
+
+    void shutdown();
+
+    void notifyFlusher();
+
+private:
+    KVDBDurabilityManager& _durabilityManager;
+    std::atomic<bool> _shuttingDown{false};  // NOLINT
+
+    bool _flushPending;
+    mutable std::mutex _jFlushMutex;
+    mutable stdx::condition_variable _jFlushCV;
 };
 
 }  // namespace mongo
