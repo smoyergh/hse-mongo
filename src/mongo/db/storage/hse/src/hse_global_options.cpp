@@ -49,7 +49,6 @@ const int KVDBGlobalOptions::kDefaultForceLag = 0;
 // Collection options
 const std::string KVDBGlobalOptions::kDefaultCompressionStr = "lz4";
 const std::string KVDBGlobalOptions::kDefaultCompressionMinBytesStr = "0";
-const std::string KVDBGlobalOptions::kDefaultOptimizeForCollectionCountStr = "low";
 
 const bool KVDBGlobalOptions::kDefaultEnableMetrics = false;
 
@@ -80,7 +79,6 @@ const std::string compressionMinBytesCfgStr = cfgStrPrefix + "compressionMinByte
 const std::string optimizeForCollectionCountCfgStr = cfgStrPrefix + "optimizeForCollectionCount";
 const std::string compressionOptStr = modName + "Compression";
 const std::string compressionMinBytesOptStr = modName + "CompressionMinBytes";
-const std::string optimizeForCollectionCountOptStr = modName + "OptimizeForCollectionCount";
 
 // Enable metrics
 const std::string enableMetricsCfgStr = cfgStrPrefix + "enableMetrics";
@@ -121,13 +119,6 @@ Status KVDBGlobalOptions::add(moe::OptionSection* options) {
                            "compression minimum size <values whose size is <= to this size are "
                            "not compressed>")
         .setDefault(moe::Value(kDefaultCompressionMinBytesStr));
-    kvdbOptions
-        .addOptionChaining(optimizeForCollectionCountCfgStr,
-                           optimizeForCollectionCountOptStr,
-                           moe::String,
-                           "optimize storage engine for collection count")
-        .format("(:?low)|(:?high)", "[low|high]")
-        .setDefault(moe::Value(kDefaultOptimizeForCollectionCountStr));
 
     kvdbOptions
         .addOptionChaining(
@@ -208,10 +199,6 @@ std::string KVDBGlobalOptions::getCompressionStr() const {
 
 std::string KVDBGlobalOptions::getCompressionMinBytesStr() const {
     return _compressionMinBytesStr;
-}
-
-std::string KVDBGlobalOptions::getOptimizeForCollectionCountStr() const {
-    return _optimizeForCollectionCountStr;
 }
 
 bool KVDBGlobalOptions::getMetricsEnabled() const {

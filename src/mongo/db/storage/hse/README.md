@@ -112,7 +112,6 @@ which are reflected in `mongod --help`.
 * `--hsePmemPath` is the directory path for the pmem media class; default is none
 * `--hseCompression` is the compression algorithm applied (`lz4` or `none`); default is `lz4`
 * `--hseCompressionMinBytes` is the min document size in bytes to compress; default is `0`
-* `--hseOptimizeForCollectionCount` optimizes the storage engine for `low` or `high` collection counts; default is `low`
 
 These HSE options are also supported in `mongod.conf`, in addition
 to the standard storage configuration options, as in the following example.
@@ -141,11 +140,6 @@ storage:
 
 # Create the KVDB with a pmem media class.  Default is none.
 #    pmemPath:
-
-# Optimize performance based on collection counts. Allowable values
-# are "low" or "high". Default is "low".
-#    optimizeForCollectionCount: high
-
 
 # Recommended oplog size for HSE when using replica sets.
 replication:
