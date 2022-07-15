@@ -84,7 +84,7 @@ git checkout rA.B.C.D.E-hse
 Build MongoDB with HSE as follows.
 
 ```shell
-scons -j $(nproc) --disable-warnings-as-errors CPPPATH=/opt/hse/include/hse-2 LIBPATH=/opt/hse/lib64 mongod mongos mongo
+scons -j $(nproc) --disable-warnings-as-errors CPPPATH=/opt/hse/include/hse-3 LIBPATH=/opt/hse/lib64 mongod mongos mongo
 ```
 
 The resulting binaries are stored in directory `./build/opt/mongo`.
@@ -96,7 +96,7 @@ The resulting binaries are stored in directory `./build/opt/mongo`.
 Build and run unit tests as follows.
 
 ```shell
-scons -j$(nproc) --dbg=off --opt=on CPPPATH=/opt/hse/include/hse-2 LIBPATH=/opt/hse/lib64 --disable-warnings-as-errors hse_unit_tests
+scons -j$(nproc) --dbg=off --opt=on CPPPATH=/opt/hse/include/hse-3 LIBPATH=/opt/hse/lib64 --disable-warnings-as-errors hse_unit_tests
 cd build/opt/mongo/db/storage/hse
 mkdir kvdb_home_test
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/hse/lib64

@@ -43,14 +43,14 @@ jobs:
 
     - name: Build mongo
       run: |
-        scons -j$(nproc) --dbg=off --opt=on CPPPATH=${{ runner.temp }}/hse/opt/hse/include/hse-2 LIBPATH=${{ runner.temp }}/hse/opt/hse/lib/x86_64-linux-gnu --disable-warnings-as-errors hse_unit_tests
+        scons -j$(nproc) --dbg=off --opt=on CPPPATH=${{ runner.temp }}/hse/opt/hse/include/hse-3 LIBPATH=${{ runner.temp }}/hse/opt/hse/lib/x86_64-linux-gnu --disable-warnings-as-errors hse_unit_tests
 
     - name: Run Unit tests
       run: |
         cd build/opt/mongo/db/storage/hse
         mkdir ./kvdb_home_test
         export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${{ runner.temp }}/hse/opt/hse/lib/x86_64-linux-gnu
-        ./hse_test_harness.py ${{ github.run_id }} ${{ runner.temp }}/hse/opt/hse/bin/hse2 $(realpath ./kvdb_home_test)
+        ./hse_test_harness.py ${{ github.run_id }} ${{ runner.temp }}/hse/opt/hse/bin/hse $(realpath ./kvdb_home_test)
 
     - name: Archive unit test output files
       uses: actions/upload-artifact@v2
