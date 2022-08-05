@@ -64,7 +64,6 @@ using hse::DEFAULT_SFX_LEN;
 using hse::DUR_LAG;
 using hse::KVDB_prefix;
 using hse::KVDBData;
-using hse::OPLOG_FANOUT;
 using hse::OPLOG_PFX_LEN;
 using hse::STDIDX_SFX_LEN;
 
@@ -483,12 +482,10 @@ void KVDBEngine::_prepareConfig() {
 
 
     _oplogKvsCParams.push_back("prefix.length=" + std::to_string(OPLOG_PFX_LEN));
-    _oplogKvsCParams.push_back("fanout=" + std::to_string(OPLOG_FANOUT));
     _oplogKvsCParams.push_back("kvs_ext01=1");
     _oplogKvsRParams.push_back("transactions.enabled=true");
 
     _oplogLargeKvsCParams.push_back("prefix.length=" + std::to_string(OPLOG_PFX_LEN));
-    _oplogLargeKvsCParams.push_back("fanout=" + std::to_string(OPLOG_FANOUT));
     _oplogLargeKvsCParams.push_back("kvs_ext01=1");
     _oplogLargeKvsRParams.push_back("transactions.enabled=true");
 

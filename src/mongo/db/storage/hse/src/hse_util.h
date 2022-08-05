@@ -66,8 +66,6 @@ static const int STDIDX_SFX_LEN = 8;
 static const int RS_LOC_LEN = 8;
 static const int DUR_LAG = 100;  // 100 ms durability
 
-static const int OPLOG_FANOUT = 4;
-
 static const uint32_t OPLOG_START_BLK = 5;
 static const uint32_t OPLOG_META_BLK = 0xFFFFFFFF;
 
