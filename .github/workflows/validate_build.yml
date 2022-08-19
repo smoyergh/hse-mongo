@@ -28,7 +28,7 @@ jobs:
     - name: Build and install hse
       run: |
         cd hse
-        meson builddir
+        meson setup builddir
         meson install -C builddir --destdir="${{ runner.temp }}/hse"
 
     - uses: actions/upload-artifact@v2
