@@ -295,15 +295,14 @@ Status KVDBImpl::kvs_iter_delete(KVSHandle handle, ClientTxn* txn, const KVDBDat
 
     bool eof = false;
 
-    const void* lKey = nullptr;
+    char lKey[HSE_KVS_KEY_LEN_MAX];
     size_t lKeyLen = 0;
-    const void* lVal = nullptr;
-    size_t lValLen = 0;
 
     while (true) {
         _hseKvsCursorReadCounter.add();
         auto lt = _hseKvsCursorReadLatency.begin();
-        ret = ::hse_kvs_cursor_read(lCursor, 0, &lKey, &lKeyLen, &lVal, &lValLen, &eof);
+        ret = ::hse_kvs_cursor_read_copy(
+            lCursor, 0, lKey, sizeof(lKey), &lKeyLen, NULL, 0, NULL, &eof);
         _hseKvsCursorReadLatency.end(lt);
         if (ret || eof) {
             break;
