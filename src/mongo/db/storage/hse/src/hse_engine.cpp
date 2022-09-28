@@ -463,23 +463,18 @@ void KVDBEngine::_prepareConfig() {
         _kvdbCParams.push_back("storage.pmem.path=" + kvdbGlobalOptions.getPmemPathStr());
     }
 
-    string vCompr = kvdbGlobalOptions.getCompressionStr();
-    string vComprMinBytes = kvdbGlobalOptions.getCompressionMinBytesStr();
+    const string vComprDefault = kvdbGlobalOptions.getCompressionDefaultStr();
 
     _kvdbRParams.push_back("txn_timeout=8589934591");
     _kvdbRParams.push_back("durability.interval_ms=" + std::to_string(ms));
 
     _mainKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
     _mainKvsRParams.push_back("transactions.enabled=true");
-    _mainKvsRParams.push_back("compression.value.algorithm=" + vCompr);
-    _mainKvsRParams.push_back("compression.value.min_length=" + vComprMinBytes);
-
+    _mainKvsRParams.push_back("compression.default=" + vComprDefault);
 
     _largeKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
     _largeKvsRParams.push_back("transactions.enabled=true");
-    _largeKvsRParams.push_back("compression.value.algorithm=" + vCompr);
-    _largeKvsRParams.push_back("compression.value.min_length=" + vComprMinBytes);
-
+    _largeKvsRParams.push_back("compression.default=" + vComprDefault);
 
     _oplogKvsCParams.push_back("prefix.length=" + std::to_string(OPLOG_PFX_LEN));
     _oplogKvsCParams.push_back("kvs_ext01=1");
@@ -492,14 +487,12 @@ void KVDBEngine::_prepareConfig() {
     _uniqIdxKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
     _uniqIdxKvsCParams.push_back("suffix.length=" + std::to_string(DEFAULT_SFX_LEN));
     _uniqIdxKvsRParams.push_back("transactions.enabled=true");
-    _uniqIdxKvsRParams.push_back("compression.value.algorithm=" + vCompr);
-    _uniqIdxKvsRParams.push_back("compression.value.min_length=" + vComprMinBytes);
+    _uniqIdxKvsRParams.push_back("compression.default=" + vComprDefault);
 
     _stdIdxKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
     _stdIdxKvsCParams.push_back("suffix.length=" + std::to_string(STDIDX_SFX_LEN));
     _stdIdxKvsRParams.push_back("transactions.enabled=true");
-    _stdIdxKvsRParams.push_back("compression.value.algorithm=" + vCompr);
-    _stdIdxKvsRParams.push_back("compression.value.min_length=" + vComprMinBytes);
+    _stdIdxKvsRParams.push_back("compression.default=" + vComprDefault);
 }
 
 void KVDBEngine::_setupDb() {

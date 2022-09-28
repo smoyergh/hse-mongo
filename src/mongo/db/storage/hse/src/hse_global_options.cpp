@@ -47,8 +47,7 @@ namespace mongo {
 const int KVDBGlobalOptions::kDefaultForceLag = 0;
 
 // Collection options
-const std::string KVDBGlobalOptions::kDefaultCompressionStr = "lz4";
-const std::string KVDBGlobalOptions::kDefaultCompressionMinBytesStr = "0";
+const std::string KVDBGlobalOptions::kDefaultCompressionDefaultStr = "on";
 
 const bool KVDBGlobalOptions::kDefaultEnableMetrics = false;
 
@@ -74,11 +73,9 @@ const std::string cfgStrPrefix = ("storage." + modName) + ".";
 const std::string forceLagCfgStr = cfgStrPrefix + "forceLag";
 
 // Collection options.
-const std::string compressionCfgStr = cfgStrPrefix + "compression";
-const std::string compressionMinBytesCfgStr = cfgStrPrefix + "compressionMinBytes";
+const std::string compressionDefaultCfgStr = cfgStrPrefix + "compressionDefault";
 const std::string optimizeForCollectionCountCfgStr = cfgStrPrefix + "optimizeForCollectionCount";
-const std::string compressionOptStr = modName + "Compression";
-const std::string compressionMinBytesOptStr = modName + "CompressionMinBytes";
+const std::string compressionDefaultOptStr = modName + "CompressionDefault";
 
 // Enable metrics
 const std::string enableMetricsCfgStr = cfgStrPrefix + "enableMetrics";
@@ -108,17 +105,11 @@ Status KVDBGlobalOptions::add(moe::OptionSection* options) {
 
     // Collection options
     kvdbOptions
-        .addOptionChaining(
-            compressionCfgStr, compressionOptStr, moe::String, "compression algorithm [none|lz4]")
-        .format("(:?none)|(:?lz4)", "[none|lz4]")
-        .setDefault(moe::Value(kDefaultCompressionStr));
-    kvdbOptions
-        .addOptionChaining(compressionMinBytesCfgStr,
-                           compressionMinBytesOptStr,
+        .addOptionChaining(compressionDefaultCfgStr,
+                           compressionDefaultOptStr,
                            moe::String,
-                           "compression minimum size <values whose size is <= to this size are "
-                           "not compressed>")
-        .setDefault(moe::Value(kDefaultCompressionMinBytesStr));
+                           "whether to compress by default")
+        .setDefault(moe::Value(kDefaultCompressionDefaultStr));
 
     kvdbOptions
         .addOptionChaining(
@@ -148,15 +139,10 @@ Status KVDBGlobalOptions::store(const moe::Environment& params,
         log() << "Force Lag: " << kvdbGlobalOptions._forceLag;
     }
 
-    if (params.count(compressionCfgStr)) {
-        kvdbGlobalOptions._compressionStr = params[compressionCfgStr].as<std::string>();
-        log() << "Compression Algo str: " << kvdbGlobalOptions._compressionStr;
-    }
-
-    if (params.count(compressionMinBytesCfgStr)) {
-        kvdbGlobalOptions._compressionMinBytesStr =
-            params[compressionMinBytesCfgStr].as<std::string>();
-        log() << "Compression minimum size  str: " << kvdbGlobalOptions._compressionMinBytesStr;
+    if (params.count(compressionDefaultCfgStr)) {
+        kvdbGlobalOptions._compressionDefaultStr =
+            params[compressionDefaultCfgStr].as<std::string>();
+        log() << "Compression default: " << kvdbGlobalOptions._compressionDefaultStr;
     }
 
     if (params.count(optimizeForCollectionCountCfgStr)) {
@@ -193,12 +179,8 @@ bool KVDBGlobalOptions::getCrashSafeCounters() const {
     return _crashSafeCounters;
 }
 
-std::string KVDBGlobalOptions::getCompressionStr() const {
-    return _compressionStr;
-}
-
-std::string KVDBGlobalOptions::getCompressionMinBytesStr() const {
-    return _compressionMinBytesStr;
+std::string KVDBGlobalOptions::getCompressionDefaultStr() const {
+    return _compressionDefaultStr;
 }
 
 bool KVDBGlobalOptions::getMetricsEnabled() const {

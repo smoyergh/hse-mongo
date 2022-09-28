@@ -110,8 +110,7 @@ which are reflected in `mongod --help`.
 
 * `--hseStagingPath` is the directory path for the staging media class; default is none
 * `--hsePmemPath` is the directory path for the pmem media class; default is none
-* `--hseCompression` is the compression algorithm applied (`lz4` or `none`); default is `lz4`
-* `--hseCompressionMinBytes` is the min document size in bytes to compress; default is `0`
+* `--hseCompressDefault` determines whether to compress by default; default is `on`
 
 These HSE options are also supported in `mongod.conf`, in addition
 to the standard storage configuration options, as in the following example.
@@ -130,10 +129,8 @@ storage:
 # Uncomment the following to customize HSE configuration options
 #  hse:
 
-# Allowable compression types are "lz4" or "none". Default is "lz4".
-# Minimum document size to compress in bytes.  Default is zero (0).
-#    compression: none
-#    compressionMinBytes: 0
+# Whether to compress by default. Default is on.
+#    compressionDefault: "on"/"off"
 
 # Create the KVDB with a staging media class.  Default is none.
 #    stagingPath:

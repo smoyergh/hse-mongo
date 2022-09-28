@@ -44,8 +44,7 @@ class KVDBGlobalOptions {
 public:
     KVDBGlobalOptions()
         : _forceLag{kDefaultForceLag},
-          _compressionStr{kDefaultCompressionStr},
-          _compressionMinBytesStr{kDefaultCompressionMinBytesStr},
+          _compressionDefaultStr{kDefaultCompressionDefaultStr},
           _enableMetrics{kDefaultEnableMetrics},
           _crashSafeCounters{false},
           _stagingPathStr{kDefaultStagingPathStr},
@@ -55,10 +54,7 @@ public:
     Status add(moe::OptionSection* options);
     Status store(const moe::Environment& params, const std::vector<std::string>& args);
 
-    std::string getCompressionStr() const;
-    std::string getCompressionMinBytesStr() const;
-
-
+    std::string getCompressionDefaultStr() const;
     bool getMetricsEnabled() const;
     bool getCrashSafeCounters() const;
     int getForceLag() const;
@@ -68,17 +64,15 @@ public:
 
 private:
     static const int kDefaultForceLag;
-    static const std::string kDefaultCompressionStr;
-    static const std::string kDefaultCompressionMinBytesStr;
     static const bool kDefaultEnableMetrics;
+    static const std::string kDefaultCompressionDefaultStr;
     static const std::string kDefaultStagingPathStr;
     static const std::string kDefaultPmemPathStr;
     static const std::string kDefaultConfigPathStr;
 
     int _forceLag;
 
-    std::string _compressionStr;
-    std::string _compressionMinBytesStr;
+    std::string _compressionDefaultStr;
     std::string _optimizeForCollectionCountStr;
     bool _enableMetrics;
     bool _crashSafeCounters;

@@ -145,8 +145,7 @@ def mongo_shell_program(logger, executable=None, connection_string=None, filenam
         "wiredTigerCollectionConfigString": (config.WT_COLL_CONFIG, ""),
         "wiredTigerEngineConfigString": (config.WT_ENGINE_CONFIG, ""),
         "wiredTigerIndexConfigString": (config.WT_INDEX_CONFIG, ""),
-        "hseCompression": (config.HSE_COMPR, ""),
-        "hseCompressionMinBytes": (config.HSE_COMPR_MIN_BYTES, ""),
+        "hseCompressionDefault": (config.HSE_COMPR, ""),
     }
 
     test_data = global_vars.get("TestData", {}).copy()

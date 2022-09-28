@@ -67,7 +67,7 @@ DEST_TO_CONFIG = {
     "wt_engine_config": "wiredTigerEngineConfigString",
     "wt_index_config": "wiredTigerIndexConfigString",
     "wt_index_config": "wiredTigerIndexConfigString",
-    "hse_compr": "hseCompression",
+    "hse_compr": "hseCompressionDefault",
     "continue_on_crash": "continueOnCrash",
 }
 
@@ -247,8 +247,8 @@ def parse_command_line():
     parser.add_option("--wiredTigerIndexConfigString", dest="wt_index_config", metavar="CONFIG",
                       help="Set the WiredTiger index configuration setting for all mongod's.")
 
-    parser.add_option("--hseCompression", dest="hse_compr", metavar="PARAMS",
-                      help="Collection compression algorithm.")
+    parser.add_option("--hseCompressionDefault", dest="hse_compr", metavar="PARAMS",
+                      help="Compress collection by default.")
 
     parser.add_option("--continueOnCrash", action="store_true", dest="continue_on_crash",
                       help="Restart test fixture and continue to execute tests after a crash.")
@@ -356,8 +356,7 @@ def update_config_vars(values):
     _config.WT_COLL_CONFIG = config.pop("wiredTigerCollectionConfigString")
     _config.WT_ENGINE_CONFIG = config.pop("wiredTigerEngineConfigString")
     _config.WT_INDEX_CONFIG = config.pop("wiredTigerIndexConfigString")
-    _config.HSE_COMPR = config.pop("hseCompression")
-    _config.HSE_COMPR_MIN_BYTES = config.pop("hseCompressionMinBytes")
+    _config.HSE_COMPR = config.pop("hseCompressionDefault")
     _config.CONTINUE_ON_CRASH = config.pop("continueOnCrash")
 
     if config:
