@@ -92,7 +92,6 @@ public:
 
         cParams.clear();
         cParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
-        cParams.push_back("suffix.length=" + std::to_string(DEFAULT_SFX_LEN));
 
         hseSt = _db.kvdb_kvs_make(_uniqIdxKvsName.c_str(), cParams);
         invariantHseSt(hseSt);
@@ -102,10 +101,11 @@ public:
 
         cParams.clear();
         cParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
-        cParams.push_back("suffix.length=" + std::to_string(STDIDX_SFX_LEN));
 
         hseSt = _db.kvdb_kvs_make(_stdIdxKvsName.c_str(), cParams);
         invariantHseSt(hseSt);
+
+        rParams.push_back("kvs_sfx_len=" + std::to_string(STDIDX_SFX_LEN));
 
         hseSt = _db.kvdb_kvs_open(_stdIdxKvsName.c_str(), rParams, _stdIdxKvs);
         invariantHseSt(hseSt);

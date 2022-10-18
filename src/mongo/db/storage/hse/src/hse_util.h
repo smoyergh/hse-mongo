@@ -61,7 +61,6 @@ static const std::string KVDB_prefix = string("\0\0\0\0", 4);
 
 static const int DEFAULT_PFX_LEN = 4;
 static const int OPLOG_PFX_LEN = 8;
-static const int DEFAULT_SFX_LEN = 0;
 static const int STDIDX_SFX_LEN = 8;
 static const int RS_LOC_LEN = 8;
 static const int DUR_LAG = 100;  // 100 ms durability

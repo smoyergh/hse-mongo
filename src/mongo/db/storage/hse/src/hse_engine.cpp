@@ -60,7 +60,6 @@ using namespace std;
 using namespace std::chrono;
 
 using hse::DEFAULT_PFX_LEN;
-using hse::DEFAULT_SFX_LEN;
 using hse::DUR_LAG;
 using hse::KVDB_prefix;
 using hse::KVDBData;
@@ -485,14 +484,13 @@ void KVDBEngine::_prepareConfig() {
     _oplogLargeKvsRParams.push_back("transactions.enabled=true");
 
     _uniqIdxKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
-    _uniqIdxKvsCParams.push_back("suffix.length=" + std::to_string(DEFAULT_SFX_LEN));
     _uniqIdxKvsRParams.push_back("transactions.enabled=true");
     _uniqIdxKvsRParams.push_back("compression.default=" + vComprDefault);
 
     _stdIdxKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
-    _stdIdxKvsCParams.push_back("suffix.length=" + std::to_string(STDIDX_SFX_LEN));
     _stdIdxKvsRParams.push_back("transactions.enabled=true");
     _stdIdxKvsRParams.push_back("compression.default=" + vComprDefault);
+    _stdIdxKvsRParams.push_back("kvs_sfx_len=" + std::to_string(STDIDX_SFX_LEN));
 }
 
 void KVDBEngine::_setupDb() {
