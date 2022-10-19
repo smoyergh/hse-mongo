@@ -1,0 +1,23 @@
+name: checkoss
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  checkoss:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout hse-mongo
+        uses: actions/checkout@v3
+
+      - name: checkoss
+        run: |
+          src/mongo/db/storage/hse/checkoss

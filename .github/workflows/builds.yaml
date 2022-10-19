@@ -1,0 +1,117 @@
+name: Builds
+
+on:
+  push:
+    branches:
+      - v3.4.17-hse
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "**.cpp"
+      - "**.h"
+      - "**/SConstruct"
+      - "**/SConscript"
+      - .github/workflows/builds.yaml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/hse-project/ci-images/ubuntu-18.04:master
+
+    steps:
+      - name: Determine branches
+        id: determine-branches
+        shell: sh +e {0}
+        run: |
+          for p in hse; do
+            branch=master
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              git ls-remote --exit-code --heads \
+                "https://github.com/hse-project/$p.git" "$GITHUB_HEAD_REF" \
+                > /dev/null
+
+              if [ $? -eq 0 ]; then
+                branch="$GITHUB_HEAD_REF"
+              fi
+            elif [ "$GITHUB_EVENT_NAME" = "release" ]; then
+              branch=$(git rev-parse --abbrev-ref HEAD)
+            else
+              git ls-remote --exit-code --heads \
+                "https://github.com/hse-project/$p.git" "$GITHUB_REF" \
+                > /dev/null
+
+              if [ $? -eq 0 ]; then
+                branch="$GITHUB_REF_NAME"
+              fi
+            fi
+
+            echo "$p=$branch" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Install scons
+        run: |
+          apt-get install -y python2.7 python2.7-minimal python-pip \
+            python-minimal
+          python -m pip install scons
+
+      - name: Checkout HSE
+        uses: actions/checkout@v3
+        with:
+          repository: hse-project/hse
+          ref: ${{ steps.determine-branches.outputs.hse }}
+          path: hse
+
+      - name: Cache Meson packagecache
+        uses: actions/cache@v3
+        with:
+          path: hse/subprojects/packagecache
+          key: meson-packagecache-${{ hashFiles('hse/subprojects/*.wrap') }}
+
+      - name: Setup HSE
+        run: |
+          cd hse
+          echo "HSE_MAJOR_VERSION=$(head -c 1 VERSION)" >> "$GITHUB_ENV"
+          meson setup builddir --buildtype=debug --fatal-meson-warnings \
+            --werror --prefix=/usr -Dcli=true -Dbindings=none -Dtools=disabled \
+            -Ddocs=disabled -Dtests=false
+
+      - name: Build HSE
+        run: |
+          cd hse
+          ninja -C builddir
+
+      - name: Install HSE
+        run: |
+          cd hse
+          meson install -C builddir
+
+      - name: Checkout hse-mongo
+        uses: actions/checkout@v3
+
+      - name: Build hse-mongo
+        run: |
+          scons -j$(nproc) --dbg=off --opt=on --disable-warnings-as-errors \
+            MONGO_VERSION=3.4.17-hse \
+            CPPPATH=/usr/include/hse-$HSE_MAJOR_VERSION hse_unit_tests
+
+      - name: Test hse-mongo
+        run: |
+          cd build/opt/mongo/db/storage/hse
+          mkdir ./kvdb_home_test
+          ./hse_test_harness.py ${{ github.run_id }} $(which hse) \
+            $(realpath ./kvdb_home_test)
+
+      - uses: actions/upload-artifact@v3
+        if: ${{ failure() }}
+        with:
+          name: ${{ github.job }}
+          path: |
+            "build/opt/mongo/db/storage/hse/*out"
+            hse/builddir/meson-logs

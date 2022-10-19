@@ -1,0 +1,35 @@
+name: ClangFormat
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "**.cpp"
+      - "**.h"
+      - .github/workflows/clang-format.yaml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  clang-format:
+    runs-on: ubuntu-20.04
+    container:
+      # Has to be Ubuntu 20.04 to get a Git >= 2.18, which GitHub requires in
+      # order not to clone with the REST API. It has to be a Git repo for this
+      # clang_format.py script.
+      image: ghcr.io/hse-project/ci-images/ubuntu-20.04:master
+
+    steps:
+      - name: Checkout hse-mongo
+        uses: actions/checkout@v3
+
+      - name: Get script dependencies
+        run: |
+          apt-get install -y python2.7 python2.7-minimal python-is-python2
+
+      - name: Run clang-format
+        run: ./buildscripts/clang_format.py lint
