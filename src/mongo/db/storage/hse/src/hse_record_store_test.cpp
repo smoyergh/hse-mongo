@@ -84,6 +84,7 @@ public:
                                                   ns,
                                                   "1",
                                                   _db,
+                                                  _metaKvs,
                                                   _colKvs,
                                                   _largeKvs,
                                                   _prefix,
@@ -107,6 +108,7 @@ public:
                                                      ns,
                                                      "1",
                                                      _db,
+                                                     _metaKvs,
                                                      _oplogKvs,
                                                      _oplogLargeKvs,
                                                      _prefix,
@@ -119,6 +121,7 @@ public:
                                                             ns,
                                                             "1",
                                                             _db,
+                                                            _metaKvs,
                                                             _colKvs,
                                                             _largeKvs,
                                                             _prefix,
@@ -144,7 +147,13 @@ public:
         cParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
         rParams.push_back("transactions.enabled=true");
 
-        hse::Status hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), cParams);
+        hse::Status hseSt = _db.kvdb_kvs_make(_metaKvsName.c_str(), cParams);
+        invariantHseSt(hseSt);
+
+        hseSt = _db.kvdb_kvs_open(_metaKvsName.c_str(), rParams, _metaKvs);
+        invariantHseSt(hseSt);
+
+        hseSt = _db.kvdb_kvs_make(_colKvsName.c_str(), cParams);
         invariantHseSt(hseSt);
 
         hseSt = _db.kvdb_kvs_open(_colKvsName.c_str(), rParams, _colKvs);
@@ -179,7 +188,10 @@ public:
     }
 
     void teardownDb() {
-        auto hseSt = _db.kvdb_kvs_close(_colKvs);
+        auto hseSt = _db.kvdb_kvs_close(_metaKvs);
+        invariantHseSt(hseSt);
+
+        hseSt = _db.kvdb_kvs_close(_colKvs);
         invariantHseSt(hseSt);
 
         hseSt = _db.kvdb_kvs_close(_idxKvs);
@@ -199,6 +211,9 @@ public:
     }
 
 private:
+    string _metaKvsName = "MetaKVS";
+    KVSHandle _metaKvs;
+
     string _colKvsName = "ColKVS";
     KVSHandle _colKvs;
 

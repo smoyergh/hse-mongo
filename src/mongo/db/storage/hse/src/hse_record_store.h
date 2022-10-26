@@ -94,6 +94,7 @@ public:
                     StringData ns,
                     StringData id,
                     KVDB& db,
+                    KVSHandle& metaKvs,
                     KVSHandle& colKvs,
                     KVSHandle& largeKvs,
                     uint32_t prefix,
@@ -266,6 +267,7 @@ protected:
     }
 
     KVDB& _db;
+    KVSHandle& _metaKvs;
     KVSHandle& _colKvs;
     KVSHandle& _largeKvs;
     uint32_t _prefixVal;
@@ -342,6 +344,7 @@ public:
                           StringData ns,
                           StringData id,
                           KVDB& db,
+                          KVSHandle& metaKvs,
                           KVSHandle& colKvs,
                           KVSHandle& largeKvs,
                           uint32_t prefix,
@@ -431,6 +434,7 @@ public:
                    StringData ns,
                    StringData id,
                    KVDB& db,
+                   KVSHandle& metaKvs,
                    KVSHandle& colKvs,
                    KVSHandle& largeKvs,
                    uint32_t prefix,

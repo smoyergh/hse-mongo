@@ -167,6 +167,7 @@ private:
     KVDBImpl _db{};
 
     // Const values for db
+    static const string kMetaKvsName;
     static const string kMainKvsName;
     static const string kUniqIdxKvsName;
     static const string kStdIdxKvsName;
@@ -180,6 +181,8 @@ private:
     // configuration
     vector<string> _kvdbCParams{};
     vector<string> _kvdbRParams{};
+    vector<string> _metaKvsCParams{};
+    vector<string> _metaKvsRParams{};
     vector<string> _mainKvsCParams{};
     vector<string> _mainKvsRParams{};
     vector<string> _largeKvsCParams{};
@@ -193,6 +196,7 @@ private:
     vector<string> _stdIdxKvsCParams{};
     vector<string> _stdIdxKvsRParams{};
 
+    KVSHandle _metaKvs;
     KVSHandle _mainKvs;
     KVSHandle _stdIdxKvs;
     KVSHandle _uniqIdxKvs;

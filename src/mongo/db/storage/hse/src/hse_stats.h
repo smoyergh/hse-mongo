@@ -111,7 +111,7 @@ public:
     virtual ~KVDBStatCounter();
 
     void add(int64_t incr = 1) {
-        if (isStatEnabled())
+        if (MONGO_unlikely(isStatEnabled()))
             add_impl(incr);
     }
 
@@ -136,7 +136,8 @@ public:
     }
 
     void end(LatencyToken bTime) {
-        if (bTime != chrono::time_point<chrono::steady_clock>(chrono::nanoseconds(0)))
+        if (MONGO_unlikely(bTime !=
+                           chrono::time_point<chrono::steady_clock>(chrono::nanoseconds(0))))
             end_impl(bTime);
     }
 

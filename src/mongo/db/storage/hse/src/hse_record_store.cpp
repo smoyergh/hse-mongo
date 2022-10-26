@@ -166,6 +166,7 @@ KVDBRecordStore::KVDBRecordStore(OperationContext* ctx,
                                  StringData ns,
                                  StringData id,
                                  KVDB& db,
+                                 KVSHandle& metaKvs,
                                  KVSHandle& colKvs,
                                  KVSHandle& largeKvs,
                                  uint32_t prefix,
@@ -173,6 +174,7 @@ KVDBRecordStore::KVDBRecordStore(OperationContext* ctx,
                                  KVDBCounterManager& counterManager)
     : RecordStore(ns),
       _db(db),
+      _metaKvs(metaKvs),
       _colKvs(colKvs),
       _largeKvs(largeKvs),
       _prefixVal(prefix),
@@ -229,7 +231,7 @@ void KVDBRecordStore::_readAndDecodeCounter(const std::string& keyString,
     KVDBData val{};
     val.createOwned(sizeof(int64_t));
 
-    auto st = _db.kvs_get(_colKvs, 0, key, val, found);
+    auto st = _db.kvs_get(_metaKvs, 0, key, val, found);
     invariantHseSt(st);
     if (!found) {
         counter.store(0);
@@ -252,7 +254,7 @@ void KVDBRecordStore::_encodeAndWriteCounter(const std::string& keyString,
     KVDBData key{keyString};
     KVDBData val = KVDBData{valString};
 
-    auto st = _db.kvs_sub_txn_put(_colKvs, key, val);
+    auto st = _db.kvs_sub_txn_put(_metaKvs, key, val);
     invariantHseSt(st);
 }
 
@@ -793,6 +795,7 @@ KVDBCappedRecordStore::KVDBCappedRecordStore(OperationContext* ctx,
                                              StringData ns,
                                              StringData id,
                                              KVDB& db,
+                                             KVSHandle& metaKvs,
                                              KVSHandle& colKvs,
                                              KVSHandle& largeKvs,
                                              uint32_t prefix,
@@ -800,7 +803,8 @@ KVDBCappedRecordStore::KVDBCappedRecordStore(OperationContext* ctx,
                                              KVDBCounterManager& counterManager,
                                              int64_t cappedMaxSize,
                                              int64_t cappedMaxDocs)
-    : KVDBRecordStore(ctx, ns, id, db, colKvs, largeKvs, prefix, durabilityManager, counterManager),
+    : KVDBRecordStore(
+          ctx, ns, id, db, metaKvs, colKvs, largeKvs, prefix, durabilityManager, counterManager),
       _cappedMaxSize(cappedMaxSize),
       _cappedMaxSizeSlack(std::min(cappedMaxSize / 10, int64_t(16 * 1024 * 1024))),
       _cappedMaxDocs(cappedMaxDocs),
@@ -1132,6 +1136,7 @@ KVDBOplogStore::KVDBOplogStore(OperationContext* opctx,
                                StringData ns,
                                StringData id,
                                KVDB& db,
+                               KVSHandle& metaKvs,
                                KVSHandle& colKvs,
                                KVSHandle& largeKvs,
                                uint32_t prefix,
@@ -1142,6 +1147,7 @@ KVDBOplogStore::KVDBOplogStore(OperationContext* opctx,
                             ns,
                             id,
                             db,
+                            metaKvs,
                             colKvs,
                             largeKvs,
                             prefix,

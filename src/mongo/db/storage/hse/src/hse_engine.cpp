@@ -85,6 +85,7 @@ uint32_t decodePrefix(const uint8_t* prefixPtr) {
 }  // namespace
 
 /* Start KVDBEngine */
+const string KVDBEngine::kMetaKvsName = "MetaKvs";
 const string KVDBEngine::kMainKvsName = "MainKvs";
 const string KVDBEngine::kUniqIdxKvsName = "UniqIdxKvs";
 const string KVDBEngine::kStdIdxKvsName = "StdIdxKvs";
@@ -149,7 +150,7 @@ std::unique_ptr<RecordStore> KVDBEngine::getRecordStore(OperationContext* opCtx,
 
     if (!colOpts.capped) {
         recordStore = stdx::make_unique<KVDBRecordStore>(
-            opCtx, ns, ident, _db, _mainKvs, _largeKvs, prefix, durRef, counterRef);
+            opCtx, ns, ident, _db, _metaKvs, _mainKvs, _largeKvs, prefix, durRef, counterRef);
     } else {
         int64_t cappedMaxSize = colOpts.cappedSize ? colOpts.cappedSize : 4096;
         int64_t cappedMaxDocs = colOpts.cappedMaxDocs ? colOpts.cappedMaxDocs : -1;
@@ -159,6 +160,7 @@ std::unique_ptr<RecordStore> KVDBEngine::getRecordStore(OperationContext* opCtx,
                                                                    ns,
                                                                    ident,
                                                                    _db,
+                                                                   _metaKvs,
                                                                    _mainKvs,
                                                                    _largeKvs,
                                                                    prefix,
@@ -173,6 +175,7 @@ std::unique_ptr<RecordStore> KVDBEngine::getRecordStore(OperationContext* opCtx,
                                                   ns,
                                                   ident,
                                                   _db,
+                                                  _metaKvs,
                                                   _oplogKvs,
                                                   _oplogLargeKvs,
                                                   prefix,
@@ -248,7 +251,7 @@ Status KVDBEngine::dropIdent(OperationContext* opCtx, StringData ident) {
     KVDBData keyToDel{delKeyStr};
 
     // delete metadata
-    auto s = _db.kvs_sub_txn_delete(_mainKvs, keyToDel);
+    auto s = _db.kvs_sub_txn_delete(_metaKvs, keyToDel);
     if (!s.ok()) {
         return hseToMongoStatus(s);
     }
@@ -267,6 +270,10 @@ Status KVDBEngine::dropIdent(OperationContext* opCtx, StringData ident) {
         KVDBData storageSizeKey{storageSizeKeyStr};
         KVDBData numRecordsKey{numRecordsKeyStr};
 
+        s = _db.kvs_sub_txn_prefix_delete(_metaKvs, pKeyToDel);
+        if (!s.ok()) {
+            return hseToMongoStatus(s);
+        }
         s = _db.kvs_sub_txn_prefix_delete(_mainKvs, pKeyToDel);
         if (!s.ok()) {
             return hseToMongoStatus(s);
@@ -276,17 +283,17 @@ Status KVDBEngine::dropIdent(OperationContext* opCtx, StringData ident) {
             return hseToMongoStatus(s);
         }
 
-        s = _db.kvs_sub_txn_delete(_mainKvs, dataSizeKey);
+        s = _db.kvs_sub_txn_delete(_metaKvs, dataSizeKey);
         if (!s.ok()) {
             return hseToMongoStatus(s);
         }
 
-        s = _db.kvs_sub_txn_delete(_mainKvs, storageSizeKey);
+        s = _db.kvs_sub_txn_delete(_metaKvs, storageSizeKey);
         if (!s.ok()) {
             return hseToMongoStatus(s);
         }
 
-        s = _db.kvs_sub_txn_delete(_mainKvs, numRecordsKey);
+        s = _db.kvs_sub_txn_delete(_metaKvs, numRecordsKey);
         if (!s.ok()) {
             return hseToMongoStatus(s);
         }
@@ -467,6 +474,10 @@ void KVDBEngine::_prepareConfig() {
     _kvdbRParams.push_back("txn_timeout=8589934591");
     _kvdbRParams.push_back("durability.interval_ms=" + std::to_string(ms));
 
+    _metaKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
+    _metaKvsRParams.push_back("transactions.enabled=true");
+    _metaKvsRParams.push_back("compression.default=" + vComprDefault);
+
     _mainKvsCParams.push_back("prefix.length=" + std::to_string(DEFAULT_PFX_LEN));
     _mainKvsRParams.push_back("transactions.enabled=true");
     _mainKvsRParams.push_back("compression.default=" + vComprDefault);
@@ -513,6 +524,7 @@ void KVDBEngine::_setupDb() {
 
     _open_kvdb(_dbHome, _kvdbCParams, _kvdbRParams);
 
+    _open_kvs(kMetaKvsName, _metaKvs, _metaKvsCParams, _metaKvsRParams);
     _open_kvs(kMainKvsName, _mainKvs, _mainKvsCParams, _mainKvsRParams);
     _open_kvs(kLargeKvsName, _largeKvs, _largeKvsCParams, _largeKvsRParams);
 
@@ -557,6 +569,10 @@ void KVDBEngine::_checkMaxPrefix() {
     uint32_t maxPrefix = 0, tmpMaxPrefix = 0;
 
     // for each kvs figure out maxPrefix.
+    // _metakvs
+    tmpMaxPrefix = _getMaxPrefixInKvs(_metaKvs);
+    maxPrefix = std::max(maxPrefix, tmpMaxPrefix);
+
     // _mainkvs
     tmpMaxPrefix = _getMaxPrefixInKvs(_mainKvs);
     maxPrefix = std::max(maxPrefix, tmpMaxPrefix);
