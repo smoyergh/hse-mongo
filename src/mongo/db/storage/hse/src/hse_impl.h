@@ -45,7 +45,9 @@ namespace hse {
 
 Status init();
 
-Status init(const string& home);
+Status init(const vector<string>& params);
+
+Status init(const string& home, const vector<string>& params);
 
 Status fini();
 

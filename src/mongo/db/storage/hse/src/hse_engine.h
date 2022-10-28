@@ -179,6 +179,7 @@ private:
     static const string kMetadataPrefix;
 
     // configuration
+    vector<string> _globalParams{};
     vector<string> _kvdbCParams{};
     vector<string> _kvdbRParams{};
     vector<string> _metaKvsCParams{};

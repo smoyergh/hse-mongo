@@ -282,7 +282,8 @@ jsTestOptions = function() {
             forceValidationWithFeatureCompatibilityVersion:
                 TestData.forceValidationWithFeatureCompatibilityVersion,
             skipValidationNamespaces: TestData.skipValidationNamespaces || [],
-            hseCompressionDefault: TestData.hseCompressionDefault,
+            hseValueCompressionDefault: TestData.hseValueCompressionDefault,
+            hseRestEnabled: TestData.hseRestEnabled,
         });
     }
     return _jsTestOptions;

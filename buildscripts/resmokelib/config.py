@@ -34,6 +34,9 @@ DEFAULT_DBPATH_PREFIX = os.path.normpath("/data/db")
 # Default compression
 DEFAULT_HSE_COMPR = "on"
 
+# Default REST enabled
+DEFAULT_HSE_REST_ENABLED = False
+
 # Subdirectory under the dbpath prefix that contains directories with data files of mongod's started
 # by resmoke.py.
 FIXTURE_SUBDIR = "resmoke"
@@ -83,7 +86,8 @@ DEFAULTS = {
     "wiredTigerCollectionConfigString": None,
     "wiredTigerEngineConfigString": None,
     "wiredTigerIndexConfigString": None,
-    "hseCompressionDefault": None,
+    "hseValueCompressionDefault": None,
+    "hseRestEnabled": None,
     "continueOnCrash": False,
 }
 

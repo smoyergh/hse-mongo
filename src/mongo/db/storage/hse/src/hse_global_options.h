@@ -44,6 +44,7 @@ class KVDBGlobalOptions {
 public:
     KVDBGlobalOptions()
         : _forceLag{kDefaultForceLag},
+          _restEnabled{kDefaultRestEnabled},
           _valueCompressionDefaultStr{kDefaultValueCompressionDefaultStr},
           _enableMetrics{kDefaultEnableMetrics},
           _crashSafeCounters{false},
@@ -54,6 +55,7 @@ public:
     Status add(moe::OptionSection* options);
     Status store(const moe::Environment& params, const std::vector<std::string>& args);
 
+    bool getRestEnabled() const;
     std::string getValueCompressionDefaultStr() const;
     bool getMetricsEnabled() const;
     bool getCrashSafeCounters() const;
@@ -63,6 +65,7 @@ public:
     std::string getConfigPathStr() const;
 
 private:
+    static const bool kDefaultRestEnabled;
     static const int kDefaultForceLag;
     static const bool kDefaultEnableMetrics;
     static const std::string kDefaultValueCompressionDefaultStr;
@@ -72,6 +75,7 @@ private:
 
     int _forceLag;
 
+    bool _restEnabled;
     std::string _valueCompressionDefaultStr;
     std::string _optimizeForCollectionCountStr;
     bool _enableMetrics;

@@ -6,6 +6,8 @@ on:
     paths-ignore:
       - "**.cpp"
       - "**.h"
+      - "**.py"
+      - "**.js"
       - "**/SConstruct"
       - "**/SConscript"
       - .github/workflows/builds.yaml

@@ -58,6 +58,7 @@ public:
     void reset();
 
 private:
+    const vector<string> _globalParams{"rest.enabled=false"};
     string _kvdbHome{"/var/tmp/mongo-ut-kvdbs/kvdb1"};
 
     KVDBImpl _db{};

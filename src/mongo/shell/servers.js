@@ -540,7 +540,8 @@ var MongoRunner, _startMongod, startMongoProgram, runMongoProgram, startMongoPro
 
         var storageEngine = opts.storageEngine || jsTestOptions().storageEngine;
         if (storageEngine === "hse") {
-            opts.hseCompressionDefault = MongoRunner.hseCompressionDefault;
+            opts.hseValueCompressionDefault = MongoRunner.hseValueCompressionDefault;
+            opts.hseRestEnabled = MongoRunner.hseRestEnabled;
         }
 
         opts.pathOpts = Object.merge(opts.pathOpts, {dbpath: opts.dbpath});

@@ -9,6 +9,8 @@ on:
     paths:
       - "**.cpp"
       - "**.h"
+      - "**.js"
+      - "**.py"
       - "**/SConstruct"
       - "**/SConscript"
       - .github/workflows/builds.yaml
@@ -113,5 +115,5 @@ jobs:
         with:
           name: ${{ github.job }}
           path: |
-            "build/opt/mongo/db/storage/hse/*out"
+            build/opt/mongo/db/storage/hse/*.out
             hse/builddir/meson-logs

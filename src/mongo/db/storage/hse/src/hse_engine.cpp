@@ -471,6 +471,9 @@ void KVDBEngine::_prepareConfig() {
 
     const string vComprDefault = kvdbGlobalOptions.getValueCompressionDefaultStr();
 
+    _globalParams.push_back(std::string("rest.enabled=") +
+                            (kvdbGlobalOptions.getRestEnabled() ? "true" : "false"));
+
     _kvdbRParams.push_back("txn_timeout=8589934591");
     _kvdbRParams.push_back("durability.interval_ms=" + std::to_string(ms));
 
@@ -515,10 +518,10 @@ void KVDBEngine::_setupDb() {
 
     const std::string configPath = kvdbGlobalOptions.getConfigPathStr();
     if (configPath.empty()) {
-        auto st = hse::init();
+        auto st = hse::init(_globalParams);
         invariantHseSt(st);
     } else {
-        auto st = hse::init(configPath);
+        auto st = hse::init(configPath, _globalParams);
         invariantHseSt(st);
     }
 

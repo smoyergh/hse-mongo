@@ -46,6 +46,9 @@ namespace mongo {
 
 const int KVDBGlobalOptions::kDefaultForceLag = 0;
 
+// Default REST server is enabled.
+const bool KVDBGlobalOptions::kDefaultRestEnabled = true;
+
 // Collection options
 const std::string KVDBGlobalOptions::kDefaultValueCompressionDefaultStr = "on";
 
@@ -72,10 +75,13 @@ const std::string cfgStrPrefix = ("storage." + modName) + ".";
 
 const std::string forceLagCfgStr = cfgStrPrefix + "forceLag";
 
+const std::string restEnabledCfgStr = cfgStrPrefix + "restEnabled";
+const std::string restEnabledOptStr = modName + "RestEnabled";
+
 // Collection options.
-const std::string compressionDefaultCfgStr = cfgStrPrefix + "compressionDefault";
 const std::string optimizeForCollectionCountCfgStr = cfgStrPrefix + "optimizeForCollectionCount";
-const std::string compressionDefaultOptStr = modName + "CompressionDefault";
+const std::string valueCompressionDefaultCfgStr = cfgStrPrefix + "valueCompressionDefault";
+const std::string valueCompressionDefaultOptStr = modName + "ValueCompressionDefault";
 
 // Enable metrics
 const std::string enableMetricsCfgStr = cfgStrPrefix + "enableMetrics";
@@ -103,12 +109,17 @@ Status KVDBGlobalOptions::add(moe::OptionSection* options) {
         .hidden()
         .setDefault(moe::Value(kDefaultForceLag));
 
+    kvdbOptions
+        .addOptionChaining(
+            restEnabledCfgStr, restEnabledOptStr, moe::Bool, "enable the REST server")
+        .setDefault(moe::Value(kDefaultRestEnabled));
+
     // Collection options
     kvdbOptions
-        .addOptionChaining(compressionDefaultCfgStr,
-                           compressionDefaultOptStr,
+        .addOptionChaining(valueCompressionDefaultCfgStr,
+                           valueCompressionDefaultOptStr,
                            moe::String,
-                           "whether to compress by default")
+                           "whether to compress values by default")
         .setDefault(moe::Value(kDefaultValueCompressionDefaultStr));
 
     kvdbOptions
@@ -139,10 +150,15 @@ Status KVDBGlobalOptions::store(const moe::Environment& params,
         log() << "Force Lag: " << kvdbGlobalOptions._forceLag;
     }
 
-    if (params.count(compressionDefaultCfgStr)) {
+    if (params.count(restEnabledCfgStr)) {
+        kvdbGlobalOptions._restEnabled = params[restEnabledCfgStr].as<bool>();
+        log() << "REST enabled: " << kvdbGlobalOptions._restEnabled;
+    }
+
+    if (params.count(valueCompressionDefaultCfgStr)) {
         kvdbGlobalOptions._valueCompressionDefaultStr =
-            params[compressionDefaultCfgStr].as<std::string>();
-        log() << "Compression default: " << kvdbGlobalOptions._valueCompressionDefaultStr;
+            params[valueCompressionDefaultCfgStr].as<std::string>();
+        log() << "Value compression default: " << kvdbGlobalOptions._valueCompressionDefaultStr;
     }
 
     if (params.count(optimizeForCollectionCountCfgStr)) {
@@ -173,6 +189,10 @@ Status KVDBGlobalOptions::store(const moe::Environment& params,
     }
 
     return Status::OK();
+}
+
+bool KVDBGlobalOptions::getRestEnabled() const {
+    return _restEnabled;
 }
 
 bool KVDBGlobalOptions::getCrashSafeCounters() const {

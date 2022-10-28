@@ -74,8 +74,14 @@ Status init() {
     return Status(::hse_init(nullptr, 0, nullptr));
 }
 
-Status init(const string& config) {
-    return Status(::hse_init(config.c_str(), 0, nullptr));
+Status init(const vector<string>& params) {
+    CStyleStrVec cVec{params};
+    return Status(::hse_init(nullptr, cVec.getCount(), cVec.getCVec()));
+}
+
+Status init(const string& config, const vector<string>& params) {
+    CStyleStrVec cVec{params};
+    return Status(::hse_init(config.c_str(), cVec.getCount(), cVec.getCVec()));
 }
 
 Status fini() {

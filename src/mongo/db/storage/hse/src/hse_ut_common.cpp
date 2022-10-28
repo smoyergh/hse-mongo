@@ -41,13 +41,12 @@ using namespace hse;
 namespace hse {
 
 KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
-
     const char* envStr = getenv("MONGO_UT_KVDB_HOME");
     if (nullptr != envStr) {
         _kvdbHome = envStr;
     }
 
-    hse::Status st = hse::init();
+    hse::Status st = hse::init(_globalParams);
     ASSERT_EQUALS(0, st.getErrno());
 
     int err{0};
@@ -75,7 +74,7 @@ KVDBTestSuiteFixture::KVDBTestSuiteFixture() {
 
 void KVDBTestSuiteFixture::reset() {
     if (_dbClosed) {
-        hse::Status st = hse::init();
+        hse::Status st = hse::init(_globalParams);
         ASSERT_EQUALS(0, st.getErrno());
 
         vector<string> params{};
@@ -102,7 +101,7 @@ void KVDBTestSuiteFixture::reset() {
 
 KVDBTestSuiteFixture::~KVDBTestSuiteFixture() {
     if (_dbClosed) {
-        hse::Status st = hse::init();
+        hse::Status st = hse::init(_globalParams);
         ASSERT_EQUALS(0, st.getErrno());
 
         vector<string> params{};
